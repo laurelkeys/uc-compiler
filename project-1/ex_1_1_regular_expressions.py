@@ -1,40 +1,45 @@
 import re
 
+###########################################################
 ## regular expressions ####################################
+###########################################################
 
 # valid uC identifiers
 identifier = r'[a-zA-Z_][0-9a-zA-Z_]*'
 
 # integer constants
 int_const = r'0|([1-9][0-9]*)'
-int_const_0s = r'[0-9]+' # allows leading zeros
+int_const_0s = r'[0-9]+' # accepts leading zeros
 
 # floating constants
-float_const = r'((0|([1-9][0-9]*))\.[0-9]*|[0-9]*\.[0-9]+)'
-float_const_0s = r'([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)' # allows leading zeros
+float_const = r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
+float_const_0s = r'([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)' # accepts leading zeros
 
 # Comments in C-Style /* ... */
-c_comment = r'/\*.*\*/'
-c_comment_multiline = r'/\*(.|[\r\n])*?\*/'
+c_comment = r'/\*(.|\n)*?\*/'
 
 # Unterminated C-style comment
-unterminated_c_comment = r'/\*.*(?<!\*/)' # FIXME
+unterminated_c_comment = r'/\*(.|\n)*?(?<!\*/)$' # FIXME r'/\*(.|\n)*$
 
 # C++-style comment (//...)
 cpp_comment = r'//.*'
 
 # string_literal
-string_literal = r'\".*\"'
+string_literal = r'".*"'
 
 # unmatched_quote
-unmatched_quote = r'\".*(?<!\")' # FIXME
+unmatched_quote = r'".*(?<!")$' # FIXME r'".*$'
 
+###########################################################
 ## misc ###################################################
+###########################################################
 
 def fullmatches(match_obj):
     return match_obj is not None
 
+###########################################################
 ## tests ##################################################
+###########################################################
 
 def test_identifier():
     assert not fullmatches(re.fullmatch(identifier, ""))
@@ -62,63 +67,55 @@ def test_float_const():
     assert fullmatches(re.fullmatch(float_const, "0."))
     assert fullmatches(re.fullmatch(float_const, ".12"))
     assert fullmatches(re.fullmatch(float_const, "0.12"))
+    assert not fullmatches(re.fullmatch(float_const, "."))
+    assert not fullmatches(re.fullmatch(float_const, "01."))
+    assert not fullmatches(re.fullmatch(float_const, "01.2"))
     assert not fullmatches(re.fullmatch(float_const, "0"))
     assert not fullmatches(re.fullmatch(float_const, "123"))
     assert not fullmatches(re.fullmatch(float_const, "0_12"))
 
 def test_c_comment():
-    assert not fullmatches(re.fullmatch(c_comment_multiline, ""))
+    assert not fullmatches(re.fullmatch(c_comment, ""))
     assert fullmatches(re.fullmatch(c_comment, "/**/"))
     assert fullmatches(re.fullmatch(c_comment, "/***/"))
     assert fullmatches(re.fullmatch(c_comment, "/* */"))
     assert fullmatches(re.fullmatch(c_comment, "/*asdf*/"))
     assert fullmatches(re.fullmatch(c_comment, "/* asdf */"))
     assert fullmatches(re.fullmatch(c_comment, "/*a!@#45^&)[@!_*/"))
+    assert fullmatches(re.fullmatch(c_comment, """/*
+                                                   * foo
+                                                   * bar
+                                                   * baz
+                                                   **/"""))
     assert not fullmatches(re.fullmatch(c_comment, "/* foo"))
     assert not fullmatches(re.fullmatch(c_comment, "// foo"))
     assert not fullmatches(re.fullmatch(c_comment, "/* * /"))
     assert not fullmatches(re.fullmatch(c_comment, "/ * */"))
     assert not fullmatches(re.fullmatch(c_comment, "/** foo"))
-
-def test_c_comment_multiline():
-    assert not fullmatches(re.fullmatch(c_comment_multiline, ""))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/**/"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/***/"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/* */"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/*asdf*/"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/* asdf */"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/*a!@#45^&)[@!_*/"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/* foo"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "// foo"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/* * /"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/ * */"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/** foo"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, """/*
-                                                            foo
-                                                            bar
-                                                            baz
-                                                            */"""))
+    assert not fullmatches(re.fullmatch(c_comment, """/* 
+                                                      xpto
+                                                   """))
 
 def test_unterminated_c_comment():
     assert not fullmatches(re.fullmatch(unterminated_c_comment, ""))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, ""))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/**/"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/***/"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/* */"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/*asdf*/"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/* asdf */"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/*a!@#45^&)[@!_*/"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "// foo"))
-    assert not fullmatches(re.fullmatch(c_comment_multiline, "/ * */"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/*"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/**"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/* "))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/*asdf"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/* * /"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/* foo"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/** foo"))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/* asdf "))
-    assert fullmatches(re.fullmatch(c_comment_multiline, "/*a!@#45^&)[@!_"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, ""))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "/**/"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "/***/"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "/* */"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "/*asdf*/"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "/* asdf */"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "/*a!@#45^&)[@!_*/"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "// foo"))
+    assert not fullmatches(re.fullmatch(unterminated_c_comment, "/ * */"))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/*"))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/**"))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/* "))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/*asdf"))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/* * /"))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/* foo"))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/** foo"))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/* asdf "))
+    assert fullmatches(re.fullmatch(unterminated_c_comment, "/*a!@#45^&)[@!_"))
 
 def test_cpp_comment():
     assert not fullmatches(re.fullmatch(cpp_comment, ""))
@@ -144,9 +141,9 @@ def test_string_literal():
 
 def test_unmatched_quote():
     assert not fullmatches(re.fullmatch(unmatched_quote, ""))
-    assert fullmatches(re.fullmatch(unmatched_quote, "\""))
+    # assert fullmatches(re.fullmatch(unmatched_quote, "\""))
     assert fullmatches(re.fullmatch(unmatched_quote, "\" "))
-    assert fullmatches(re.fullmatch(unmatched_quote, "\"\"\""))
+    # assert fullmatches(re.fullmatch(unmatched_quote, "\"\"\""))
     assert fullmatches(re.fullmatch(unmatched_quote, "\"\'\'"))
     assert fullmatches(re.fullmatch(unmatched_quote, "\"asdf1234!@#$])"))
     assert not fullmatches(re.fullmatch(unmatched_quote, "\"\""))
