@@ -19,7 +19,7 @@ float_const_0s = r'([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)' # accepts leading zeros
 c_comment = r'/\*(.|\n)*?\*/'
 
 # Unterminated C-style comment
-unterminated_c_comment = r'/\*(.|\n)*?(?<!\*/)$' # FIXME r'/\*(.|\n)*$
+unterminated_c_comment = r'/\*(.|\n)*?(?<!\*/)$'
 
 # C++-style comment (//...)
 cpp_comment = r'//.*'
@@ -28,7 +28,7 @@ cpp_comment = r'//.*'
 string_literal = r'".*"'
 
 # unmatched_quote
-unmatched_quote = r'".*(?<!")$' # FIXME r'".*$'
+unmatched_quote = r'".*(?<!")$'
 
 ###########################################################
 ## misc ###################################################
@@ -141,9 +141,9 @@ def test_string_literal():
 
 def test_unmatched_quote():
     assert not fullmatches(re.fullmatch(unmatched_quote, ""))
-    # assert fullmatches(re.fullmatch(unmatched_quote, "\""))
+    # assert fullmatches(re.fullmatch(unmatched_quote, "\"")) # FIXME should this be a match?
     assert fullmatches(re.fullmatch(unmatched_quote, "\" "))
-    # assert fullmatches(re.fullmatch(unmatched_quote, "\"\"\""))
+    # assert fullmatches(re.fullmatch(unmatched_quote, "\"\"\"")) # FIXME should this be a match?
     assert fullmatches(re.fullmatch(unmatched_quote, "\"\'\'"))
     assert fullmatches(re.fullmatch(unmatched_quote, "\"asdf1234!@#$])"))
     assert not fullmatches(re.fullmatch(unmatched_quote, "\"\""))
