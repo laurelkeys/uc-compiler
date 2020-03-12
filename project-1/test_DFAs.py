@@ -14,10 +14,10 @@ class DFA:
         self.current_state = start_state
 
     def transition_to_state_with_input(self, input_value):
-        if (self.current_state, input_value) not in self.transition_function:
+        try:
+            self.current_state = self.transition_function[(self.current_state, input_value)]
+        except KeyError:
             self.current_state = None
-            return
-        self.current_state = self.transition_function[(self.current_state, input_value)]
 
     def in_accept_state(self):
         return self.current_state in self.accept_states
