@@ -235,9 +235,15 @@ class UCLexer():
     def t_comment(self, t):
         r'/\*(.|\n)*?\*/'
         t.lexer.lineno += t.value.count('\n')
+        # FIXME rename to t_c_comment, and add t_cpp_comment:
+        #       //           Skips the rest of the line
+        #       /* ... */    Skips a block (no nesting allowed)
 
     # Error
     def t_error(self, t):
         # NOTE keep this as the last defined t_ function
         msg = "Illegal character '%s'" % repr(t.value[0])
         self._error(msg, t)
+        # FIXME the lexer must report the following error messages:
+        #       lineno: Unterminated string
+        #       lineno: Unterminated comment
