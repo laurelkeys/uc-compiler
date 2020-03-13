@@ -38,6 +38,8 @@ def test_simple_prog():
         }
     """
     tokens = m.scan(input_text, print_tokens=False)
+    # FIXME we're comparing LexToken with strings,
+    #       and the line and column might be different (by some constant)
     assert tokens == [
         "LexToken(INT,'int',2,14)",
         "LexToken(ID,'j',2,18)",
@@ -118,3 +120,4 @@ def test_function_variable():
 
 # ref.: http://www.dabeaz.com/ply/ply.html#ply_nn3
 #       https://github.com/iviarcio/mc921/blob/master/lex_unit_tests.ipynb
+#       https://en.wikipedia.org/wiki/Operators_in_C_and_C%2B%2B#Operator_precedence

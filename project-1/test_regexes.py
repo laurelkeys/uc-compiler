@@ -19,7 +19,7 @@ float_const_0s = r'([0-9]+\.[0-9]*|[0-9]*\.[0-9]+)' # accepts leading zeros
 c_comment = r'/\*(.|\n)*?\*/'
 
 # Unterminated C-style comment
-unterminated_c_comment = r'/\*(.|\n)*?(?<!\*/)$' # r'/\*(.|\n)*$'
+unterminated_c_comment = r'/\*(.|\n)*?(?<!\*/)$' # r'/\*(.|\n)*$', if called after c_comment
 
 # C++-style comment (//...)
 cpp_comment = r'//.*'
@@ -28,7 +28,7 @@ cpp_comment = r'//.*'
 string_literal = r'".*"'
 
 # unmatched_quote
-unmatched_quote = r'".*(?<!")$' # r'".*$'
+unmatched_quote = r'".*(?<!")$' # r'".*$', if called after string_literal
 
 ###########################################################
 ## misc ###################################################

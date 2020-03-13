@@ -43,27 +43,18 @@ class UCLexer():
     """
 
     def __init__(self, error_func):
-        """ Creates a new Lexer.
-            \n
-            `error_func` will be called with an error message, line and column as arguments,
-            in case of an error during lexing.
+        """ Creates a new Lexer.\n
+            `error_func` will be called in case of an error during lexing, with an error message, line and column as arguments.
         """
         self.filename = ''
         self.error_func = error_func
         self.last_token = None # last token returned from self.token()
 
     def build(self, **kwargs):
-        """ Builds the lexer from the specification.
-            Must be called after the lexer object is created.
-            \n
-            This method exists separately because the PLY manual
-            warns against calling `lex.lex` inside `__init__`.
+        """ Builds the lexer. Must be called after the lexer object is created.\n
+            This method exists separately because the PLY manual warns against calling `lex.lex` inside `__init__`.
         """
         self.lexer = lex.lex(object=self, **kwargs)
-
-    def reset_lineno(self):
-        """ Resets the internal line number counter of the lexer to 1. """
-        self.lexer.lineno = 1
 
     def input(self, text):
         self.lexer.input(text)
@@ -72,19 +63,24 @@ class UCLexer():
         self.last_token = self.lexer.token()
         return self.last_token
 
-    def find_tok_column(self, token):
+    # Internal auxiliary methods
+    def _find_tok_column(self, token):
         """ Find the column of the token in its line. """
-        last_cr = self.lexer.lexdata.rfind('\n', start=0, end=token.lexpos)
+        last_cr = self.lexer.lexdata.rfind('\n', 0, token.lexpos)
         return token.lexpos - last_cr
 
-    # Internal auxiliary methods
+    def _make_tok_location(self, token):
+        """ Returns the token's location as a tuple `(line, column)`. """
+        return token.lineno, self._find_tok_column(token)
+
+    def _reset_lineno(self):
+        """ Resets the internal line number counter of the lexer to 1. """
+        self.lexer.lineno = 1
+
     def _error(self, msg, token):
         line, column = self._make_tok_location(token)
         self.error_func(msg, line, column)
         self.lexer.skip(1)
-
-    def _make_tok_location(self, token):
-        return token.lineno, self.find_tok_column(token)
 
     # Reserved keywords
     keywords = (
@@ -123,7 +119,10 @@ class UCLexer():
 
     def t_ID(self, t):
         r'[a-zA-Z_][0-9a-zA-Z_]*'
-        t.type = self.keyword_map.get(t.value, default="ID")
+        try:
+            t.type = self.keyword_map[t.value]
+        except KeyError:
+            t.type = "ID"
         return t
 
     def t_INT_CONST(self, t):
