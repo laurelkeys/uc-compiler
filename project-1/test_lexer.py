@@ -1,3 +1,4 @@
+import re
 import ply.lex as lex
 
 from ply.lex import LexToken
@@ -10,6 +11,20 @@ class UCLexer():
     """ A lexer for the uC programming language.
         After building it, set the input text with `input()`, and call `token()` to get new tokens.
     """
+
+    # NOTE For simple tokens, the regular expression can be specified as strings,
+    #      with the name following 't_' matching exactly one of the names supplied in `tokens`.
+    #      When a function is used, the regular expression rule is specified in the function documentation string.
+    #      The function takes a single argument of type LexToken, with attributes t.type, t.value, t.lineno, and t.lexpos.
+
+    # NOTE Patterns are compiled using the re.VERBOSE flag which can be used to help readability.
+    #      However, be aware that unescaped whitespace is ignored and comments are allowed in this mode.
+    #      If your pattern involves whitespace, make sure you use \s. If you need to match the # character, use [#].
+
+    # NOTE When building the master regular expression, rules are added in the following order:
+    #      1. All tokens defined by functions are added in the same order as they appear in the lexer file.
+    #      2. Tokens defined by strings are added next, by sorting them in order of decreasing regular expression length
+    #         (longer expressions are added first).
 
     def __init__(self, error_func):
         """ Creates a new Lexer.
@@ -71,30 +86,39 @@ class UCLexer():
         'ID',
 
         # constants
-        'INT_CONST', 'FLOAT_CONST',
+        'INT_CONST', 'FLOAT_CONST'
 
     ) + keywords
 
     # Rules
     t_ignore = ' \t'
 
-    # Newlines
-    def t_NEWLINE(self, t):
+    def t_newline(self, t):
         r'\n+'
-        t.lexer.lineno += t.value.count("\n")
-
-    def t_ID(self, t):
-        r'[a-zA-Z_][0-9a-zA-Z_]*'
-        t.type = self.keyword_map.get(t.value, "ID")
-        return t
+        t.lexer.lineno += t.value.count('\n')
 
     def t_comment(self, t):
         r'/\*(.|\n)*?\*/'
         t.lexer.lineno += t.value.count('\n')
 
     def t_error(self, t):
-        msg = "Illegal character %s" % repr(t.value[0])
+        msg = "Illegal character '%s'" % repr(t.value[0])
         self._error(msg, t)
+
+    def t_ID(self, t):
+        r'[a-zA-Z_][0-9a-zA-Z_]*'
+        t.type = self.keyword_map.get(t.value, default="ID")
+        return t
+
+    def t_INT_CONST(self, t):
+        r'0|([1-9][0-9]*)'
+        t.value = int(t.value)
+        return t
+
+    def t_FLOAT_CONST(self, t):
+        r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
+        t.value = float(t.value)
+        return t
 
     # Scanner (used only for testing)
     def scan(self, data, print_tokens=True):
