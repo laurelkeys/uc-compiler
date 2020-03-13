@@ -82,59 +82,6 @@ class UCLexer():
         self.error_func(msg, line, column)
         self.lexer.skip(1)
 
-    # Reserved keywords
-    keywords = (
-        'ASSERT', 'BREAK', 'CHAR', 'ELSE', 'FLOAT', 'FOR', 'IF',
-        'INT', 'PRINT', 'READ', 'RETURN', 'VOID', 'WHILE',
-    )
-
-    keyword_map = {}
-    for keyword in keywords:
-        keyword_map[keyword.lower()] = keyword
-
-    # All the tokens recognized by the lexer
-    tokens = (
-        # identifiers
-        'ID',
-
-        # constants
-        'INT_CONST', 'FLOAT_CONST'
-
-    ) + keywords
-
-    # Rules
-    t_ignore = ' \t' # NOTE special rule name, reserved for characters that should be completely ignored
-
-    def t_newline(self, t):
-        r'\n+'
-        t.lexer.lineno += t.value.count('\n')
-
-    def t_comment(self, t):
-        r'/\*(.|\n)*?\*/'
-        t.lexer.lineno += t.value.count('\n')
-
-    def t_error(self, t):
-        msg = "Illegal character '%s'" % repr(t.value[0])
-        self._error(msg, t)
-
-    def t_ID(self, t):
-        r'[a-zA-Z_][0-9a-zA-Z_]*'
-        try:
-            t.type = self.keyword_map[t.value]
-        except KeyError:
-            t.type = "ID"
-        return t
-
-    def t_INT_CONST(self, t):
-        r'0|([1-9][0-9]*)'
-        t.value = int(t.value)
-        return t
-
-    def t_FLOAT_CONST(self, t):
-        r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
-        t.value = float(t.value)
-        return t
-
     # Scanner (used only for testing)
     def scan(self, data, print_tokens=True):
         tokens = []
@@ -147,3 +94,145 @@ class UCLexer():
             if print_tokens:
                 print(tok)
         return tokens
+
+    # Reserved keywords
+    keywords = (
+        'IF', 'ELSE',
+        'FOR', 'WHILE',
+        'BREAK', 'RETURN',
+        'ASSERT', 'PRINT', 'READ',
+        'VOID', 'CHAR', 'INT', 'FLOAT', # type specifiers
+    )
+
+    keyword_map = {}
+    for keyword in keywords:
+        keyword_map[keyword.lower()] = keyword
+
+    # FIXME should we include '.' as a token? (i.e. element selection by reference)
+    # Token list
+    tokens = (
+        # identifiers
+        'ID',
+
+        # constants
+        'INT_CONST', 'FLOAT_CONST',
+        'CHAR_CONST', 'STRING_CONST',
+
+        # braces, brackets and parenthesis
+        'LBRACE', 'RBRACE',
+        'LBRACKET', 'RBRACKET',
+        'LPAREN', 'RPAREN',
+
+        # comma and semicolon
+        'COMMA',
+        'SEMI',
+
+        # assignment operators: =, *=, /=, %=, +=, -=
+        'EQUALS',
+        'TIMESEQUALS', 'DIVEQUALS',
+        'MODEQUALS',
+        'PLUSEQUALS', 'MINUSEQUALS',
+
+        # binary operators: *, /, %, +, -, <, <=, >, >=, ==, !=, &&, ||
+        'TIMES', 'DIV',
+        'MOD',
+        'PLUS', 'MINUS',
+        'LT', 'LEQ', 'GT', 'GEQ', 'EQ', 'NEQ',
+        'AND', 'OR',
+
+        # unary operators: ++, --, +, -, &, *, !
+        'PLUSPLUS', 'MINUSMINUS',
+        'UPLUS', 'UMINUS',
+        'ADDRESS', 'UTIMES',
+        'NOT',
+
+        # reserved keywords
+    ) + keywords
+
+    # Completely ignored characters
+    t_ignore = ' \t'
+
+    # Newlines
+    def t_newline(self, t):
+        r'\n+'
+        t.lexer.lineno += t.value.count('\n')
+
+    # Delimiters
+    t_LBRACE = r'\{'
+    t_RBRACE = r'\}'
+    t_LBRACKET = r'\['
+    t_RBRACKET = r'\]'
+    t_LPAREN  = r'\('
+    t_RPAREN  = r'\)'
+
+    t_COMMA = r','
+    t_SEMI = r';'
+
+    # Assignment operators
+    t_EQUALS = r'='
+    t_TIMESEQUALS = r'\*='
+    t_DIVEQUALS = r'/='
+    t_MODEQUALS = r'%='
+    t_PLUSEQUALS = r'\+='
+    t_MINUSEQUALS = r'\-='
+
+    # Binary operators
+    t_TIMES = r'\*'
+    t_DIV = r'/'
+    t_MOD = r'%'
+    t_PLUS = r'\+'
+    t_MINUS = r'\-'
+
+    t_LT = r'<'
+    t_LEQ = r'<='
+    t_GT = r'>'
+    t_GEQ = r'>='
+    t_EQ = r'=='
+    t_NEQ = r'!='
+
+    t_AND = r'\&\&'
+    t_OR = r'\|\|'
+
+    # Unary operators
+    t_PLUSPLUS = r'\+\+'
+    t_MINUSMINUS = r'\-\-'
+    t_UPLUS = r'\+'
+    t_UMINUS = r'\-'
+
+    t_ADDRESS = r'\&' # address-of
+    t_UTIMES = r'\*'  # indirection (dereference)
+
+    t_NOT = r'!'
+
+    # Identifiers and reserved words
+    def t_ID(self, t):
+        r'[a-zA-Z_][a-zA-Z0-9_]*'
+        t.type = self.keyword_map.get(t.value, 'ID')
+        return t
+
+    # Constants
+    def t_INT_CONST(self, t):
+        r'0|([1-9][0-9]*)'
+        t.value = int(t.value)
+        return t
+
+    def t_FLOAT_CONST(self, t):
+        r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
+        t.value = float(t.value)
+        return t
+
+    # FIXME is r'".*"' enough?
+    t_STRING_CONST = r'\"([^\\\n]|(\\.))*?\"'
+
+    # FIXME is r'\'.?\'' enough?
+    t_CHAR_CONST = r'\'([^\\\n]|(\\.))*?\'' # FIXME should we use a function to check length is 1?
+
+    # Comments
+    def t_comment(self, t):
+        r'/\*(.|\n)*?\*/'
+        t.lexer.lineno += t.value.count('\n')
+
+    # Error (NOTE keep it as the last defined t_ function)
+    def t_error(self, t):
+        msg = "Illegal character '%s'" % repr(t.value[0])
+        self._error(msg, t)
