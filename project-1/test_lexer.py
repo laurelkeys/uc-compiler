@@ -16,6 +16,7 @@ class UCLexer():
     #      with the name following 't_' matching exactly one of the names supplied in `tokens`.
     #      When a function is used, the regular expression rule is specified in the function documentation string.
     #      The function takes a single argument of type LexToken, with attributes t.type, t.value, t.lineno, and t.lexpos.
+    #      The @TOKEN or @Token decorators can also be used for more complex regular expression rules, defined as variables.
 
     # NOTE Patterns are compiled using the re.VERBOSE flag which can be used to help readability.
     #      However, be aware that unescaped whitespace is ignored and comments are allowed in this mode.
@@ -25,6 +26,21 @@ class UCLexer():
     #      1. All tokens defined by functions are added in the same order as they appear in the lexer file.
     #      2. Tokens defined by strings are added next, by sorting them in order of decreasing regular expression length
     #         (longer expressions are added first).
+
+    # NOTE expected/reserved variables:
+    #      - `tokens`, a list that defines all possible token names that can be produced by the lexer
+    #      - `t_ignore`, special rule reserved for characters that should be completely ignored in the input stream
+    #                    obs.: you can include the prefix "ignore_" in a token declaration to force the token to be ignored
+    #      - `literals`, list of literal characters, i.e. single characters that are returned "as is" when encountered by the lexer
+    #                    obs.: literals are checked after all of the defined regular expression rules
+    #      - `t_error()`, function used to handle lexing errors that occur when illegal characters are detected
+    #      - `t_eof()`, function used to handle an end-of-file (EOF) condition in the input
+
+    # NOTE To build the lexer, the function lex.lex() is used.
+    #      This function uses Python reflection to read the regular expression rules out of the calling context and build the lexer.
+    #      Once the lexer has been built, two methods can be used to control the lexer:
+    #       - lexer.input(data), Reset the lexer and store a new input string.
+    #       - lexer.token(), Return the next token (LexToken instance on success or None if the end of the input text is reached).
 
     def __init__(self, error_func):
         """ Creates a new Lexer.
@@ -91,7 +107,7 @@ class UCLexer():
     ) + keywords
 
     # Rules
-    t_ignore = ' \t'
+    t_ignore = ' \t' # NOTE special rule name, reserved for characters that should be completely ignored
 
     def t_newline(self, t):
         r'\n+'
@@ -147,6 +163,17 @@ m.build()
 ###########################################################
 ## tests ##################################################
 ###########################################################
+
+# NOTE For the purpose of debugging, you can run lex() in a debugging mode as follows:
+#           lexer = lex.lex(debug=1)
+#
+#      This will produce various sorts of debugging information including all of the added rules,
+#      the master regular expressions used by the lexer, and tokens generating during lexing.
+#
+#      In addition, lex.py comes with a simple main function which will either tokenize input read from standard input
+#      or from a file specified on the command line. To use it, simply put this in your lexer:
+#           if __name__ == '__main__':
+#               lex.runmain()
 
 def test_simple_prog():
     input_text = """
