@@ -92,7 +92,7 @@ def test_c_comment():
     assert not fullmatches(re.fullmatch(c_comment, "/* * /"))
     assert not fullmatches(re.fullmatch(c_comment, "/ * */"))
     assert not fullmatches(re.fullmatch(c_comment, "/** foo"))
-    assert not fullmatches(re.fullmatch(c_comment, """/* 
+    assert not fullmatches(re.fullmatch(c_comment, """/*
                                                       xpto
                                                    """))
 
@@ -155,3 +155,5 @@ def test_unmatched_quote():
     assert not fullmatches(re.fullmatch(unmatched_quote, "\' \'"))
     assert not fullmatches(re.fullmatch(unmatched_quote, "\'\"\"\'"))
     assert not fullmatches(re.fullmatch(unmatched_quote, "\'asdf1234!@#$])\'"))
+
+# ref.: https://docs.python.org/3/library/re.html

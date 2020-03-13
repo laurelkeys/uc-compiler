@@ -47,6 +47,7 @@
     ('ADDRESS', '&'),
     ('NOT', '!'),          # FIXME check reference name
     # FIXME should there be a token for unary *, +, - ?
+    # (see http://www.dabeaz.com/ply/ply.html#ply_nn27)
 
     # assignment operators: =, *=, /=, %=, +=, -=
     ('EQUALS', '='),
