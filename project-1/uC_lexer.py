@@ -42,13 +42,14 @@ class UCLexer():
         After building it, set the input text with `input()`, and call `token()` to get new tokens.
     """
 
-    def __init__(self, error_func):
+    def __init__(self, error_func, cast_numbers=True):
         """ Creates a new Lexer.\n
             `error_func` will be called in case of an error during lexing, with an error message, line and column as arguments.
         """
         self.filename = ''
         self.error_func = error_func
         self.last_token = None # last token returned from self.token()
+        self.cast_numbers = cast_numbers # casts values of float and int tokens
 
     def build(self, **kwargs):
         """ Builds the lexer. Must be called after the lexer object is created.\n
@@ -211,14 +212,17 @@ class UCLexer():
         return t
 
     # Constants
-    def t_INT_CONST(self, t):
-        r'0|([1-9][0-9]*)'
-        t.value = int(t.value)
+    def t_FLOAT_CONST(self, t):
+        # NOTE keep this before t_INT_CONST
+        r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
+        if self.cast_numbers:
+            t.value = float(t.value)
         return t
 
-    def t_FLOAT_CONST(self, t):
-        r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
-        t.value = float(t.value)
+    def t_INT_CONST(self, t):
+        r'0|([1-9][0-9]*)'
+        if self.cast_numbers:
+            t.value = int(t.value)
         return t
 
     # FIXME is r'".*"' enough?
@@ -232,7 +236,8 @@ class UCLexer():
         r'/\*(.|\n)*?\*/'
         t.lexer.lineno += t.value.count('\n')
 
-    # Error (NOTE keep it as the last defined t_ function)
+    # Error
     def t_error(self, t):
+        # NOTE keep this as the last defined t_ function
         msg = "Illegal character '%s'" % repr(t.value[0])
         self._error(msg, t)
