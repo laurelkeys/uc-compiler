@@ -38,23 +38,23 @@ from ply.lex import LexToken
 ###########################################################
 
 class UCLexer():
-    """ A lexer for the uC programming language.
+    ''' A lexer for the uC programming language.
         After building it, set the input text with `input()`, and call `token()` to get new tokens.
-    """
+    '''
 
     def __init__(self, error_func, cast_numbers=True):
-        """ Creates a new Lexer.\n
+        ''' Creates a new Lexer.\n
             `error_func` will be called in case of an error during lexing, with an error message, line and column as arguments.
-        """
+        '''
         self.filename = ''
         self.error_func = error_func
         self.last_token = None # last token returned from self.token()
         self.cast_numbers = cast_numbers # casts values of float and int tokens
 
     def build(self, **kwargs):
-        """ Builds the lexer. Must be called after the lexer object is created.\n
+        ''' Builds the lexer. Must be called after the lexer object is created.\n
             This method exists separately because the PLY manual warns against calling `lex.lex` inside `__init__`.
-        """
+        '''
         self.lexer = lex.lex(object=self, **kwargs)
 
     def input(self, text):
@@ -66,16 +66,16 @@ class UCLexer():
 
     # Internal auxiliary methods
     def _find_tok_column(self, token):
-        """ Find the column of the token in its line. """
+        ''' Find the column of the token in its line. '''
         last_cr = self.lexer.lexdata.rfind('\n', 0, token.lexpos)
         return token.lexpos - last_cr
 
     def _make_tok_location(self, token):
-        """ Returns the token's location as a tuple `(line, column)`. """
+        ''' Returns the token's location as a tuple `(line, column)`. '''
         return token.lineno, self._find_tok_column(token)
 
     def _reset_lineno(self):
-        """ Resets the internal line number counter of the lexer to 1. """
+        ''' Resets the internal line number counter of the lexer to 1. '''
         self.lexer.lineno = 1
 
     def _error(self, msg, token):
@@ -109,7 +109,6 @@ class UCLexer():
     for keyword in keywords:
         keyword_map[keyword.lower()] = keyword
 
-    # FIXME should we include '.' as a token? (i.e. element selection by reference)
     # Token list
     tokens = (
         # identifiers
@@ -117,7 +116,7 @@ class UCLexer():
 
         # constants
         'INT_CONST', 'FLOAT_CONST',
-        'CHAR_CONST', 'STRING_CONST',
+        'CHAR_CONST', 'STRING_LITERAL',
 
         # braces, brackets and parenthesis
         'LBRACE', 'RBRACE',
@@ -143,8 +142,7 @@ class UCLexer():
 
         # unary operators: ++, --, +, -, &, *, !
         'PLUSPLUS', 'MINUSMINUS',
-        'UPLUS', 'UMINUS',
-        'ADDRESS', 'UTIMES',
+        'ADDRESS',
         'NOT',
 
         # reserved keywords
@@ -154,7 +152,7 @@ class UCLexer():
     t_ignore = ' \t'
 
     # Newlines
-    def t_newline(self, t):
+    def t_NEWLINE(self, t):
         r'\n+'
         t.lexer.lineno += t.value.count('\n')
 
@@ -163,8 +161,8 @@ class UCLexer():
     t_RBRACE = r'\}'
     t_LBRACKET = r'\['
     t_RBRACKET = r'\]'
-    t_LPAREN  = r'\('
-    t_RPAREN  = r'\)'
+    t_LPAREN = r'\('
+    t_RPAREN = r'\)'
 
     t_COMMA = r','
     t_SEMI = r';'
@@ -175,14 +173,14 @@ class UCLexer():
     t_DIVEQUALS = r'/='
     t_MODEQUALS = r'%='
     t_PLUSEQUALS = r'\+='
-    t_MINUSEQUALS = r'\-='
+    t_MINUSEQUALS = r'-='
 
     # Binary operators
     t_TIMES = r'\*'
     t_DIV = r'/'
     t_MOD = r'%'
     t_PLUS = r'\+'
-    t_MINUS = r'\-'
+    t_MINUS = r'-'
 
     t_LT = r'<'
     t_LEQ = r'<='
@@ -196,24 +194,18 @@ class UCLexer():
 
     # Unary operators
     t_PLUSPLUS = r'\+\+'
-    t_MINUSMINUS = r'\-\-'
-    t_UPLUS = r'\+'
-    t_UMINUS = r'\-'
+    t_MINUSMINUS = r'--'
 
-    t_ADDRESS = r'\&' # address-of
-    t_UTIMES = r'\*'  # indirection (dereference)
+    t_ADDRESS = r'\&'
 
     t_NOT = r'!'
 
-    # Identifiers and reserved words
-    def t_ID(self, t):
-        r'[a-zA-Z_][a-zA-Z0-9_]*'
-        t.type = self.keyword_map.get(t.value, 'ID')
-        return t
-
     # Constants
-    def t_FLOAT_CONST(self, t):
-        # NOTE keep this before t_INT_CONST
+    t_CHAR_CONST = r'\'([^\\\n]|(\\.))*?\''
+
+    t_STRING_LITERAL = r'\"([^\\\n]|(\\.))*?\"'
+
+    def t_FLOAT_CONST(self, t): # NOTE keep this before t_INT_CONST
         r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
         if self.cast_numbers:
             t.value = float(t.value)
@@ -225,23 +217,23 @@ class UCLexer():
             t.value = int(t.value)
         return t
 
-    # FIXME is r'".*"' enough?
-    t_STRING_CONST = r'\"([^\\\n]|(\\.))*?\"'
-
-    # FIXME is r'\'.?\'' enough?
-    t_CHAR_CONST = r'\'([^\\\n]|(\\.))*?\'' # FIXME should we use a function to check length is 1?
+    # Identifiers and reserved words
+    def t_ID(self, t):
+        r'[a-zA-Z_][a-zA-Z0-9_]*'
+        t.type = self.keyword_map.get(t.value, 'ID')
+        return t
 
     # Comments
-    def t_comment(self, t):
+    def t_C_COMMENT(self, t):
         r'/\*(.|\n)*?\*/'
         t.lexer.lineno += t.value.count('\n')
-        # FIXME rename to t_c_comment, and add t_cpp_comment:
-        #       //           Skips the rest of the line
-        #       /* ... */    Skips a block (no nesting allowed)
+
+    def t_CPP_COMMENT(self, t):
+        r'//.*?(\n|$)'
+        t.lexer.lineno += 1
 
     # Error
     def t_error(self, t):
-        # NOTE keep this as the last defined t_ function
         msg = "Illegal character '%s'" % repr(t.value[0])
         self._error(msg, t)
         # FIXME the lexer must report the following error messages:
