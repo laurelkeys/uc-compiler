@@ -78,9 +78,9 @@
 <parameter_list> ::= <parameter_declaration>
                    | <parameter_list> , <parameter_declaration>
 
-<parameter_declaration> ::= {<type_specifier>} <declarator>
+<parameter_declaration> ::= <type_specifier> <declarator>
 
-<declaration> ::=  {<type_specifier>} {<init_declarator>}* ;
+<declaration> ::=  <type_specifier> {<init_declarator>}* ;
 
 <init_declarator> ::= <declarator>
                     | <declarator> = <initializer>
@@ -116,6 +116,6 @@
 
 <assert_statement> ::= assert <expression> ;
 
-<print_statement> ::= print ( <expression>* ) ;
+<print_statement> ::= print ( {<expression>}* ) ;
 
-<read_statement> ::= read ( <declarator>+ );
+<read_statement> ::= read ( {<declarator>}+ );
