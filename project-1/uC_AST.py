@@ -33,7 +33,7 @@ class BinaryOp(Node):
     _fields = ['lvalue', 'op', 'rvalue']
 
 
-# FIXME already implemented:
+# TODO implement:
 # [ ] ArrayDecl
 # [ ] ArrayRef
 # [ ] Assert
