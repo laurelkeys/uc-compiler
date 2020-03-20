@@ -15,7 +15,7 @@ class Node:
     def __init__(self, *args, **kwargs):
         assert len(args) == len(self._fields)
 
-        for name, value in zip(self._fields,args):
+        for name, value in zip(self._fields, args):
             setattr(self, name, value)
 
         for name, value in kwargs.items():

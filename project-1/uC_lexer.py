@@ -19,13 +19,13 @@ from ply.lex import LexToken
 #         (longer expressions are added first).
 
 # NOTE expected/reserved variables:
-#      - `tokens`, a list that defines all possible token names that can be produced by the lexer
-#      - `t_ignore`, special rule reserved for characters that should be completely ignored in the input stream
-#                    obs.: you can include the prefix "ignore_" in a token declaration to force the token to be ignored
-#      - `literals`, list of literal characters, i.e. single characters that are returned "as is" when encountered by the lexer
-#                    obs.: literals are checked after all of the defined regular expression rules
-#      - `t_error()`, function used to handle lexing errors that occur when illegal characters are detected
-#      - `t_eof()`, function used to handle an end-of-file (EOF) condition in the input
+#       - `tokens`, a list that defines all possible token names that can be produced by the lexer
+#       - `t_ignore`, special rule reserved for characters that should be completely ignored in the input stream
+#                     obs.: you can include the prefix "ignore_" in a token declaration to force the token to be ignored
+#       - `literals`, list of literal characters, i.e. single characters that are returned "as is" when encountered by the lexer
+#                     obs.: literals are checked after all of the defined regular expression rules
+#       - `t_error()`, function used to handle lexing errors that occur when illegal characters are detected
+#       - `t_eof()`, function used to handle an end-of-file (EOF) condition in the input
 
 # NOTE To build the lexer, the function lex.lex() is used.
 #      This function uses Python reflection to read the regular expression rules out of the calling context and build the lexer.

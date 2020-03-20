@@ -2,26 +2,41 @@ import re
 import ply.yacc as yacc
 
 from uC_lexer import UCLexer
-from uC_AST import Program, \
-                   ID
-
-# NOTE Yacc uses a parsing technique known as LR-parsing or shift-reduce parsing.
-#      LR parsing is a bottom up technique that tries to recognize the right-hand-side of various grammar rules.
-#      Whenever a valid right-hand-side is found in the input, the appropriate action code is triggered and the
-#      grammar symbols are replaced by the grammar symbol on the left-hand-side.
+from uC_AST import Program
 
 # NOTE Each rule is defined by a function whose docstring contains the appropriate context-free grammar specification.
 #      The statements that make up the function body implement the semantic actions of the rule.
 #      Each function accepts a single argument `p` that is a sequence containing the values of each grammar symbol
 #      in the corresponding rule. The values of `p[i]` are mapped to grammar symbols, in order.
 
-# NOTE The use of negative indices have a special meaning in yacc, thus, do not use them (e.g. p[-1])
+# NOTE The first rule defined in the yacc specification determines the starting grammar symbol, unless `start` is declared.
+#      The `p_error(p)` rule is defined to catch syntax errors.
+
+# NOTE To resolve ambiguity, individual tokens can be assigned a precedence level and their associativity direction.
+#      This is done by adding a variable `precedence` to the grammar file.
+#      Within the precedence declaration, tokens are ordered from lowest to highest precedence.
+
+# NOTE When shift/reduce conflicts are encountered, the parser looks at the precedence rules and associativity specifiers:
+#      1. If the current token has higher precedence than the rule on the stack, it is shifted.
+#      2. If the grammar rule on the stack has higher precedence, the rule is reduced.
+#      3. If the current token and the grammar rule have the same precedence, the rule is reduced for left associativity,
+#         whereas the token is shifted for right associativity.
+#      4. If nothing is known about the precedence, shift/reduce conflicts are resolved in favor of shifting (the default).
+
+# NOTE By default, PLY tracks the line number and position of all tokens, which are available using the following functions:
+#       - p.lineno(num), Return the line number for symbol num.
+#       - p.lexpos(num), Return the lexing position for symbol num.
+
+# NOTE See '%prec' and 'nonassoc' in section 6.6 (https://www.dabeaz.com/ply/ply.html#ply_nn27).
+#      See the last example in section 6.11 (https://www.dabeaz.com/ply/ply.html#ply_nn35b).
 
 ###########################################################
 ## uC Parser ##############################################
 ###########################################################
 
 class UCParser:
+
+    start = 'program' # top level rule
 
     def p_empty(self, p):
         ''' empty : '''
@@ -369,14 +384,38 @@ class UCParser:
     ##               | <read_statement>
     ##
 
+    def p_compound_statement(self, p):
+        ''' statement : expression_statement
+                      | compound_statement
+                      | selection_statement
+                      | iteration_statement
+                      | jump_statement
+                      | assert_statement
+                      | print_statement
+                      | read_statement
+        '''
+        pass
+
     ##
     ## <expression_statement> ::= {<expression>}? ;
     ##
+
+    def p_compound_statement(self, p):
+        ''' expression_statement : empty
+                                 | expression
+        '''
+        pass
 
     ##
     ## <selection_statement> ::= if ( <expression> ) <statement>
     ##                         | if ( <expression> ) <statement> else <statement>
     ##
+
+    def p_selection_statement(self, p):
+        ''' selection_statement : IF LPAREN expression RPAREN statement
+                                | IF LPAREN expression RPAREN statement ELSE statement
+        '''
+        pass
 
     ##
     ## <iteration_statement> ::= while ( <expression> ) <statement>
