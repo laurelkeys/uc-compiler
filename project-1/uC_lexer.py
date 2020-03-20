@@ -37,8 +37,8 @@ from ply.lex import LexToken
 ## uC Lexer ###############################################
 ###########################################################
 
-class UCLexer():
-    ''' A lexer for the uC programming language.
+class UCLexer:
+    ''' A lexer for the uC programming language.\n
         After building it, set the input text with `input()`, and call `token()` to get new tokens.
     '''
 
