@@ -437,3 +437,34 @@ class UCParser:
 
     ##
     ## <read_statement> ::= read ( {<declarator>}+ );
+    ##
+
+    def p_read_statement(self, p):
+        ''' read_statement : READ LPAREN expression RPAREN statement
+                                | IF LPAREN expression RPAREN statement ELSE statement
+        '''
+        pass
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#                                                                     #
+#     # {<foo>}* : 0 or more repetitions (i.e. an "optional list")    #
+#     def p_foo__list__opt(self, p):                                  #
+#         ''' foo__list__opt : empty                                  #
+#                            | foo__list                              #
+#         '''                                                         #
+#                                                                     #
+#     # {<foo>}+ : 1 or more repetitions (i.e. a "list")              #
+#     def p_foo__list(self, p):                                       #
+#         ''' foo__list : foo                                         #
+#                       | foo__list foo                               #
+#         '''                                                         #
+#         pass                                                        #
+#                                                                     #
+#     # {<foo>}? : 0 or 1 repetitions (i.e. an "optional")            #
+#     def p_foo__opt(self, p):                                        #
+#         ''' foo__opt : empty                                        #
+#                      | foo                                          #
+#         '''                                                         #
+#         pass                                                        #
+#                                                                     #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
