@@ -39,6 +39,8 @@ class UCParser:
 
     start = 'program' # top level rule
 
+    tokens = UCLexer.tokens
+
     def p_empty(self, p):
         ''' empty : '''
         p[0] = None

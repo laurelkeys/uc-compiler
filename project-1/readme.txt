@@ -3,7 +3,7 @@
 <global_declaration> ::= <function_definition>
                        | <declaration>
 
-<function_definition> ::= {<type_specifier>}? <declarator> {<declaration>}* <compound-statement>
+<function_definition> ::= {<type_specifier>}? <declarator> {<declaration>}* <compound_statement>
 
 <type_specifier> ::= void
                    | char
@@ -19,19 +19,19 @@
 <constant_expression> ::= <binary_expression>
 
 <binary_expression> ::= <cast_expression>
-                      | <binary_expression * binary_expression
-                      | binary_expression / binary_expression
-                      | binary_expression % binary_expression
-                      | binary_expression + binary_expression
-                      | binary_expression - binary_expression
-                      | binary_expression < binary_expression
-                      | binary_expression <= binary_expression
-                      | binary_expression > binary_expression
-                      | binary_expression >= binary_expression
-                      | binary_expression == binary_expression
-                      | binary_expression != binary_expression
-                      | binary_expression && binary_expression
-                      | binary_expression || binary_expression
+                      | <binary_expression> * <binary_expression>
+                      | <binary_expression> / <binary_expression>
+                      | <binary_expression> % <binary_expression>
+                      | <binary_expression> + <binary_expression>
+                      | <binary_expression> - <binary_expression>
+                      | <binary_expression> < <binary_expression>
+                      | <binary_expression> <= <binary_expression>
+                      | <binary_expression> > <binary_expression>
+                      | <binary_expression> >= <binary_expression>
+                      | <binary_expression> == <binary_expression>
+                      | <binary_expression> != <binary_expression>
+                      | <binary_expression> && <binary_expression>
+                      | <binary_expression> || <binary_expression>
 
 <cast_expression> ::= <unary_expression>
                     | ( <type_specifier> ) <cast_expression>
@@ -47,7 +47,7 @@
                        | <postfix_expression> ++
                        | <postfix_expression> --
 
-<primary-expression> ::= <identifier>
+<primary_expression> ::= <identifier>
                        | <constant>
                        | <string>
                        | ( <expression> )
@@ -118,4 +118,4 @@
 
 <print_statement> ::= print ( {<expression>}* ) ;
 
-<read_statement> ::= read ( {<declarator>}+ );
+<read_statement> ::= read ( {<declarator>}+ ) ;
