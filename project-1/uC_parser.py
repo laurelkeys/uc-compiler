@@ -75,7 +75,7 @@ class UCParser:
     ## <program> ::= {<global_declaration>}+
     ##
 
-    def p_program(self, p):
+    def p_program(self, p): # NOTE this is the top level rule, as defined by `start`
         ''' program : global_declaration__list '''
         p[0] = Program(p[1])
 
@@ -219,7 +219,7 @@ class UCParser:
         ''' unary_expression : postfix_expression
                              | PLUSPLUS unary_expression
                              | MINUSMINUS unary_expression
-                             | unary_expression cast_expression
+                             | unary_operator cast_expression
         '''
         pass
 
@@ -348,7 +348,7 @@ class UCParser:
     ##
 
     def p_unary_operator(self, p):
-        ''' unary_operator : AND
+        ''' unary_operator : ADDRESS
                            | TIMES
                            | PLUS
                            | MINUS
@@ -577,3 +577,5 @@ class UCParser:
 #                  | foo
 #     '''
 #     p[0] = p[1]
+
+parser = yacc.yacc()

@@ -1,17 +1,8 @@
-
+import sys
 
 ###########################################################
 ## uC Abstract Syntax Tree ################################
 ###########################################################
-
-def _repr(obj):
-    """
-    Get the representation of an object, with dedicated pprint-like format for lists.
-    """
-    if isinstance(obj, list):
-        return '[' + (',\n '.join((_repr(e).replace('\n', '\n ') for e in obj))) + '\n]'
-    else:
-        return repr(obj)
 
 class Node:
     ''' Abstract base class for the AST nodes.\n
@@ -114,22 +105,20 @@ class NodeVisitor(object):
             self.visit(c)
 
 ###########################################################
+## uC Nodes ###############################################
 ###########################################################
 
 class Program(Node):
     ''' This is the top of the AST, representing a uC program (a translation unit in K&R jargon).\n
-        It contains a list of global-declaration's, which are either declarations (Decl), or function definitions (FuncDef).
+        It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
     '''
     _fields = ['decls']
-
 
 class BinaryOp(Node):
     _fields = ['lvalue', 'op', 'rvalue']
 
-
 class ID(Node):
     _fields = ['value']
-
 
 # TODO implement:
 # [ ] ArrayDecl

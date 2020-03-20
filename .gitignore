@@ -1,3 +1,8 @@
+# PLY
+parser.out
+parsetab.py
+
+# VS Code
 .vscode/
 
 # Byte-compiled / optimized / DLL files
