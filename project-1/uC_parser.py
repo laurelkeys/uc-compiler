@@ -53,12 +53,12 @@ class UCParser:
     ##
 
     def p_program(self, p):
-        ''' program : global_declaration_list '''
+        ''' program : global_declaration__list '''
         p[0] = Program(p[1])
 
-    def p_global_declaration_list(self, p):
-        ''' global_declaration_list : global_declaration
-                                    | global_declaration_list global_declaration
+    def p_global_declaration__list(self, p):
+        ''' global_declaration__list : global_declaration
+                                     | global_declaration__list global_declaration
         '''
         if len(p) == 2:
             p[0] = [p[1]]
@@ -80,23 +80,9 @@ class UCParser:
     ## <function_definition> ::= {<type_specifier>}? <declarator> {<declaration>}* <compound_statement>
     ##
 
-    def p_function_definition_01(self, p):
-        ''' function_definition : declarator declaration_list_opt compound_statement
-                                | declaration
-        '''
+    def p_function_definition(self, p):
+        ''' function_definition : type_specifier__opt declarator declaration__list__opt compound_statement '''
         pass
-
-    def p_function_definition_02(self, p):
-        ''' function_definition : type_specifier declarator declaration_list_opt compound_statement
-                                | declaration
-        '''
-        pass
-
-    def p_declaration_list_opt(self, p):
-        ''' declaration_list_opt : empty
-                                 | declaration_list
-        '''
-        p[0] = p[1]
 
     ##
     ## <type_specifier> ::= void
@@ -124,10 +110,9 @@ class UCParser:
     def p_declarator(self, p):
         ''' declarator : identifier
                        | LPAREN declarator RPAREN
-                       | declarator LBRACKET RBRACKET
-                       | declarator LBRACKET constant_expression_list RBRACKET
+                       | declarator LBRACKET constant_expression__opt RBRACKET
                        | declarator LPAREN parameter_list RPAREN
-                       | declarator LPAREN identifier_list_opt RPAREN
+                       | declarator LPAREN identifier__list__opt RPAREN
         '''
         pass
 
@@ -135,7 +120,7 @@ class UCParser:
     ## <constant_expression> ::= <binary_expression>
     ##
 
-    def p_type_specifier(self, p):
+    def p_constant_expression(self, p):
         ''' constant_expression : binary_expression '''
         pass
 
@@ -179,7 +164,7 @@ class UCParser:
     ##                     | ( <type_specifier> ) <cast_expression>
     ##
 
-    def p_binary_expression(self, p):
+    def p_cast_expression(self, p):
         ''' cast_expression : unary_expression
                             | LPAREN type_specifier RPAREN cast_expression
         '''
@@ -211,7 +196,7 @@ class UCParser:
     def p_postfix_expression(self, p):
         ''' postfix_expression : primary_expression
                                | postfix_expression LBRACKET expression RBRACKET
-                               | postfix_expression LPAREN assignment_expression_list_opt RPAREN
+                               | postfix_expression LPAREN assignment_expression__list__opt RPAREN
                                | postfix_expression PLUSPLUS
                                | postfix_expression MINUSMINUS
         '''
@@ -251,8 +236,8 @@ class UCParser:
     ##
 
     def p_expression(self, p):
-        ''' constant : assignment_expression
-                     | expression COMMA assignment_expression
+        ''' expression : assignment_expression
+                       | expression COMMA assignment_expression
         '''
         pass
 
@@ -276,7 +261,7 @@ class UCParser:
     ##                         | -=
     ##
 
-    def p_assignment_expression(self, p):
+    def p_assignment_operator(self, p):
         ''' assignment_operator : EQUALS
                                 | TIMESEQUALS
                                 | DIVEQUALS
@@ -295,13 +280,13 @@ class UCParser:
     ##
 
     def p_unary_operator(self, p):
-        ''' assignment_operator : AND
-                                | TIMES
-                                | PLUS
-                                | MINUS
-                                | NOT
+        ''' unary_operator : AND
+                           | TIMES
+                           | PLUS
+                           | MINUS
+                           | NOT
         '''
-        pass # FIXME add ++ and -- (?)
+        pass
 
     ##
     ## <parameter_list> ::= <parameter_declaration>
@@ -319,7 +304,7 @@ class UCParser:
     ##
 
     def p_parameter_declaration(self, p):
-        ''' parameter_list : type_specifier declarator '''
+        ''' parameter_declaration : type_specifier declarator '''
         pass
 
     ##
@@ -327,7 +312,7 @@ class UCParser:
     ##
 
     def p_declaration(self, p):
-        ''' declaration : type_specifier init_declarator_list_opt '''
+        ''' declaration : type_specifier init_declarator__list__opt SEMI '''
         pass
 
     ##
@@ -335,7 +320,7 @@ class UCParser:
     ##                     | <declarator> = <initializer>
     ##
 
-    def p_declaration(self, p):
+    def p_init_declarator(self, p):
         ''' init_declarator : declarator
                             | declarator EQUALS initializer
         '''
@@ -370,7 +355,7 @@ class UCParser:
     ##
 
     def p_compound_statement(self, p):
-        ''' compound_statement : LBRACE declaration_list_opt statement_list_opt RBRACE '''
+        ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
         pass
 
     ##
@@ -384,7 +369,7 @@ class UCParser:
     ##               | <read_statement>
     ##
 
-    def p_compound_statement(self, p):
+    def p_statement(self, p):
         ''' statement : expression_statement
                       | compound_statement
                       | selection_statement
@@ -400,10 +385,8 @@ class UCParser:
     ## <expression_statement> ::= {<expression>}? ;
     ##
 
-    def p_compound_statement(self, p):
-        ''' expression_statement : empty
-                                 | expression
-        '''
+    def p_expression_statement(self, p):
+        ''' expression_statement : expression__opt '''
         pass
 
     ##
@@ -422,27 +405,45 @@ class UCParser:
     ##                         | for ( {<expression>}? ; {<expression>}? ; {<expression>}? ) <statement>
     ##
 
+    def p_iteration_statement(self, p):
+        ''' iteration_statement : WHILE LPAREN expression RPAREN
+                                | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN SEMI
+        '''
+        pass
+
     ##
     ## <jump_statement> ::= break ;
     ##                    | return {<expression>}? ;
     ##
 
+    def p_jump_statement(self, p):
+        ''' jump_statement : BREAK SEMI
+                           | RETURN expression__opt SEMI
+        '''
+        pass
+
     ##
     ## <assert_statement> ::= assert <expression> ;
     ##
+
+    def p_assert_statement(self, p):
+        ''' assert_statement : ASSERT expression SEMI '''
+        pass
 
     ##
     ## <print_statement> ::= print ( {<expression>}* ) ;
     ##
 
+    def p_print_statement(self, p):
+        ''' print_statement : PRINT LPAREN expression__list__opt RPAREN SEMI '''
+        pass
+
     ##
-    ## <read_statement> ::= read ( {<declarator>}+ );
+    ## <read_statement> ::= read ( {<declarator>}+ ) ;
     ##
 
     def p_read_statement(self, p):
-        ''' read_statement : READ LPAREN expression RPAREN statement
-                                | IF LPAREN expression RPAREN statement ELSE statement
-        '''
+        ''' read_statement : READ LPAREN declarator__list RPAREN SEMI '''
         pass
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
