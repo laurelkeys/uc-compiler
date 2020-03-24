@@ -5,6 +5,17 @@ from uC_lexer import UCLexer
 from uC_AST import *
 
 
+precedence = (
+    ('nonassoc', 'LT', 'GT'),
+    ('left', 'OR'),
+    ('left', 'AND'),
+    ('left', 'EQ', 'NEQ'),
+    ('left', 'GT', 'GEQ', 'LT', 'LEQ'),
+    ('left', 'PLUS', 'MINUS'),
+    ('left', 'TIMES', 'DIV', 'MOD'),
+)
+
+
 def p_empty(p):
     ''' empty : '''
     p[0] = None
@@ -263,7 +274,7 @@ def p_error(p):
 
 if __name__ == "__main__":
     start = 'expression' # top level rule
-    
+
     tokens = UCLexer.tokens
-    
+
     parser = yacc.yacc()
