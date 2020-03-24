@@ -147,8 +147,8 @@ class EmptyStatement(Node):
 class ExprList(Node):
     _fields = ['exprs']
 
-class For(Node): # FIXME add 'body'?
-    _fields = ['init', 'cond', 'next']
+class For(Node):
+    _fields = ['init', 'cond', 'next', 'body']
 
 class FuncCall(Node):
     _fields = ['name', 'args']
@@ -203,5 +203,5 @@ class Type(Node):
 class UnaryOp(Node):
     _fields = ['op', 'expr']
 
-class While(Node): # FIXME add 'body'?
-    _fields = ['cond']
+class While(Node):
+    _fields = ['cond', 'body']

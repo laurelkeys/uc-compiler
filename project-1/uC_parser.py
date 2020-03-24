@@ -74,7 +74,7 @@ class UCParser:
     # <string>
     def p_string(self, p):
         """ string : STRING_LITERAL """
-    p[0] = Constant("string", p[1])
+        p[0] = Constant("string", p[1])
 
 
     # <identifier>
@@ -165,7 +165,7 @@ class UCParser:
     ## <constant_expression> ::= <binary_expression>
     def p_constant_expression(self, p):
         ''' constant_expression : binary_expression '''
-        pass
+        p[0] = p[1]
 
     def p_constant_expression__opt(self, p):
         ''' constant_expression__opt : empty
@@ -258,8 +258,8 @@ class UCParser:
             else:
                 p[0] = FuncCall(p[1], p[3])
         else:
-            # FIXME check if this should be represented differently from when ++ or -- comes as a prefix
-            p[0] = UnaryOp(p[1], p[2])
+            # NOTE a 'p' is added so we can differentiate this from when ++ or -- comes as a prefix
+            p[0] = UnaryOp('p' + p[2], p[1])
 
 
     ## <primary_expression> ::= <identifier>
@@ -397,6 +397,11 @@ class UCParser:
     def p_declaration(self, p):
         ''' declaration : type_specifier init_declarator__list__opt SEMI '''
         pass
+        # FIXME https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L425
+        # if p[2] is None:
+        #     p[0] = self._build_declarations(spec=p[1], decls=[dict(decl=None, init=None)])
+        # else:
+        #     p[0] = self._build_declarations(spec=p[1], decls=p[2])
 
     def p_declaration__list__opt(self, p):
         ''' declaration__list__opt : empty
@@ -417,7 +422,11 @@ class UCParser:
         ''' init_declarator : declarator
                             | declarator EQUALS initializer
         '''
-        pass
+        if len(p) == 2:
+            p[0] = dict(decl=p[1], init=None)
+        else:
+            p[0] = dict(decl=p[1], init=p[3])
+        # FIXME ?
 
     def p_init_declarator__list__opt(self, p):
         ''' init_declarator__list__opt : empty
@@ -521,13 +530,13 @@ class UCParser:
     ## <iteration_statement> ::= while ( <expression> ) <statement>
     ##                         | for ( {<expression>}? ; {<expression>}? ; {<expression>}? ) <statement>
     def p_iteration_statement(self, p):
-        ''' iteration_statement : WHILE LPAREN expression RPAREN
-                                | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN SEMI
+        ''' iteration_statement : WHILE LPAREN expression RPAREN statement
+                                | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN statement
         '''
         if len(p) == 5:
-            p[0] = While(p[3]) # FIXME pass the statement (and add it to the docstring)
+            p[0] = While(p[3], p[5])
         else:
-            p[0] = For(p[3], p[5], p[7]) # FIXME pass the statement (and add it to the docstring)
+            p[0] = For(p[3], p[5], p[7], p[9])
 
 
     ## <jump_statement> ::= break ;
