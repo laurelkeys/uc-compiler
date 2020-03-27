@@ -36,12 +36,13 @@ from uC_AST import *
 
 class UCParser:
 
-    start = 'program' # top level rule
-
-    tokens = UCLexer.tokens
-
-    def build(self):
-        self.parser = yacc.yacc(object=self) # , start='program')
+    def __init__(self):
+        self.lexer = UCLexer(
+            error_func=lambda msg, x, y: print("Lexical error: %s at%d:%d" % (msg, x, y))
+        )
+        self.lexer.build()
+        self.tokens = self.lexer.tokens
+        self.parser = yacc.yacc(module=self, start='program') # top level rule
 
 
     def p_error(self, p):

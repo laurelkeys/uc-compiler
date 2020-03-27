@@ -23,13 +23,57 @@ precedence = (
     ('left', 'TIMES', 'DIV', 'MOD'),
 
     ('right', 'ADDRESS'),
-    ('right', '__DEREFERRENCE'), # indirection
+    ('right', '__DEREFERENCE'), # indirection
     ('right', 'NOT'),
     ('right', '__UPLUS', '__UMINUS'), # unary plus and minus
     ('right', '__pre_PLUSPLUS', '__pre_MINUSMINUS'), # prefix increment and decrement
 
     ('left', '__post_PLUSPLUS', '__post_MINUSMINUS'), # suffix/postfix increment and decrement
 )
+
+###########################################################
+
+def _type_modify_decl(self, decl, modifier):
+    # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L251
+    pass
+
+def _build_declarations(spec, decls):
+        ''' Builds a list of declarations all sharing the given specifiers. '''
+        declarations = []
+
+        for decl in decls:
+            assert decl['decl'] is not None
+            declaration = Decl(
+                name=None,
+                type=decl['decl'],
+                init=decl.get('init'),
+                # coord=decl['decl'].coord
+            )
+
+            fixed_decl = declaration # FIXME
+            # if isinstance(declaration.type, Type):
+            #     fixed_decl = declaration
+            # else:
+            #     fixed_decl = _fix_decl_name_type(declaration, spec)
+            # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L375
+
+            declarations.append(fixed_decl)
+
+        return declarations
+
+def _build_function_definition(spec, decl, param_decls, body):
+    ''' Builds a function definition. '''
+    declaration, *_ = _build_declarations(
+        spec=spec,
+        decls=[dict(decl=decl, init=None)]
+    )
+
+    return FuncDef(
+        decl=declaration,
+        param_decls=param_decls,
+        body=body,
+        # coord=decl.coord
+    )
 
 ###########################################################
 
@@ -117,7 +161,7 @@ def p_assignment_operator(p):
 ##                    | !
 def p_unary_operator(p):
     ''' unary_operator : ADDRESS
-                       | TIMES %prec __DEREFERRENCE
+                       | TIMES %prec __DEREFERENCE
                        | PLUS %prec __UPLUS
                        | MINUS %prec __UMINUS
                        | NOT
@@ -297,12 +341,15 @@ def p_constant_expression__opt(p):
 ## <declarator> ::= {<pointer>}? <direct_declarator>
 def p_declarator(p):
     ''' declarator : pointer__opt direct_declarator '''
+    if p[1] is None:
+        p[0] = p[2]
+    else:
+        p[0] = _type_modify_decl(p[2], p[1])
     # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1087
-    pass
 
 ## <pointer> ::= * {<pointer>}?
 def p_pointer(p):
-    ''' pointer : TIMES pointer__opt %prec __DEREFERRENCE '''
+    ''' pointer : TIMES pointer__opt %prec __DEREFERENCE '''
     # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1199
     pass
 def p_pointer__opt(p):
@@ -346,38 +393,6 @@ def p_parameter_declaration(p):
 
 ###########################################################
 
-## <declaration> ::=  <type_specifier> {<init_declarator>}* ;
-def p_declaration(p):
-    ''' declaration : type_specifier init_declarator__list__opt SEMI '''
-    # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L740
-    pass
-def p_declaration__list(p):
-    ''' declaration__list : declaration
-                          | declaration__list declaration
-    '''
-    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
-
-## <init_declarator> ::= <declarator>
-##                     | <declarator> = <initializer>
-def p_init_declarator(p):
-    ''' init_declarator : declarator
-                        | declarator EQUALS initializer
-    '''
-    if len(p) == 2:
-        p[0] = dict(decl=p[1], init=None)
-    else:
-        p[0] = dict(decl=p[1], init=p[3])
-def p_init_declarator__list__opt(p):
-    ''' init_declarator__list__opt : empty
-                                   | init_declarator__list
-    '''
-    p[0] = p[1]
-def p_init_declarator__list(p):
-    ''' init_declarator__list : init_declarator
-                              | init_declarator__list init_declarator
-    '''
-    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
-
 ## <initializer> ::= <assignment_expression>
 ##                 | { <initializer_list> }
 ##                 | { <initializer_list> , }
@@ -404,6 +419,43 @@ def p_initializer_list(p):
             p[1] = InitList([p[1]])
         p[1].exprs.append(p[3])
         p[0] = p[1]
+
+###########################################################
+
+## <init_declarator> ::= <declarator>
+##                     | <declarator> = <initializer>
+def p_init_declarator(p):
+    ''' init_declarator : declarator
+                        | declarator EQUALS initializer
+    '''
+    if len(p) == 2:
+        p[0] = dict(decl=p[1], init=None)
+    else:
+        p[0] = dict(decl=p[1], init=p[3])
+
+## <init_declarator_list> ::= <init_declarator>
+##                          | <init_declarator_list> , <init_declarator>
+def p_init_declarator_list(p):
+    ''' init_declarator_list : init_declarator
+                             | init_declarator_list COMMA init_declarator
+    '''
+    if len(p) == 2:
+        p[0] = [p[1]]
+    else:
+        p[0] = p[1] + [p[3]]
+def p_init_declarator_list__opt(p):
+    ''' init_declarator_list__opt : empty
+                                  | init_declarator_list
+    '''
+    p[0] = p[1]
+
+###########################################################
+
+## <declaration> ::=  <type_specifier> {<init_declarator_list>}? ;
+def p_declaration(p):
+    ''' declaration : type_specifier init_declarator_list__opt SEMI '''
+    # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L740
+    pass
 
 ###########################################################
 

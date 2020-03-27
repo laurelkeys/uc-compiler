@@ -87,7 +87,10 @@
 
 <parameter_declaration> ::= <type_specifier> <declarator>
 
-<declaration> ::=  <type_specifier> {<init_declarator>}* ;
+<declaration> ::=  <type_specifier> {<init_declarator_list>}? ;
+
+<init_declarator_list> ::= <init_declarator>
+                         | <init_declarator_list> , <init_declarator>
 
 <init_declarator> ::= <declarator>
                     | <declarator> = <initializer>

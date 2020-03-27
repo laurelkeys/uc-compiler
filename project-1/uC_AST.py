@@ -135,8 +135,8 @@ class Compound(Node): # FIXME ?
 class Constant(Node):
     _fields = ['type', 'value']
 
-# [ ] Decl
-# FIXME ?
+class Decl(Node):
+    _fields = ['name', 'type', 'init']
 
 # [ ] DeclList
 # FIXME _fields = ['decls']
@@ -156,8 +156,8 @@ class FuncCall(Node):
 # [ ] FuncDecl
 # FIXME _fields = ['type', 'args']
 
-# [ ] FuncDef
-# FIXME _fields = ['decl', 'body']
+class FuncDef(Node):
+    _fields = ['decl', 'param_decls', 'body']
 
 # [ ] GlobalDecl
 # FIXME ?
@@ -197,8 +197,8 @@ class Return(Node):
 class Type(Node):
     _fields = ['type']
 
-# [ ] VarDecl
-# FIXME ?
+class VarDecl(Node):
+    _fields = ['declname', 'type']
 
 class UnaryOp(Node):
     _fields = ['op', 'expr']
