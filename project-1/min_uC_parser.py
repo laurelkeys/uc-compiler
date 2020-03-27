@@ -297,17 +297,19 @@ def p_constant_expression__opt(p):
 ## <declarator> ::= {<pointer>}? <direct_declarator>
 def p_declarator(p):
     ''' declarator : pointer__opt direct_declarator '''
+    # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1087
     pass
 
 ## <pointer> ::= * {<pointer>}?
 def p_pointer(p):
     ''' pointer : TIMES pointer__opt %prec __DEREFERRENCE '''
+    # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1199
     pass
 def p_pointer__opt(p):
     ''' pointer__opt : empty
                      | pointer
     '''
-    pass
+    p[0] = p[1]
 
 ## <direct_declarator> ::= <identifier>
 ##                       | ( <declarator> )
@@ -321,6 +323,7 @@ def p_direct_declarator(p):
                           | direct_declarator LPAREN parameter_list RPAREN
                           | direct_declarator LPAREN identifier__list__opt RPAREN
     '''
+    # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1087
     pass
 
 ## <parameter_list> ::= <parameter_declaration>
@@ -339,6 +342,68 @@ def p_parameter_list(p):
 def p_parameter_declaration(p):
     ''' parameter_declaration : type_specifier declarator '''
     # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1264
+    pass
+
+###########################################################
+
+## <declaration> ::=  <type_specifier> {<init_declarator>}* ;
+def p_declaration(p):
+    ''' declaration : type_specifier init_declarator__list__opt SEMI '''
+    # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L740
+    pass
+def p_declaration__list(p):
+    ''' declaration__list : declaration
+                          | declaration__list declaration
+    '''
+    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+
+## <init_declarator> ::= <declarator>
+##                     | <declarator> = <initializer>
+def p_init_declarator(p):
+    ''' init_declarator : declarator
+                        | declarator EQUALS initializer
+    '''
+    if len(p) == 2:
+        p[0] = dict(decl=p[1], init=None)
+    else:
+        p[0] = dict(decl=p[1], init=p[3])
+def p_init_declarator__list__opt(p):
+    ''' init_declarator__list__opt : empty
+                                   | init_declarator__list
+    '''
+    p[0] = p[1]
+def p_init_declarator__list(p):
+    ''' init_declarator__list : init_declarator
+                              | init_declarator__list init_declarator
+    '''
+    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+
+## <initializer> ::= <assignment_expression>
+##                 | { <initializer_list> }
+##                 | { <initializer_list> , }
+def p_initializer(p):
+    ''' initializer : assignment_expression
+                    | LBRACE initializer_list RBRACE
+                    | LBRACE initializer_list COMMA RBRACE
+    '''
+    if len(p) == 2:
+        p[0] = p[1]
+    else:
+        p[0] = p[2]
+
+## <initializer_list> ::= <initializer>
+##                      | <initializer_list> , <initializer>
+def p_initializer_list(p):
+    ''' initializer_list : initializer
+                         | initializer_list COMMA initializer
+    '''
+    if len(p) == 2:
+        p[0] = InitList([p[1]])
+    else:
+        if not isinstance(p[1], InitList):
+            p[1] = InitList([p[1]])
+        p[1].exprs.append(p[3])
+        p[0] = p[1]
 
 ###########################################################
 
@@ -351,7 +416,7 @@ def p_error(p):
 ###########################################################
 
 if __name__ == "__main__":
-    start = 'parameter_list' # top level rule
+    start = 'declaration' # top level rule
 
     tokens = UCLexer.tokens
 
