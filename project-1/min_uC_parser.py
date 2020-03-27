@@ -487,6 +487,30 @@ def p_read_statement(p):
 
 ###########################################################
 
+## <iteration_statement> ::= while ( <expression> ) <statement>
+##                         | for ( {<expression>}? ; {<expression>}? ; {<expression>}? ) <statement>
+def p_iteration_statement(p):
+    ''' iteration_statement : WHILE LPAREN expression RPAREN statement
+                            | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN statement
+    '''
+    if len(p) == 5:
+        p[0] = While(p[3], p[5])
+    else:
+        p[0] = For(p[3], p[5], p[7], p[9])
+
+## <selection_statement> ::= if ( <expression> ) <statement>
+##                         | if ( <expression> ) <statement> else <statement>
+def p_selection_statement(p):
+    ''' selection_statement : IF LPAREN expression RPAREN statement
+                            | IF LPAREN expression RPAREN statement ELSE statement
+    '''
+    if len(p) == 6:
+        p[0] = If(p[3], p[5], None)
+    else:
+        p[0] = If(p[3], p[5], p[6])
+
+###########################################################
+
 def p_error(p):
     if p is not None:
         print("Error near symbol '%s'" % p.value)
@@ -497,6 +521,8 @@ def p_error(p):
 
 def p_statement(p):
     ''' statement : expression_statement
+                  | selection_statement
+                  | iteration_statement
                   | jump_statement
                   | assert_statement
                   | print_statement
