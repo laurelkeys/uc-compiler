@@ -233,13 +233,13 @@ def p_unary_expression(p):
 
 ## <postfix_expression> ::= <primary_expression>
 ##                        | <postfix_expression> [ <expression> ]
-##                        | <postfix_expression> ( {<argument_expression>}? )
+##                        | <postfix_expression> ( {<argument_expression_list>}? )
 ##                        | <postfix_expression> ++
 ##                        | <postfix_expression> --
 def p_postfix_expression(p):
     ''' postfix_expression : primary_expression
                            | postfix_expression LBRACKET expression RBRACKET
-                           | postfix_expression LPAREN argument_expression__opt RPAREN
+                           | postfix_expression LPAREN argument_expression_list__opt RPAREN
                            | postfix_expression PLUSPLUS %prec __post_PLUSPLUS
                            | postfix_expression MINUSMINUS %prec __post_MINUSMINUS
     '''
@@ -282,36 +282,26 @@ def p_expression(p):
             p[1] = ExprList([p[1]])
         p[1].exprs.append(p[3])
         p[0] = p[1]
-def p_expression__list__opt(p):
-    ''' expression__list__opt : empty
-                              | expression__list
-    '''
-    p[0] = p[1]
-def p_expression__list(p):
-    ''' expression__list : expression
-                         | expression__list expression
-    '''
-    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
 def p_expression__opt(p):
     ''' expression__opt : empty
                         | expression
     '''
     p[0] = p[1]
 
-## <argument_expression> ::= <assignment_expression>
-##                         | <argument_expression> , <assignment_expression>
+## <argument_expression_list> ::= <assignment_expression>
+##                              | <argument_expression_list> , <assignment_expression>
 def p_argument_expression(p):
-    ''' argument_expression : assignment_expression
-                            | argument_expression COMMA assignment_expression
+    ''' argument_expression_list : assignment_expression
+                                 | argument_expression_list COMMA assignment_expression
     '''
     if len(p) == 2:
         p[0] = ExprList([p[1]])
     else:
         p[1].exprs.append(p[3])
         p[0] = p[1]
-def p_argument_expression__opt(p):
-    ''' argument_expression__opt : empty
-                                 | argument_expression
+def p_argument_expression_list__opt(p):
+    ''' argument_expression_list__opt : empty
+                                      | argument_expression_list
     '''
     p[0] = p[1]
 
@@ -456,6 +446,44 @@ def p_declaration(p):
     ''' declaration : type_specifier init_declarator_list__opt SEMI '''
     # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L740
     pass
+    # if p[2] is None:
+    #     p[0] = self._build_declarations(spec=p[1], decls=[dict(decl=None, init=None)])
+    # else:
+    #     p[0] = self._build_declarations(spec=p[1], decls=p[2])
+
+###########################################################
+
+## <expression_statement> ::= {<expression>}? ;
+def p_expression_statement(p):
+    ''' expression_statement : expression__opt '''
+    p[0] = p[1]
+
+## <jump_statement> ::= break ;
+##                    | return {<expression>}? ;
+def p_jump_statement(p):
+    ''' jump_statement : BREAK SEMI
+                       | RETURN expression__opt SEMI
+    '''
+    if len(p) == 3:
+        p[0] = Break()
+    else:
+        p[0] = Return(p[2])
+
+## <assert_statement> ::= assert <expression> ;
+def p_assert_statement(p):
+    ''' assert_statement : ASSERT expression SEMI '''
+    p[0] = Assert(p[2])
+
+## <print_statement> ::= print ( {<argument_expression_list>}? ) ;
+def p_print_statement(p):
+    ''' print_statement : PRINT LPAREN argument_expression_list__opt RPAREN SEMI '''
+    # NOTE I've changed this rule (it's not like in uC_Grammar.ipynb)
+    p[0] = Print(p[3])
+
+## <read_statement> ::= read ( <argument_expression_list> ) ;
+def p_read_statement(p):
+    ''' read_statement : READ LPAREN argument_expression_list RPAREN SEMI '''
+    p[0] = Read(p[3])
 
 ###########################################################
 
@@ -467,8 +495,19 @@ def p_error(p):
 
 ###########################################################
 
+def p_statement(p):
+    ''' statement : expression_statement
+                  | jump_statement
+                  | assert_statement
+                  | print_statement
+                  | read_statement
+    '''
+    p[0] = p[1]
+
 if __name__ == "__main__":
-    start = 'declaration' # top level rule
+    # top level rule
+    #start = 'declaration'
+    start = 'statement'
 
     tokens = UCLexer.tokens
 
