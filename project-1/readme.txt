@@ -10,11 +10,15 @@
                    | int
                    | float
 
-<declarator> ::= <identifier>
-               | ( <declarator> )
-               | <declarator> [ {<constant_expression>}? ]
-               | <declarator> ( <parameter_list> )
-               | <declarator> ( {<identifier>}* )
+<declarator> ::= {<pointer>}? <direct_declarator>
+
+<pointer> ::= * {<pointer>}?
+
+<direct_declarator> ::= <identifier>
+                      | ( <declarator> )
+                      | <direct_declarator> [ {<constant_expression>}? ]
+                      | <direct_declarator> ( <parameter_list> )
+                      | <direct_declarator> ( {<identifier>}* )
 
 <constant_expression> ::= <binary_expression>
 
@@ -43,7 +47,7 @@
 
 <postfix_expression> ::= <primary_expression>
                        | <postfix_expression> [ <expression> ]
-                       | <postfix_expression> ( {<assignment_expression>}* )
+                       | <postfix_expression> ( {<argument_expression>}? )
                        | <postfix_expression> ++
                        | <postfix_expression> --
 
@@ -58,6 +62,9 @@
 
 <expression> ::= <assignment_expression>
                | <expression> , <assignment_expression>
+
+<argument_expression> ::= <assignment_expression>
+                        | <argument_expression> , <assignment_expression>
 
 <assignment_expression> ::= <binary_expression>
                           | <unary_expression> <assignment_operator> <assignment_expression>
@@ -80,7 +87,10 @@
 
 <parameter_declaration> ::= <type_specifier> <declarator>
 
-<declaration> ::=  <type_specifier> {<init_declarator>}* ;
+<declaration> ::=  <type_specifier> {<init_declarator_list>}? ;
+
+<init_declarator_list> ::= <init_declarator>
+                         | <init_declarator_list> , <init_declarator>
 
 <init_declarator> ::= <declarator>
                     | <declarator> = <initializer>
@@ -118,4 +128,4 @@
 
 <print_statement> ::= print ( {<expression>}* ) ;
 
-<read_statement> ::= read ( {<declarator>}+ ) ;
+<read_statement> ::= read ( <argument_expression> ) ;

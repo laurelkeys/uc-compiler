@@ -108,47 +108,100 @@ class NodeVisitor(object):
 ## uC Nodes ###############################################
 ###########################################################
 
-class Program(Node):
-    ''' This is the top of the AST, representing a uC program (a translation unit in K&R jargon).\n
-        It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
-    '''
-    _fields = ['decls']
+# [ ] ArrayDecl
+# FIXME _fields = ['type', 'dim']
 
-class BinaryOp(Node):
+class ArrayRef(Node):
+    _fields = ['name', 'subscript']
+
+class Assert(Node):
+    _fields = ['expr']
+
+class Assignment(Node): # FIXME isn't 'op' 1st more readable?
     _fields = ['lvalue', 'op', 'rvalue']
+
+class BinaryOp(Node): # FIXME isn't 'op' 1st more readable?
+    _fields = ['lvalue', 'op', 'rvalue']
+
+class Break(Node):
+    _fields = []
+
+class Cast(Node):
+    _fields = ['type', 'value']
+
+class Compound(Node): # FIXME ?
+    _fields = ['decls', 'stmts']
+
+class Constant(Node):
+    _fields = ['type', 'value']
+
+class Decl(Node):
+    _fields = ['name', 'type', 'init']
+
+# [ ] DeclList
+# FIXME _fields = ['decls']
+
+class EmptyStatement(Node):
+    _fields = []
+
+class ExprList(Node):
+    _fields = ['exprs']
+
+class For(Node):
+    _fields = ['init', 'cond', 'next', 'body']
+
+class FuncCall(Node):
+    _fields = ['name', 'args']
+
+# [ ] FuncDecl
+# FIXME _fields = ['type', 'args']
+
+class FuncDef(Node):
+    _fields = ['decl', 'param_decls', 'body']
+
+# [ ] GlobalDecl
+# FIXME ?
 
 class ID(Node):
     _fields = ['value']
 
-# TODO implement:
-# [ ] ArrayDecl
-# [ ] ArrayRef
-# [ ] Assert
-# [ ] Assignment
-# [x] BinaryOp
-# [ ] Break
-# [ ] Cast
-# [ ] Compound
-# [ ] Constant
-# [ ] Decl
-# [ ] DeclList
-# [ ] EmptyStatement
-# [ ] ExprList
-# [ ] For
-# [ ] FuncCall
-# [ ] FuncDecl
-# [ ] FuncDef
-# [ ] GlobalDecl
-# [x] ID
-# [ ] If
-# [ ] InitList
-# [ ] ParamList
-# [ ] Print
-# [x] Program
+class If(Node):
+    _fields = ['cond', 'then', 'else']
+
+class InitList(Node): # FIXME ?
+    _fields = ['exprs']
+
+class ParamList(Node):
+    _fields = ['params']
+
+class Print(Node):
+    _fields = ['expr']
+
+class Program(Node):
+    ''' This is the top of the AST, representing a uC program (a translation unit in K&R jargon).\n
+       It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
+   '''
+    _fields = ['decls']
+    # FIXME since Program fields could be either 'Decls's or 'FuncDef's (i.e. 'GlobalDecl's),
+    #       should we change its name to something like 'globals' instead (e.g. if 'GlobalDecl's field is 'global')?
+
 # [ ] PtrDecl
-# [ ] Read
-# [ ] Return
-# [ ] Type
-# [ ] VarDecl
-# [ ] UnaryOp
-# [ ] While
+# FIXME ?
+
+class Read(Node):
+    _fields = ['decl']
+
+class Return(Node):
+    _fields = ['expr']
+
+class Type(Node):
+    _fields = ['type']
+
+class VarDecl(Node):
+    _fields = ['declname', 'type']
+
+class UnaryOp(Node):
+    _fields = ['op', 'expr']
+
+class While(Node):
+    _fields = ['cond', 'body']
