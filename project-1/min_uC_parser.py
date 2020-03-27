@@ -465,7 +465,7 @@ def p_declaration__list__opt(p):
 
 ## <expression_statement> ::= {<expression>}? ;
 def p_expression_statement(p):
-    ''' expression_statement : expression__opt '''
+    ''' expression_statement : expression__opt SEMI '''
     p[0] = p[1]
 
 ## <jump_statement> ::= break ;
@@ -522,14 +522,15 @@ def p_selection_statement(p):
 ###########################################################
 
 ## <compound_statement> ::= { {<declaration>}* {<statement>}* }
-# def p_compound_statement(p):
-#     ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
-#     p[0] = Compound(p[2], p[3])
+def p_compound_statement(p):
+    ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
+    p[0] = Compound(p[2], p[3])
 
 # FIXME adding compound_statement generates over 100 shift/reduce conflicts
 #                  | compound_statement
 def p_statement(p):
     ''' statement : expression_statement
+                  | compound_statement
                   | selection_statement
                   | iteration_statement
                   | jump_statement
