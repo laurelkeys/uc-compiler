@@ -171,8 +171,8 @@ class If(Node):
 class InitList(Node): # FIXME ?
     _fields = ['exprs']
 
-# [ ] ParamList
-# FIXME _fields = ['params']
+class ParamList(Node):
+    _fields = ['params']
 
 class Print(Node):
     _fields = ['expr']

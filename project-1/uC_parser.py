@@ -40,6 +40,9 @@ class UCParser:
 
     tokens = UCLexer.tokens
 
+    def build(self):
+        self.parser = yacc.yacc(object=self) # , start='program')
+
 
     def p_error(self, p):
         if p is not None:
@@ -141,18 +144,9 @@ class UCParser:
         p[0] = p[1]
 
 
-    ## <declarator> ::= <identifier>
-    ##                | ( <declarator> )
-    ##                | <declarator> [ {<constant_expression>}? ]
-    ##                | <declarator> ( <parameter_list> )
-    ##                | <declarator> ( {<identifier>}* )
+    ## <declarator> ::= {<pointer>}? <direct_declarator>
     def p_declarator(self, p):
-        ''' declarator : identifier
-                       | LPAREN declarator RPAREN
-                       | declarator LBRACKET constant_expression__opt RBRACKET
-                       | declarator LPAREN parameter_list RPAREN
-                       | declarator LPAREN identifier__list__opt RPAREN
-        '''
+        ''' direct_declarator : pointer__opt direct_declarator '''
         pass
 
     def p_declarator__list(self, p):
@@ -160,6 +154,18 @@ class UCParser:
                              | declarator__list declarator
         '''
         p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+
+
+    ## <pointer> ::= * {<pointer>}?
+    def p_pointer(self, p):
+        ''' pointer : TIMES pointer__opt '''
+        pass
+
+    def p_pointer__opt(self, p):
+        ''' pointer__opt : empty
+                         | pointer
+        '''
+        p[0] = p[1]
 
 
     ## <constant_expression> ::= <binary_expression>
@@ -172,6 +178,21 @@ class UCParser:
                                      | constant_expression
         '''
         p[0] = p[1]
+
+
+    ## <direct_declarator> ::= <identifier>
+    ##                       | ( <declarator> )
+    ##                       | <direct_declarator> [ {<constant_expression>}? ]
+    ##                       | <direct_declarator> ( <parameter_list> )
+    ##                       | <direct_declarator> ( {<identifier>}* )
+    def p_direct_declarator(self, p):
+        ''' direct_declarator : identifier
+                              | LPAREN declarator RPAREN
+                              | direct_declarator LBRACKET constant_expression__opt RBRACKET
+                              | direct_declarator LPAREN parameter_list RPAREN
+                              | direct_declarator LPAREN identifier__list__opt RPAREN
+        '''
+        pass
 
 
     ## <binary_expression> ::= <cast_expression>
@@ -426,7 +447,6 @@ class UCParser:
             p[0] = dict(decl=p[1], init=None)
         else:
             p[0] = dict(decl=p[1], init=p[3])
-        # FIXME ?
 
     def p_init_declarator__list__opt(self, p):
         ''' init_declarator__list__opt : empty
