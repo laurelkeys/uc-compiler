@@ -450,6 +450,16 @@ def p_declaration(p):
     #     p[0] = self._build_declarations(spec=p[1], decls=[dict(decl=None, init=None)])
     # else:
     #     p[0] = self._build_declarations(spec=p[1], decls=p[2])
+def p_declaration__list(p):
+    ''' declaration__list : declaration
+                          | declaration__list declaration
+    '''
+    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+def p_declaration__list__opt(p):
+    ''' declaration__list__opt : empty
+                               | declaration__list
+    '''
+    p[0] = p[1]
 
 ###########################################################
 
@@ -511,14 +521,13 @@ def p_selection_statement(p):
 
 ###########################################################
 
-def p_error(p):
-    if p is not None:
-        print("Error near symbol '%s'" % p.value)
-    else:
-        print("Error at the end of input")
+## <compound_statement> ::= { {<declaration>}* {<statement>}* }
+# def p_compound_statement(p):
+#     ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
+#     p[0] = Compound(p[2], p[3])
 
-###########################################################
-
+# FIXME adding compound_statement generates over 100 shift/reduce conflicts
+#                  | compound_statement
 def p_statement(p):
     ''' statement : expression_statement
                   | selection_statement
@@ -529,6 +538,26 @@ def p_statement(p):
                   | read_statement
     '''
     p[0] = p[1]
+def p_statement__list(p):
+    ''' statement__list : statement
+                        | statement__list statement
+    '''
+    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+def p_statement__list__opt(p):
+    ''' statement__list__opt : empty
+                             | statement__list
+    '''
+    p[0] = p[1]
+
+###########################################################
+
+def p_error(p):
+    if p is not None:
+        print("Error near symbol '%s'" % p.value)
+    else:
+        print("Error at the end of input")
+
+###########################################################
 
 if __name__ == "__main__":
     # top level rule
