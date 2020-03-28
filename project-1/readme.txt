@@ -47,7 +47,7 @@
 
 <postfix_expression> ::= <primary_expression>
                        | <postfix_expression> [ <expression> ]
-                       | <postfix_expression> ( {<argument_expression>}? )
+                       | <postfix_expression> ( {<argument_expression_list>}? )
                        | <postfix_expression> ++
                        | <postfix_expression> --
 
@@ -63,8 +63,8 @@
 <expression> ::= <assignment_expression>
                | <expression> , <assignment_expression>
 
-<argument_expression> ::= <assignment_expression>
-                        | <argument_expression> , <assignment_expression>
+<argument_expression_list> ::= <assignment_expression>
+                            | <argument_expression_list> , <assignment_expression>
 
 <assignment_expression> ::= <binary_expression>
                           | <unary_expression> <assignment_operator> <assignment_expression>
@@ -128,4 +128,4 @@
 
 <print_statement> ::= print ( {<argument_expression_list>}? ) ;
 
-<read_statement> ::= read ( <argument_expression> ) ;
+<read_statement> ::= read ( <argument_expression_list> ) ;
