@@ -173,7 +173,7 @@ class UCParser:
         ''' global_declaration : function_definition
                                | declaration
         '''
-        pass
+        p[0] = GlobalDecl(p[1]) # FIXME
 
     def p_global_declaration__list(self, p):
         ''' global_declaration__list : global_declaration
@@ -188,7 +188,7 @@ class UCParser:
                                 |      empty     declarator declaration__list compound_statement
                                 |      empty     declarator       empty       compound_statement
         '''
-        pass
+        p[0] = FuncDef(p[1], p[2], p[3], p[4])
 
 
     def p_type_specifier(self, p):
@@ -212,7 +212,7 @@ class UCParser:
     def p_pointer(self, p):
         ''' pointer : TIMES pointer__opt %prec __DEREFERENCE '''
         # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1199
-        pass
+        p[0] = PtrDecl(p[2])  # FIXME 
 
     def p_pointer__opt(self, p):
         ''' pointer__opt : empty
