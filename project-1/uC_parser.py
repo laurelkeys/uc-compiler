@@ -42,6 +42,30 @@ class UCParser:
         )
         self.lexer.build()
         self.tokens = self.lexer.tokens
+        self.precedence = (
+            ('left', 'COMMA'),
+
+            ('right', 'TIMESEQUALS', 'DIVEQUALS', 'MODEQUALS'),
+            ('right', 'PLUSEQUALS', 'MINUSEQUALS'),
+            ('right', 'EQUALS'),
+
+            ('left', 'OR'),
+            ('left', 'AND'),
+
+            ('left', 'EQ', 'NEQ'),
+            ('left', 'GT', 'GEQ', 'LT', 'LEQ'),
+
+            ('left', 'PLUS', 'MINUS'),
+            ('left', 'TIMES', 'DIV', 'MOD'),
+
+            ('right', 'ADDRESS'),
+            ('right', '__DEREFERENCE'), # indirection
+            ('right', 'NOT'),
+            ('right', '__UPLUS', '__UMINUS'), # unary plus and minus
+            ('right', '__pre_PLUSPLUS', '__pre_MINUSMINUS'), # prefix increment and decrement
+
+            ('left', '__post_PLUSPLUS', '__post_MINUSMINUS'), # suffix/postfix increment and decrement
+        )
         self.parser = yacc.yacc(module=self, start='program') # top level rule
 
 
@@ -77,13 +101,13 @@ class UCParser:
 
     # <string>
     def p_string(self, p):
-        """ string : STRING_LITERAL """
+        ''' string : STRING_LITERAL '''
         p[0] = Constant("string", p[1])
 
 
     # <identifier>
     def p_identifier(self, p):
-        """ identifier : ID """
+        ''' identifier : ID '''
         p[0] = ID(p[1], lineno=p.lineno(1))
 
     def p_identifier__list__opt(self, p):

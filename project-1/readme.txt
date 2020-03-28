@@ -126,6 +126,6 @@
 
 <assert_statement> ::= assert <expression> ;
 
-<print_statement> ::= print ( {<expression>}* ) ;
+<print_statement> ::= print ( {<argument_expression_list>}? ) ;
 
 <read_statement> ::= read ( <argument_expression> ) ;

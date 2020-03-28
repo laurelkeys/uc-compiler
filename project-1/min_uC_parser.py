@@ -552,6 +552,35 @@ def p_statement__list__opt(p):
 
 ###########################################################
 
+## <program> ::= {<global_declaration>}+
+def p_program(p): # NOTE this is the top level rule, as defined by `start`
+    ''' program : global_declaration__list '''
+    p[0] = Program(p[1])
+
+## <global_declaration> ::= <function_definition>
+##                        | <declaration>
+def p_global_declaration(p):
+    ''' global_declaration : function_definition
+                           | declaration
+    '''
+    pass
+def p_global_declaration__list(p):
+    ''' global_declaration__list : global_declaration
+                                 | global_declaration__list global_declaration
+    '''
+    p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+
+## <function_definition> ::= {<type_specifier>}? <declarator> {<declaration>}* <compound_statement>
+def p_function_definition(p):
+    ''' function_definition : type_specifier declarator declaration__list compound_statement
+                            | type_specifier declarator       empty       compound_statement
+                            |      empty     declarator declaration__list compound_statement
+                            |      empty     declarator       empty       compound_statement
+    '''
+    pass
+
+###########################################################
+
 def p_error(p):
     if p is not None:
         print("Error near symbol '%s'" % p.value)
@@ -561,9 +590,7 @@ def p_error(p):
 ###########################################################
 
 if __name__ == "__main__":
-    # top level rule
-    #start = 'declaration'
-    start = 'statement'
+    start = 'program' # top level rule
 
     tokens = UCLexer.tokens
 
