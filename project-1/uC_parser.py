@@ -188,7 +188,6 @@ class UCParser:
                                 |      empty     declarator declaration__list compound_statement
                                 |      empty     declarator       empty       compound_statement
         '''
-        # ''' function_definition : type_specifier__opt declarator declaration__list__opt compound_statement '''
         pass
 
 
@@ -561,7 +560,3 @@ class UCParser:
     def p_read_statement(self, p):
         ''' read_statement : READ LPAREN argument_expression_list RPAREN SEMI '''
         p[0] = Read(p[3])
-
-
-if __name__ == "__main__":
-    parser = UCParser()
