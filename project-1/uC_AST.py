@@ -154,13 +154,15 @@ class FuncCall(Node):
     _fields = ['name', 'args']
 
 # [ ] FuncDecl
-# FIXME _fields = ['type', 'args']
+# class FuncDecl(Node):
+#     _fields = ['type', 'name', 'args'] # FIXME
 
 class FuncDef(Node):
-    _fields = ['decl', 'param_decls', 'body']
+    _fields = ['decl', 'name', 'param_decls', 'body']
 
 # [ ] GlobalDecl
-# FIXME ?
+class GlobalDecl(Node):
+    _fields = ['decl'] # FIXME really?
 
 class ID(Node):
     _fields = ['value']
@@ -186,7 +188,8 @@ class Program(Node):
     #       should we change its name to something like 'globals' instead (e.g. if 'GlobalDecl's field is 'global')?
 
 # [ ] PtrDecl
-# FIXME ?
+class PtrDecl(Node):
+    _fields = ['pointer'] # FIXME
 
 class Read(Node):
     _fields = ['decl']
