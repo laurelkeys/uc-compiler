@@ -108,8 +108,8 @@ class NodeVisitor(object):
 ## uC Nodes ###############################################
 ###########################################################
 
-# [ ] ArrayDecl
-# FIXME _fields = ['type', 'dim']
+class ArrayDecl(Node):
+    _fields = ['type', 'dim']
 
 class ArrayRef(Node):
     _fields = ['name', 'subscript']
@@ -127,19 +127,19 @@ class Break(Node):
     _fields = []
 
 class Cast(Node):
-    _fields = ['type', 'value']
+    _fields = ['type', 'expr']
 
-class Compound(Node): # FIXME ?
+class Compound(Node):
     _fields = ['decls', 'stmts']
 
 class Constant(Node):
     _fields = ['type', 'value']
 
-class Decl(Node):
+class Decl(Node): # FIXME ?
     _fields = ['name', 'type', 'init']
 
-# [ ] DeclList
-# FIXME _fields = ['decls']
+class DeclList(Node):
+    _fields = ['decls']
 
 class EmptyStatement(Node):
     _fields = []
@@ -153,19 +153,17 @@ class For(Node):
 class FuncCall(Node):
     _fields = ['name', 'args']
 
-# [ ] FuncDecl
-# class FuncDecl(Node):
-#     _fields = ['type', 'name', 'args'] # FIXME
+class FuncDecl(Node): # FIXME add 'name' ?
+    _fields = ['type', 'args']
 
 class FuncDef(Node):
-    _fields = ['decl', 'name', 'param_decls', 'body']
+    _fields = ['decl', 'param_decls', 'body']
 
-# [ ] GlobalDecl
 class GlobalDecl(Node):
-    _fields = ['decl'] # FIXME really?
+    _fields = ['gdecl']
 
 class ID(Node):
-    _fields = ['value']
+    _fields = ['name']
 
 class If(Node):
     _fields = ['cond', 'then', 'else']
@@ -183,13 +181,10 @@ class Program(Node):
     ''' This is the top of the AST, representing a uC program (a translation unit in K&R jargon).\n
        It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
    '''
-    _fields = ['decls']
-    # FIXME since Program fields could be either 'Decls's or 'FuncDef's (i.e. 'GlobalDecl's),
-    #       should we change its name to something like 'globals' instead (e.g. if 'GlobalDecl's field is 'global')?
+    _fields = ['gdecls']
 
-# [ ] PtrDecl
-class PtrDecl(Node):
-    _fields = ['pointer'] # FIXME
+class PtrDecl(Node): # FIXME ?
+    _fields = ['type']
 
 class Read(Node):
     _fields = ['decl']
@@ -197,10 +192,10 @@ class Read(Node):
 class Return(Node):
     _fields = ['expr']
 
-class Type(Node):
+class Type(Node): # FIXME should have a 'names'
     _fields = ['type']
 
-class VarDecl(Node):
+class VarDecl(Node): # FIXME ?
     _fields = ['declname', 'type']
 
 class UnaryOp(Node):
