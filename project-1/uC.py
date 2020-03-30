@@ -118,7 +118,7 @@ def run_compiler():
     ''' Runs the command-line compiler. '''
 
     if len(sys.argv) < 2:
-        print("Usage: ./uC.py <source-file> [-no-ast] [-debug]")
+        print("Usage: python uC.py <source-file> [-no-ast] [-debug]")
         sys.exit(1)
 
     emit_ast = True

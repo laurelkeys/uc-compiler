@@ -29,7 +29,7 @@ class Node:
 
         result, indent, separator = '', '', ''
         len_class_name = len(self.__class__.__name__)
-        for name in self.__slots__[:-2]:
+        for name in self.__dict__.keys(): # FIXME __slots__[:-2]:
             result += separator + indent + name + '=' + (
                 _repr(getattr(self, name)).replace('\n', '\n  ' + (' ' * (len(name) + len_class_name)))
             )
@@ -39,7 +39,7 @@ class Node:
 
     def children(self):
         ''' A sequence of all children that are `Node`s. '''
-        pass
+        return [] # FIXME pass
 
     def show(self, buf=sys.stdout, offset=0, attrnames=False, nodenames=False, showcoord=False, _my_node_name=None):
         ''' Pretty print the Node and all its attributes and children (recursively) to a buffer, where:
@@ -55,6 +55,7 @@ class Node:
         else:
             buf.write(lead + self.__class__.__name__+ ': ')
 
+        self.attr_names = self._fields # FIXME
         if self.attr_names:
             if attrnames:
                 nvlist = [(n, getattr(self, n)) for n in self.attr_names if getattr(self, n) is not None]
@@ -65,7 +66,7 @@ class Node:
             buf.write(attrstr)
 
         if showcoord:
-            if self.coord:
+            if hasattr(self, 'coord'): # FIXME self.coord:
                 buf.write('%s' % self.coord)
         buf.write('\n')
 

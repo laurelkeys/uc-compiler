@@ -80,7 +80,6 @@ class UCParser:
         '''
         self.lexer.filename = filename
         self.lexer._reset_lineno()
-        # FIXME https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L132
         return self.parser.parse(input=text, lexer=self.lexer, debug=debuglevel)
 
 
@@ -167,7 +166,7 @@ class UCParser:
         )
 
 
-    # Grammar rules
+    # Grammar productions
     def p_error(self, p):
         if p is not None:
             print("Error near symbol '%s'" % p.value)
@@ -242,7 +241,12 @@ class UCParser:
                                 |      empty     declarator declaration__list compound_statement
                                 |      empty     declarator       empty       compound_statement
         '''
-        p[0] = FuncDef(p[1], p[2], p[3], p[4])
+        p[0] = self._build_function_definition(
+            spec=p[1], # FIXME this can be None
+            decl=p[2],
+            param_decls=p[3],
+            body=p[4]
+        )
 
 
     def p_type_specifier(self, p):

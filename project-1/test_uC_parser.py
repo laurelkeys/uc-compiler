@@ -15,3 +15,25 @@ m = UCParser()
 ###########################################################
 
 # TODO
+examples = [
+    "int x, y, z = 5;",
+
+    "int c[5];",
+
+    '\n'.join([
+        "int a;",
+        "a = 3 * 4 + 5;",
+        "print (a);"
+    ]),
+
+    '\n'.join([
+        "/* comment */",
+        "int j = 3;",
+        "int main () {",
+        "  int i = j;",
+        "  int k = 3;",
+        "  int p = 2 * j;",
+        "  assert p == 2 * i;",
+        "}",
+    ])
+]
