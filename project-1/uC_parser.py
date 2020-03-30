@@ -36,43 +36,102 @@ from uC_AST import *
 
 class UCParser:
 
+    # ref.: https://en.cppreference.com/w/c/language/operator_precedence
+    precedence = (
+        ('left', 'COMMA'),
+
+        ('right', 'TIMESEQUALS', 'DIVEQUALS', 'MODEQUALS'),
+        ('right', 'PLUSEQUALS', 'MINUSEQUALS'),
+        ('right', 'EQUALS'),
+
+        ('left', 'OR'),
+        ('left', 'AND'),
+
+        ('left', 'EQ', 'NEQ'),
+        ('left', 'GT', 'GEQ', 'LT', 'LEQ'),
+
+        ('left', 'PLUS', 'MINUS'),
+        ('left', 'TIMES', 'DIV', 'MOD'),
+
+        ('right', 'ADDRESS'),
+        ('right', '__DEREFERENCE'), # indirection
+        ('right', 'NOT'),
+        ('right', '__UPLUS', '__UMINUS'), # unary plus and minus
+        ('right', '__pre_PLUSPLUS', '__pre_MINUSMINUS'), # prefix increment and decrement
+
+        ('left', '__post_PLUSPLUS', '__post_MINUSMINUS'), # suffix/postfix increment and decrement
+    )
+
+
     def __init__(self):
         self.lexer = UCLexer(
             error_func=lambda msg, x, y: print("Lexical error: %s at%d:%d" % (msg, x, y))
         )
         self.lexer.build()
         self.tokens = self.lexer.tokens
-        self.precedence = (
-            ('left', 'COMMA'),
-
-            ('right', 'TIMESEQUALS', 'DIVEQUALS', 'MODEQUALS'),
-            ('right', 'PLUSEQUALS', 'MINUSEQUALS'),
-            ('right', 'EQUALS'),
-
-            ('left', 'OR'),
-            ('left', 'AND'),
-
-            ('left', 'EQ', 'NEQ'),
-            ('left', 'GT', 'GEQ', 'LT', 'LEQ'),
-
-            ('left', 'PLUS', 'MINUS'),
-            ('left', 'TIMES', 'DIV', 'MOD'),
-
-            ('right', 'ADDRESS'),
-            ('right', '__DEREFERENCE'), # indirection
-            ('right', 'NOT'),
-            ('right', '__UPLUS', '__UMINUS'), # unary plus and minus
-            ('right', '__pre_PLUSPLUS', '__pre_MINUSMINUS'), # prefix increment and decrement
-
-            ('left', '__post_PLUSPLUS', '__post_MINUSMINUS'), # suffix/postfix increment and decrement
-        )
         self.parser = yacc.yacc(module=self, start='program') # top level rule
+
+
+    def parse(self, text, filename='', debuglevel=0):
+        ''' Parses uC code and returns an AST, where:
+            - `text`: A string containing the uC source code.
+            - `filename`: Name of the file being parsed (for meaningful error messages).
+            - `debuglevel`: Debug level to yacc.
+        '''
+        self.lexer.filename = filename
+        self.lexer._reset_lineno()
+        # FIXME https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L132
+        return self.parser.parse(input=text, lexer=self.lexer, debug=debuglevel)
 
 
     # Internal auxiliary methods
     def _type_modify_decl(self, decl, modifier):
-        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L251
-        pass
+        ''' Tacks a type modifier on a declarator, and returns the modified declarator.\n
+            Note: `decl` and `modifier` may be modified.
+        '''
+        modifier_head = modifier
+        modifier_tail = modifier
+
+        while modifier_tail.type:
+            modifier_tail = modifier_tail.type
+
+        if isinstance(decl, VarDecl):
+            modifier_tail.type = decl
+            return modifier
+        else:
+            decl_tail = decl
+            while not isinstance(decl_tail.type, VarDecl):
+                decl_tail = decl_tail.type
+            modifier_tail.type = decl_tail.type
+            decl_tail.type = modifier_head
+            return decl
+
+
+    def _fix_decl_name_type(self, decl, typename):
+        ''' Fixes a declaration. Modifies `decl`. '''
+        type = decl
+        while not isinstance(type, VarDecl):
+            type = type.type # reach the underlying basic type
+
+        decl.name = type.declname
+
+        for tn in typename:
+            if not isinstance(tn, Type):
+                if len(typename) > 1:
+                    self._parse_error("Invalid multiple types specified", tn.coord)
+                else:
+                    type.type = tn
+                    return decl
+
+        if not typename:
+            if not isinstance(decl.type, FuncDecl):
+                self._parse_error("Missing type in declaration", decl.coord)
+            type.type = Type(['int'], coord=decl.coord) # functions return int by default
+        else:
+            type.type = Type([typename.names[0]], coord=typename.coord)
+
+        return decl
+
 
     def _build_declarations(self, spec, decls):
             ''' Builds a list of declarations all sharing the given specifiers. '''
@@ -84,19 +143,14 @@ class UCParser:
                     name=None,
                     type=decl['decl'],
                     init=decl.get('init'),
-                    # coord=decl['decl'].coord
+                    coord=decl['decl'].coord
                 )
 
-                fixed_decl = declaration # FIXME
-                # if isinstance(declaration.type, Type):
-                #     fixed_decl = declaration
-                # else:
-                #     fixed_decl = _fix_decl_name_type(declaration, spec)
-                # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L375
-
+                fixed_decl = self._fix_decl_name_type(declaration, spec)
                 declarations.append(fixed_decl)
 
             return declarations
+
 
     def _build_function_definition(self, spec, decl, param_decls, body):
         ''' Builds a function definition. '''
