@@ -64,7 +64,7 @@
                | <expression> , <assignment_expression>
 
 <argument_expression_list> ::= <assignment_expression>
-                            | <argument_expression_list> , <assignment_expression>
+                             | <argument_expression_list> , <assignment_expression>
 
 <assignment_expression> ::= <binary_expression>
                           | <unary_expression> <assignment_operator> <assignment_expression>
