@@ -118,11 +118,11 @@ class ArrayRef(Node):
 class Assert(Node):
     _fields = ['expr']
 
-class Assignment(Node): # FIXME isn't 'op' 1st more readable?
-    _fields = ['lvalue', 'op', 'rvalue']
+class Assignment(Node):
+    _fields = ['op', 'lvalue', 'rvalue']
 
-class BinaryOp(Node): # FIXME isn't 'op' 1st more readable?
-    _fields = ['lvalue', 'op', 'rvalue']
+class BinaryOp(Node):
+    _fields = ['op', 'lvalue', 'rvalue']
 
 class Break(Node):
     _fields = []
@@ -136,7 +136,7 @@ class Compound(Node):
 class Constant(Node):
     _fields = ['type', 'value']
 
-class Decl(Node): # FIXME ?
+class Decl(Node):
     _fields = ['name', 'type', 'init']
 
 class DeclList(Node):
@@ -154,7 +154,7 @@ class For(Node):
 class FuncCall(Node):
     _fields = ['name', 'args']
 
-class FuncDecl(Node): # FIXME add 'name' ?
+class FuncDecl(Node):
     _fields = ['type', 'args']
 
 class FuncDef(Node):
@@ -169,7 +169,7 @@ class ID(Node):
 class If(Node):
     _fields = ['cond', 'then', 'else']
 
-class InitList(Node): # FIXME ?
+class InitList(Node):
     _fields = ['exprs']
 
 class ParamList(Node):
@@ -184,19 +184,19 @@ class Program(Node):
    '''
     _fields = ['gdecls']
 
-class PtrDecl(Node): # FIXME ?
+class PtrDecl(Node):
     _fields = ['type']
 
 class Read(Node):
-    _fields = ['decl']
+    _fields = ['expr']
 
 class Return(Node):
     _fields = ['expr']
 
-class Type(Node): # FIXME should have a 'names'
-    _fields = ['type']
+class Type(Node):
+    _fields = ['names']
 
-class VarDecl(Node): # FIXME ?
+class VarDecl(Node):
     _fields = ['declname', 'type']
 
 class UnaryOp(Node):

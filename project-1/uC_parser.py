@@ -255,7 +255,7 @@ class UCParser:
                            | INT
                            | FLOAT
         '''
-        p[0] = Type(p[1])
+        p[0] = Type(p[1]) # FIXME should we actually pass [p[1]] ?
 
 
     def p_declarator(self, p):
@@ -320,7 +320,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = BinaryOp(p[1], p[2], p[3])
+            p[0] = BinaryOp(p[2], p[1], p[3]) # NOTE pass 'op' first
 
 
     def p_cast_expression(self, p):
@@ -427,7 +427,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = Assignment(p[1], p[2], p[3])
+            p[0] = Assignment(p[2], p[1], p[3]) # NOTE pass 'op' first
 
 
     def p_assignment_operator(self, p):
