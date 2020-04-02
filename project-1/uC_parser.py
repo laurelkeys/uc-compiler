@@ -84,6 +84,14 @@ class UCParser:
 
 
     # Internal auxiliary methods
+    def _token_coord(self, p, token_idx):
+        last_cr = p.lexer.lexer.lexdata.rfind('\n', 0, p.lexpos(token_idx))
+        if last_cr < 0:
+            last_cr = -1
+        column = p.lexpos(token_idx) - last_cr
+        return Coord(p.lineno(token_idx), column)
+
+
     def _type_modify_decl(self, decl, modifier):
         ''' Tacks a type modifier on a declarator, and returns the modified declarator.\n
             Note: `decl` and `modifier` may be modified.
@@ -618,3 +626,21 @@ class UCParser:
     def p_read_statement(self, p):
         ''' read_statement : READ LPAREN argument_expression_list RPAREN SEMI '''
         p[0] = Read(p[3])
+
+
+class Coord(object):
+    ''' Coordinates of a syntactic element.\n
+        Consists of:
+        - `line`: Line number.
+        - `column`: Column number, for the Lexer (optional).
+    '''
+    __slots__ = ('line', 'column', '__weakref__')
+
+    def __init__(self, line, column=None):
+        self.line = line
+        self.column = column
+
+    def __str__(self):
+        if self.line:
+            return "   @ %s:%s" % (self.line, self.column)
+        return ""
