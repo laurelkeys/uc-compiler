@@ -66,7 +66,7 @@ class Node:
             buf.write(attrstr)
 
         if showcoord:
-            if hasattr(self, 'coord'): # FIXME self.coord:
+            if self.coord:
                 buf.write('%s' % self.coord)
         buf.write('\n')
 
@@ -123,7 +123,7 @@ class Assignment(Node):
     attr_names = ('op', )
 
 class BinaryOp(Node):
-    _fields = ['op', 'lvalue', 'rvalue'] # TODO rename lvalue and rvalue to left and right
+    _fields = ['op', 'left', 'right']
     attr_names = ('op', )
 
 class Break(Node):

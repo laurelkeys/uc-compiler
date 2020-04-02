@@ -85,7 +85,7 @@ class UCParser:
 
 
     # Internal auxiliary methods
-    _default_function_return_type = ['int'] # functions return int by default
+    _default_function_return_type = ['int'] # functions return 'int' by default
 
     def _token_coord(self, p, token_idx):
         last_cr = p.lexer.lexer.lexdata.rfind('\n', 0, p.lexpos(token_idx))
@@ -173,7 +173,7 @@ class UCParser:
             decl=declaration,
             param_decls=param_decls,
             body=body,
-            # coord=decl.coord
+            coord=decl.coord
         )
 
 
@@ -231,7 +231,7 @@ class UCParser:
     # NOTE top level rule
     def p_program(self, p):
         ''' program : global_declaration__list '''
-        p[0] = Program(p[1], coord=None)
+        p[0] = Program(p[1]) # FIXME should we pass coord=None ?
 
 
     def p_global_declaration(self, p):
