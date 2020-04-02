@@ -1,0 +1,103 @@
+
+# t0.uc
+int* c[5];
+
+# t1.uc
+int a = 3 * 4 + 5;
+
+# t2.uc
+int x = 10;
+int main(){
+  int z = 5;
+  int y;
+  read(y);
+  print(x * (y + z));
+  return;
+}
+
+# t3.uc
+int main () {
+  int v[] = {1, 2, 3, 4, 5};
+  int k = 3;
+  int p = v[k];
+  assert p == 4;
+  return;
+}
+
+# t1.ast
+Program: 
+    GlobalDecl: 
+        Decl: ID(name='a'  )
+            VarDecl: 
+                Type: ['int']   @ 1:1
+            BinaryOp: +   @ 1:9
+                BinaryOp: *   @ 1:9
+                    Constant: int, 3   @ 1:9
+                    Constant: int, 4   @ 1:13
+                Constant: int, 5   @ 1:17
+
+# t2.ast
+Program: 
+    GlobalDecl: 
+        Decl: ID(name='x'  )
+            VarDecl: 
+                Type: ['int']   @ 1:1
+            Constant: int, 10   @ 1:9
+    FuncDef: 
+        Type: ['int']   @ 2:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 2:1
+        Compound:    @ 2:1
+            Decl: ID(name='z'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:3
+                Constant: int, 5   @ 3:11
+            Decl: ID(name='y'  )
+                VarDecl: 
+                    Type: ['int']   @ 4:3
+            Read:    @ 5:3
+                ExprList:    @ 5:8
+                    ID: y   @ 5:8
+            Print:    @ 6:3
+                ID: x   @ 6:9
+                BinaryOp: +   @ 6:14
+                    ID: y   @ 6:14
+                    ID: z   @ 6:18
+            Return:    @ 7:3
+
+# t3.ast
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 1:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 1:1
+        Compound:    @ 1:1
+            Decl: ID(name='v'  )
+                ArrayDecl: 
+                    VarDecl: 
+                        Type: ['int']   @ 2:3
+                InitList:    @ 2:14
+                    Constant: int, 1   @ 2:14
+                    Constant: int, 2   @ 2:17
+                    Constant: int, 3   @ 2:20
+                    Constant: int, 4   @ 2:23
+                    Constant: int, 5   @ 2:26
+            Decl: ID(name='k'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:3
+                Constant: int, 3   @ 3:11
+            Decl: ID(name='p'  )
+                VarDecl: 
+                    Type: ['int']   @ 4:3
+                ArrayRef:    @ 4:11
+                    ID: v   @ 4:11
+                    ID: k   @ 4:13
+            Assert:    @ 5:3
+                BinaryOp: ==   @ 5:10
+                    ID: p   @ 5:10
+                    Constant: int, 4   @ 5:15
+            Return:    @ 6:3
