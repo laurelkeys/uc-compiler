@@ -393,12 +393,12 @@ class UCParser:
             p[0] = p[1]
         elif len(p) == 4:
             if p[2] == '[':
-                p[0] = ArrayRef(p[1], p[3])
+                p[0] = ArrayRef(p[1], p[3], coord=p[1].coord)
             else:
-                p[0] = FuncCall(p[1], p[3])
+                p[0] = FuncCall(p[1], p[3], coord=p[1].coord)
         else:
             # NOTE a 'p' is added so we can differentiate this from when ++ or -- comes as a prefix
-            p[0] = UnaryOp('p' + p[2], p[1])
+            p[0] = UnaryOp('p' + p[2], p[1], coord=p[1].coord) # NOTE pass 'op' first
 
 
     def p_primary_expression(self, p):
@@ -429,7 +429,7 @@ class UCParser:
             p[0] = p[1]
         else:
             if not isinstance(p[1], ExprList):
-                p[1] = ExprList([p[1]])
+                p[1] = ExprList([p[1]], coord=p[1].coord)
             p[1].exprs.append(p[3])
             p[0] = p[1]
 
@@ -440,12 +440,12 @@ class UCParser:
         p[0] = p[1]
 
 
-    def p_argument_expression(self, p):
+    def p_argument_expression_list(self, p):
         ''' argument_expression_list : assignment_expression
                                      | argument_expression_list COMMA assignment_expression
         '''
         if len(p) == 2:
-            p[0] = ExprList([p[1]])
+            p[0] = ExprList([p[1]], coord=p[1].coord)
         else:
             p[1].exprs.append(p[3])
             p[0] = p[1]
@@ -562,7 +562,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = p[2]
+            p[0] = p[2] # FIXME should the initializer_list be __opt (?)
 
 
     def p_initializer_list(self, p):
@@ -570,10 +570,10 @@ class UCParser:
                              | initializer_list COMMA initializer
         '''
         if len(p) == 2:
-            p[0] = InitList([p[1]])
+            p[0] = InitList([p[1]], coord=p[1].coord)
         else:
             if not isinstance(p[1], InitList):
-                p[1] = InitList([p[1]])
+                p[1] = InitList([p[1]], coord=p[1].coord)
             p[1].exprs.append(p[3])
             p[0] = p[1]
 
