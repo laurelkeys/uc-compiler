@@ -150,13 +150,13 @@ class UCParser:
         for decl in decls:
             assert decl['decl'] is not None
             declaration = Decl(
-                name=None,
-                type=decl['decl'],
-                init=decl.get('init'),
+                None,
+                decl['decl'],
+                decl.get('init'),
                 coord=decl['decl'].coord
             )
-
-            fixed_decl = self._fix_decl_name_type(declaration, spec)
+            # FIXME I changed spec to spec.names, should the former work, or maybe spec['type'] ?
+            fixed_decl = self._fix_decl_name_type(declaration, spec.names)
             declarations.append(fixed_decl)
 
         return declarations
@@ -502,18 +502,19 @@ class UCParser:
 
     def p_parameter_declaration(self, p):
         ''' parameter_declaration : type_specifier declarator '''
-        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1264
-        pass
+        # FIXME double check this xD
+        spec = p[1]
+        if not spec['type']:
+            spec['type'] = [Type(_default_function_return_type, coord=self._token_coord(p, 1))]
+        p[0], *_ = self._build_declarations(spec, decls=[dict(decl=p[2])])
 
 
     def p_declaration(self, p):
         ''' declaration : type_specifier init_declarator_list__opt SEMI '''
-        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L740
-        # if p[2] is None:
-        #     p[0] = self._build_declarations(spec=p[1], decls=[dict(decl=None, init=None)])
-        # else:
-        #     p[0] = self._build_declarations(spec=p[1], decls=p[2])
-        pass
+        if p[2] is None:
+            p[0] = self._build_declarations(spec=p[1], decls=[dict(decl=None, init=None)])
+        else:
+            p[0] = self._build_declarations(spec=p[1], decls=p[2])
 
     def p_declaration__list__opt(self, p):
         ''' declaration__list__opt : empty
@@ -526,7 +527,8 @@ class UCParser:
                               | declaration__list declaration
         '''
         # FIXME declaration might already be a list (so just use p[1] or add p[2])
-        p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+        # p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
+        p[0] = p[1] if len(p) == 2 else p[1] + p[2]
 
 
     def p_init_declarator_list(self, p):
@@ -675,7 +677,8 @@ class Coord(object):
         self.line = line
         self.column = column
 
-    def __str__(self):
+    # FIXME I changed __str__ to __repr__, should the former work ?
+    def __repr__(self):
         if self.line:
             return "   @ %s:%s" % (self.line, self.column)
         return ""

@@ -123,7 +123,7 @@ class Assignment(Node):
     attr_names = ('op', )
 
 class BinaryOp(Node):
-    _fields = ['op', 'lvalue', 'rvalue']
+    _fields = ['op', 'lvalue', 'rvalue'] # TODO rename lvalue and rvalue to left and right
     attr_names = ('op', )
 
 class Break(Node):
