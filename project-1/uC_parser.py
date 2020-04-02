@@ -85,6 +85,8 @@ class UCParser:
 
 
     # Internal auxiliary methods
+    _default_function_return_type = ['int'] # functions return int by default
+
     def _token_coord(self, p, token_idx):
         last_cr = p.lexer.lexer.lexdata.rfind('\n', 0, p.lexpos(token_idx))
         if last_cr < 0:
@@ -134,7 +136,7 @@ class UCParser:
         if not typename:
             if not isinstance(decl.type, FuncDecl):
                 self._parse_error("Missing type in declaration", decl.coord)
-            type.type = Type(['int'], coord=decl.coord) # functions return int by default
+            type.type = Type(_default_function_return_type, coord=decl.coord)
         else:
             type.type = Type([typename.names[0]], coord=typename.coord)
 
@@ -253,10 +255,13 @@ class UCParser:
                                 |      empty     declarator declaration__list compound_statement
                                 |      empty     declarator       empty       compound_statement
         '''
-        spec = p[1] if p[1] is not None else dict(
-            type=[Type(['int'], coord=self._token_coord(p, 1))], # functions return int by default
-            function=[]
-        )
+        if p[1] is not None:
+            spec = p[1]
+        else:
+            spec = dict(
+                type=[Type(_default_function_return_type, coord=self._token_coord(p, 1))],
+                function=[]
+            )
         p[0] = self._build_function_definition(
             spec,
             decl=p[2],
@@ -315,12 +320,10 @@ class UCParser:
             p[0] = p[2]
         else:
             if p[2] == '[':
-                p[0] = self._type_modify_decl(
-                    decl=p[1],
-                    modifier=ArrayDecl(None, p[3], coord=p[1].coord)
-                )
+                array = ArrayDecl(None, p[3], coord=p[1].coord)
+                p[0] = self._type_modify_decl(decl=p[1], modifier=array)
             else:
-                func = FuncDecl(None, p[3], coord=self._token_coord(p, 1))
+                func = FuncDecl(None, p[3], coord=self._token_coord(p, 1)) # FIXME use p[1].coord (?)
                 p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
 
@@ -354,7 +357,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = BinaryOp(p[2], p[1], p[3]) # NOTE pass 'op' first
+            p[0] = BinaryOp(p[2], p[1], p[3], coord=p[1].coord) # NOTE pass 'op' first
 
 
     def p_cast_expression(self, p):
@@ -364,7 +367,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = Cast(p[2], p[4])
+            p[0] = Cast(p[2], p[4], coord=self._token_coord(p, 1))
 
 
     def p_unary_expression(self, p):
@@ -376,7 +379,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = UnaryOp(p[1], p[2])
+            p[0] = UnaryOp(p[1], p[2], coord=p[2].coord)
 
 
     def p_postfix_expression(self, p):
@@ -461,7 +464,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = Assignment(p[2], p[1], p[3]) # NOTE pass 'op' first
+            p[0] = Assignment(p[2], p[1], p[3], coord=p[1].coord) # NOTE pass 'op' first
 
 
     def p_assignment_operator(self, p):
@@ -490,7 +493,7 @@ class UCParser:
                            | parameter_list COMMA parameter_declaration
         '''
         if len(p) == 2:
-            p[0] = ParamList([p[1]])
+            p[0] = ParamList([p[1]], coord=p[1].coord)
         else:
             p[1].params.append(p[3])
             p[0] = p[1]
@@ -521,6 +524,7 @@ class UCParser:
         ''' declaration__list : declaration
                               | declaration__list declaration
         '''
+        # FIXME declaration might already be a list (so just use p[1] or add p[2])
         p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
 
 
@@ -576,7 +580,8 @@ class UCParser:
 
     def p_compound_statement(self, p):
         ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
-        p[0] = Compound(p[2], p[3])
+        # NOTE pycparser actually defines a 'block_item', do we need it (?)
+        p[0] = Compound(p[2], p[3], coord=self._token_coord(p, 1))
 
 
     def p_statement(self, p):
@@ -607,7 +612,7 @@ class UCParser:
     def p_expression_statement(self, p):
         ''' expression_statement : expression__opt SEMI '''
         if p[1] is None:
-            p[0] = EmptyStatement()
+            p[0] = EmptyStatement(coord=self._token_coord(p, 2))
         else:
             p[0] = p[1]
 
@@ -617,9 +622,9 @@ class UCParser:
                                 | IF LPAREN expression RPAREN statement ELSE statement
         '''
         if len(p) == 6:
-            p[0] = If(p[3], p[5], None)
+            p[0] = If(p[3], p[5], None, coord=self._token_coord(p, 1))
         else:
-            p[0] = If(p[3], p[5], p[6])
+            p[0] = If(p[3], p[5], p[6], coord=self._token_coord(p, 1))
 
 
     def p_iteration_statement(self, p):
@@ -627,9 +632,9 @@ class UCParser:
                                 | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN statement
         '''
         if len(p) == 5:
-            p[0] = While(p[3], p[5])
+            p[0] = While(p[3], p[5], coord=self._token_coord(p, 1))
         else:
-            p[0] = For(p[3], p[5], p[7], p[9])
+            p[0] = For(p[3], p[5], p[7], p[9], coord=self._token_coord(p, 1))
 
 
     def p_jump_statement(self, p):
@@ -637,24 +642,24 @@ class UCParser:
                            | RETURN expression__opt SEMI
         '''
         if len(p) == 3:
-            p[0] = Break()
+            p[0] = Break(coord=self._token_coord(p, 1))
         else:
-            p[0] = Return(p[2])
+            p[0] = Return(p[2], coord=self._token_coord(p, 1))
 
 
     def p_assert_statement(self, p):
         ''' assert_statement : ASSERT expression SEMI '''
-        p[0] = Assert(p[2])
+        p[0] = Assert(p[2], coord=self._token_coord(p, 1))
 
 
     def p_print_statement(self, p):
         ''' print_statement : PRINT LPAREN argument_expression_list__opt RPAREN SEMI '''
-        p[0] = Print(p[3])
+        p[0] = Print(p[3], coord=self._token_coord(p, 1))
 
 
     def p_read_statement(self, p):
         ''' read_statement : READ LPAREN argument_expression_list RPAREN SEMI '''
-        p[0] = Read(p[3])
+        p[0] = Read(p[3], coord=self._token_coord(p, 1))
 
 
 class Coord(object):
