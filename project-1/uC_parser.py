@@ -213,6 +213,7 @@ class UCParser:
     def p_identifier(self, p):
         ''' identifier : ID '''
         p[0] = ID(p[1], coord=self._token_coord(p, 1))
+        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1307
 
     def p_identifier__list__opt(self, p):
         ''' identifier__list__opt : empty
@@ -238,7 +239,7 @@ class UCParser:
                                | declaration
         '''
         if isinstance(p[1], FuncDef):
-            p[0] = p[1]
+            p[0] = p[1] # NOTE FuncDef is not embedded into a GlobalDecl
         else: # Decl
             p[0] = GlobalDecl(p[1])
 
@@ -323,7 +324,7 @@ class UCParser:
                 array = ArrayDecl(None, p[3], coord=p[1].coord)
                 p[0] = self._type_modify_decl(decl=p[1], modifier=array)
             else:
-                func = FuncDecl(None, p[3], coord=self._token_coord(p, 1)) # FIXME use p[1].coord (?)
+                func = FuncDecl(None, p[3], coord=p[1].coord)
                 p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
 
