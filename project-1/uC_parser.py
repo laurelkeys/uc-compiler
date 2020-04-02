@@ -64,6 +64,7 @@ class UCParser:
 
 
     def __init__(self):
+        # TODO pass a Coord to the error_func
         self.lexer = UCLexer(
             error_func=lambda msg, x, y: print("Lexical error: %s at%d:%d" % (msg, x, y))
         )
@@ -141,22 +142,22 @@ class UCParser:
 
 
     def _build_declarations(self, spec, decls):
-            ''' Builds a list of declarations all sharing the given specifiers. '''
-            declarations = []
+        ''' Builds a list of declarations all sharing the given specifiers. '''
+        declarations = []
 
-            for decl in decls:
-                assert decl['decl'] is not None
-                declaration = Decl(
-                    name=None,
-                    type=decl['decl'],
-                    init=decl.get('init'),
-                    coord=decl['decl'].coord
-                )
+        for decl in decls:
+            assert decl['decl'] is not None
+            declaration = Decl(
+                name=None,
+                type=decl['decl'],
+                init=decl.get('init'),
+                coord=decl['decl'].coord
+            )
 
-                fixed_decl = self._fix_decl_name_type(declaration, spec)
-                declarations.append(fixed_decl)
+            fixed_decl = self._fix_decl_name_type(declaration, spec)
+            declarations.append(fixed_decl)
 
-            return declarations
+        return declarations
 
 
     def _build_function_definition(self, spec, decl, param_decls, body):
@@ -189,27 +190,27 @@ class UCParser:
 
     def p_integer_constant(self, p):
         ''' integer_constant : INT_CONST '''
-        p[0] = Constant("int", p[1])
+        p[0] = Constant("int", p[1], coord=self._token_coord(p, 1))
 
 
     def p_character_constant(self, p):
         ''' character_constant : CHAR_CONST '''
-        p[0] = Constant("char", p[1])
+        p[0] = Constant("char", p[1], coord=self._token_coord(p, 1))
 
 
     def p_floating_constant(self, p):
         ''' floating_constant : FLOAT_CONST '''
-        p[0] = Constant("float", p[1])
+        p[0] = Constant("float", p[1], coord=self._token_coord(p, 1))
 
 
     def p_string(self, p):
         ''' string : STRING_LITERAL '''
-        p[0] = Constant("string", p[1])
+        p[0] = Constant("string", p[1], coord=self._token_coord(p, 1))
 
 
     def p_identifier(self, p):
         ''' identifier : ID '''
-        p[0] = ID(p[1], lineno=p.lineno(1))
+        p[0] = ID(p[1], coord=self._token_coord(p, 1))
 
     def p_identifier__list__opt(self, p):
         ''' identifier__list__opt : empty
@@ -227,14 +228,17 @@ class UCParser:
     # NOTE top level rule
     def p_program(self, p):
         ''' program : global_declaration__list '''
-        p[0] = Program(p[1])
+        p[0] = Program(p[1], coord=None)
 
 
     def p_global_declaration(self, p):
         ''' global_declaration : function_definition
                                | declaration
         '''
-        p[0] = GlobalDecl(p[1])
+        if isinstance(p[1], FuncDef):
+            p[0] = p[1]
+        else: # Decl
+            p[0] = GlobalDecl(p[1])
 
     def p_global_declaration__list(self, p):
         ''' global_declaration__list : global_declaration
@@ -249,8 +253,12 @@ class UCParser:
                                 |      empty     declarator declaration__list compound_statement
                                 |      empty     declarator       empty       compound_statement
         '''
+        spec = p[1] if p[1] is not None else dict(
+            type=[Type(['int'], coord=self._token_coord(p, 1))], # functions return int by default
+            function=[]
+        )
         p[0] = self._build_function_definition(
-            spec=p[1], # FIXME this can be None
+            spec,
             decl=p[2],
             param_decls=p[3],
             body=p[4]
@@ -263,7 +271,7 @@ class UCParser:
                            | INT
                            | FLOAT
         '''
-        p[0] = Type(p[1]) # FIXME should we actually pass [p[1]] ?
+        p[0] = Type([p[1]], coord=self._token_coord(p, 1))
 
 
     def p_declarator(self, p):
@@ -271,14 +279,20 @@ class UCParser:
         if p[1] is None:
             p[0] = p[2]
         else:
-            p[0] = _type_modify_decl(p[2], p[1])
-        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1087
+            p[0] = self._type_modify_decl(p[2], p[1])
 
 
     def p_pointer(self, p):
         ''' pointer : TIMES pointer__opt %prec __DEREFERENCE '''
-        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1199
-        pass
+        type_head = PtrDecl(None, coord=self._token_coord(p, 1))
+        if p[2] is None:
+            p[0] = type_head
+        else:
+            type_tail = p[2]
+            while type_tail.type is not None:
+                type_tail = type_tail.type
+            type_tail.type = type_head
+            p[0] = p[3]
 
     def p_pointer__opt(self, p):
         ''' pointer__opt : empty
@@ -294,8 +308,20 @@ class UCParser:
                               | direct_declarator LPAREN parameter_list RPAREN
                               | direct_declarator LPAREN identifier__list__opt RPAREN
         '''
-        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1087
-        pass
+        # FIXME type = None ?
+        if len(p) == 2:
+            p[0] = VarDecl(None, p[1], coord=self._token_coord(p, 1))
+        elif len(p) == 4:
+            p[0] = p[2]
+        else:
+            if p[2] == '[':
+                p[0] = self._type_modify_decl(
+                    decl=p[1],
+                    modifier=ArrayDecl(None, p[3], coord=p[1].coord)
+                )
+            else:
+                func = FuncDecl(None, p[3], coord=self._token_coord(p, 1))
+                p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
 
     def p_constant_expression(self, p):
@@ -580,7 +606,10 @@ class UCParser:
 
     def p_expression_statement(self, p):
         ''' expression_statement : expression__opt SEMI '''
-        p[0] = p[1]
+        if p[1] is None:
+            p[0] = EmptyStatement()
+        else:
+            p[0] = p[1]
 
 
     def p_selection_statement(self, p):
