@@ -2,7 +2,7 @@ import re
 import ply.yacc as yacc
 
 from uC_lexer import UCLexer
-from _uC_AST import *
+from uC_AST import *
 
 # NOTE Each rule is defined by a function whose docstring contains the appropriate context-free grammar specification.
 #      The statements that make up the function body implement the semantic actions of the rule.

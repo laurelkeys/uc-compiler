@@ -1,6 +1,6 @@
 import weakref
 
-from _uC_AST import *
+from uC_AST import *
 from uC_parser import Coord
 
 ###########################################################
