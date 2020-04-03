@@ -155,8 +155,7 @@ class UCParser:
                 decl.get('init'),
                 coord=decl['decl'].coord
             )
-            # FIXME I changed spec to spec.names, should the former work, or maybe spec['type'] ?
-            fixed_decl = self._fix_decl_name_type(declaration, spec.names)
+            fixed_decl = self._fix_decl_name_type(declaration, spec)
             declarations.append(fixed_decl)
 
         return declarations
