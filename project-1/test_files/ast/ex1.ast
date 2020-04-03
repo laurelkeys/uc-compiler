@@ -2,6 +2,6 @@ Program:
     GlobalDecl: 
         Decl: ID(name='c'  )
             ArrayDecl: 
-                VarDecl:
+                VarDecl: 
                     Type: ['int']   @ 1:1
                 Constant: int, 5   @ 1:7

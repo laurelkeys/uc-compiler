@@ -7,6 +7,6 @@ Program:
             VarDecl: 
                 Type: ['int']   @ 1:1
         Decl: ID(name='z'  )
-            VarDecl:
+            VarDecl: 
                 Type: ['int']   @ 1:1
             Constant: int, 5   @ 1:15
