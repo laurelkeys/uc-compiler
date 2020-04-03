@@ -29,6 +29,7 @@ Program:
                     ID: i   @ 3:29
                 Print:    @ 4:9
                     ExprList:    @ 4:15
-                        UnaryOp: p[   @ 4:15
+                        ArrayRef:    @ 4:15
                             ID: v   @ 4:15
+                            ID: i   @ 4:17
             Return:    @ 5:5
