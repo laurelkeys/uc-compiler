@@ -86,6 +86,7 @@ class Node(object):
         buf.write('\n')
 
         for (child_name, child) in self.children():
+            assert hasattr(child, 'show'), f"'{child_name}' ({type(child)}) doesn't have 'show': {child}" # FIXME remove this
             child.show(buf, offset + 4, attrnames, nodenames, showcoord, child_name)
 
 

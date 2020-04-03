@@ -36,6 +36,7 @@ from _uC_AST import *
 
 class UCParser:
 
+    # FIXME check if we should remove some of these
     # ref.: https://en.cppreference.com/w/c/language/operator_precedence
     precedence = (
         ('left', 'COMMA'),
@@ -503,11 +504,7 @@ class UCParser:
 
     def p_parameter_declaration(self, p):
         ''' parameter_declaration : type_specifier declarator '''
-        # FIXME double check this xD
-        spec = p[1]
-        if not spec['type']:
-            spec['type'] = [Type(_default_function_return_type, coord=self._token_coord(p, 1))]
-        p[0], *_ = self._build_declarations(spec, decls=[dict(decl=p[2])])
+        p[0], *_ = self._build_declarations(spec=p[1], decls=[dict(decl=p[2])])
 
 
     def p_declaration(self, p):
@@ -626,7 +623,7 @@ class UCParser:
         if len(p) == 6:
             p[0] = If(p[3], p[5], None, coord=self._token_coord(p, 1))
         else:
-            p[0] = If(p[3], p[5], p[6], coord=self._token_coord(p, 1))
+            p[0] = If(p[3], p[5], p[7], coord=self._token_coord(p, 1))
 
 
     def p_iteration_statement(self, p):
@@ -634,12 +631,12 @@ class UCParser:
                                 | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN statement
                                 | FOR LPAREN declaration expression__opt SEMI expression__opt RPAREN statement
         '''
-        if len(p) == 5:
+        if len(p) == 6:
             p[0] = While(p[3], p[5], coord=self._token_coord(p, 1))
         elif len(p) == 10:
             p[0] = For(p[3], p[5], p[7], p[9], coord=self._token_coord(p, 1))
         else:
-            p[0] = For(DeclList(p[3], self._token_coord(p, 1)), p[4], p[6], p[8], coord=self._token_coord(p, 1))
+            p[0] = For(DeclList(p[3], coord=self._token_coord(p, 1)), p[4], p[6], p[8], coord=self._token_coord(p, 1))
 
 
     def p_jump_statement(self, p):
