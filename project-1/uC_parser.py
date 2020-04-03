@@ -170,9 +170,10 @@ class UCParser:
         )
 
         return FuncDef(
-            decl=declaration,
-            param_decls=param_decls,
-            body=body,
+            spec,
+            declaration,
+            param_decls,
+            body,
             coord=decl.coord
         )
 

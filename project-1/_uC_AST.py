@@ -18,6 +18,7 @@
 
 import sys
 
+
 def _repr(obj):
     """
     Get the representation of an object, with dedicated pprint-like format for lists.
@@ -25,29 +26,25 @@ def _repr(obj):
     if isinstance(obj, list):
         return '[' + (',\n '.join((_repr(e).replace('\n', '\n ') for e in obj))) + '\n]'
     else:
-        return repr(obj) 
+        return repr(obj)
 
 class Node(object):
-    __slots__ = () # FIXME
+    __slots__ = ()
     """ Abstract base class for AST nodes.
     """
     def __repr__(self):
         """ Generates a python representation of the current node
         """
         result = self.__class__.__name__ + '('
-        
         indent = ''
         separator = ''
         for name in self.__slots__[:-2]:
             result += separator
             result += indent
             result += name + '=' + (_repr(getattr(self, name)).replace('\n', '\n  ' + (' ' * (len(name) + len(self.__class__.__name__)))))
-            
             separator = ','
-            indent = '\n ' + (' ' * len(self.__class__.__name__))
-        
+            indent = ' ' * len(self.__class__.__name__)
         result += indent + ')'
-        
         return result
 
     def children(self):
@@ -56,26 +53,17 @@ class Node(object):
         pass
 
     def show(self, buf=sys.stdout, offset=0, attrnames=False, nodenames=False, showcoord=False, _my_node_name=None):
-        """ Pretty print the Node and all its attributes and
-            children (recursively) to a buffer.
-
+        """ Pretty print the Node and all its attributes and children (recursively) to a buffer.
             buf:
                 Open IO buffer into which the Node is printed.
-
             offset:
                 Initial offset (amount of leading spaces)
-
             attrnames:
-                True if you want to see the attribute names in
-                name=value pairs. False to only see the values.
-
+                True if you want to see the attribute names in name=value pairs. False to only see the values.
             nodenames:
-                True if you want to see the actual node names
-                within their parents.
-
+                True if you want to see the actual node names within their parents.
             showcoord:
-                Do you want the coordinates of each Node to be
-                displayed.
+                Do you want the coordinates of each Node to be displayed.
         """
         lead = ' ' * offset
         if nodenames and _my_node_name is not None:
@@ -85,7 +73,7 @@ class Node(object):
 
         if self.attr_names:
             if attrnames:
-                nvlist = [(n, getattr(self,n)) for n in self.attr_names if getattr(self, n) is not None] # FIXME
+                nvlist = [(n, getattr(self, n)) for n in self.attr_names if getattr(self, n) is not None]
                 attrstr = ', '.join('%s=%s' % nv for nv in nvlist)
             else:
                 vlist = [getattr(self, n) for n in self.attr_names]
@@ -93,19 +81,12 @@ class Node(object):
             buf.write(attrstr)
 
         if showcoord:
-            if self.coord: # FIXME
-                buf.write('%s' % self.coord) # FIXME
+            if self.coord:
+                buf.write('%s' % self.coord)
         buf.write('\n')
 
         for (child_name, child) in self.children():
-            assert hasattr(child, 'show'), f"{child_name} ({type(child)}) doesn't have 'show': {child}" # FIXME
-            child.show(
-                buf,
-                offset=offset + 4, # FIXME
-                attrnames=attrnames,
-                nodenames=nodenames,
-                showcoord=showcoord,
-                _my_node_name=child_name)
+            child.show(buf, offset + 4, attrnames, nodenames, showcoord, child_name)
 
 
 class NodeVisitor(object):
@@ -487,10 +468,10 @@ class FuncDecl(Node):
 
     attr_names = ()
 
-# FIXME add 'spec'
 class FuncDef(Node):
-    __slots__ = ('decl', 'param_decls', 'body', 'coord', '__weakref__')
-    def __init__(self, decl, param_decls, body, coord=None):
+    __slots__ = ('spec', 'decl', 'param_decls', 'body', 'coord', '__weakref__')
+    def __init__(self, spec, decl, param_decls, body, coord=None):
+        self.spec = spec
         self.decl = decl
         self.param_decls = param_decls
         self.body = body
@@ -498,6 +479,7 @@ class FuncDef(Node):
 
     def children(self):
         nodelist = []
+        if self.spec is not None: nodelist.append(("spec", self.spec))
         if self.decl is not None: nodelist.append(("decl", self.decl))
         if self.body is not None: nodelist.append(("body", self.body))
         for i, child in enumerate(self.param_decls or []):
@@ -505,6 +487,8 @@ class FuncDef(Node):
         return tuple(nodelist)
 
     def __iter__(self):
+        if self.spec is not None:
+            yield self.spec
         if self.decl is not None:
             yield self.decl
         if self.body is not None:

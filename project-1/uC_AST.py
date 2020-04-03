@@ -162,7 +162,7 @@ class FuncDecl(Node):
     _fields = ['args', 'type']
 
 class FuncDef(Node):
-    _fields = ['decl', 'param_decls', 'body']
+    _fields = ['spec', 'decl', 'param_decls', 'body']
 
 class GlobalDecl(Node): # FIXME
     _fields = ['gdecl']
