@@ -1,15 +1,13 @@
 #
 # This is the main program for the uC compiler, which just parses command-line options, figures
 # out which source files to read and write to, and invokes the different stages of the compiler.
-#   
+#
 # One of the most important parts of writing a compiler is reliable reporting of error messages back to the user.
-# This file defines some generic functionality for dealing with errors throughout the compiler project. 
+# This file defines some generic functionality for dealing with errors throughout the compiler project.
 #
 
 import sys
-#import logging
 
-#from functools import partial
 from contextlib import contextmanager
 
 from uC_parser import UCParser
@@ -32,10 +30,6 @@ def error(lineno, message, filename=None):
         subscriber(errmsg)
     _num_errors += 1
 
-# NOTE The utility function `errors_reported()` returns the total number of errors reported so far.
-#      Different stages of the compiler might use this to decide whether or not to keep processing or not.
-#      Use `clear_errors()` to clear the total number of errors.
-
 def errors_reported():
     ''' Return the number of errors reported. '''
     return _num_errors
@@ -44,27 +38,6 @@ def clear_errors():
     ''' Reset the total number of errors reported to 0. '''
     global _num_errors
     _num_errors = 0
-
-# NOTE Error handling is based on a subscription based model using context-managers and the `subscribe_errors()` function. 
-#     
-#      For example, to route error messages to standard output, use this:
-#        with subscribe_errors(print):
-#            run_compiler()
-#      
-#      To send messages to standard error, you can do this:
-#        with subscribe_errors(functools.partial(print, file=sys.stderr)):
-#             run_compiler()
-#
-#      To route messages to a logger, you can do this:
-#        log = logging.getLogger("somelogger")
-#        with subscribe_errors(log.error):
-#             run_compiler()
-#
-#      To collect error messages for the purpose of unit testing, do this:
-#        errs = []
-#        with subscribe_errors(errs.append):
-#             run_compiler()
-#        # Check errs for specific errors
 
 @contextmanager
 def subscribe_errors(handler):
@@ -107,7 +80,7 @@ class Compiler:
     def compile(self, code, susy, ast_file, debug):
         ''' Compiles the given code string. '''
         self.code = code
-        with subscribe_errors(lambda msg: sys.stdout.write(msg + "\n")):
+        with subscribe_errors(lambda msg: sys.stderr.write(msg + "\n")):
             self._do_compile(susy, ast_file, debug)
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
@@ -170,3 +143,31 @@ def run_compiler():
 
 if __name__ == '__main__':
     run_compiler()
+
+
+# NOTE The utility function `errors_reported()` returns the total number of errors reported so far.
+#      Different stages of the compiler might use this to decide whether or not to keep processing or not.
+#      Use `clear_errors()` to clear the total number of errors.
+
+# NOTE Error handling is based on a subscription based model using context-managers and the `subscribe_errors()` function.
+#
+#      For example, to route error messages to standard output, use this:
+#          with subscribe_errors(print):
+#              run_compiler()
+#
+#      To send messages to standard error, you can do this:
+#          from functools import partial
+#          with subscribe_errors(partial(print, file=sys.stderr)):
+#               run_compiler()
+#
+#      To route messages to a logger, you can do this:
+#          import logging
+#          log = logging.getLogger("somelogger")
+#          with subscribe_errors(log.error):
+#               run_compiler()
+#
+#      To collect error messages for the purpose of unit testing, do this:
+#          errs = []
+#          with subscribe_errors(errs.append):
+#               run_compiler()
+#          # Check errs for specific errors
