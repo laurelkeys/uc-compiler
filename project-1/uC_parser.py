@@ -394,7 +394,7 @@ class UCParser:
         '''
         if len(p) == 2:
             p[0] = p[1]
-        elif len(p) == 4:
+        elif len(p) == 5:
             if p[2] == '[':
                 p[0] = ArrayRef(p[1], p[3], coord=p[1].coord)
             else:
@@ -448,8 +448,10 @@ class UCParser:
                                      | argument_expression_list COMMA assignment_expression
         '''
         if len(p) == 2:
-            p[0] = ExprList([p[1]], coord=p[1].coord)
+            p[0] = p[1]
         else:
+            if not isinstance(p[1], ExprList):
+                p[1] = ExprList([p[1]], coord=p[1].coord)
             p[1].exprs.append(p[3])
             p[0] = p[1]
 
@@ -580,7 +582,7 @@ class UCParser:
     def p_compound_statement(self, p):
         ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
         # NOTE pycparser actually defines a 'block_item', do we need it (?)
-        p[0] = Compound(p[2], p[3], coord=self._token_coord(p, 1))
+        p[0] = Compound(p[2], p[3], coord=self._token_coord(p, 1)) # FIXME coord is wrong
 
 
     def p_statement(self, p):
