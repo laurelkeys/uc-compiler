@@ -1,3 +1,4 @@
+```
 <program> ::= {<global_declaration>}+
 
 <global_declaration> ::= <function_definition>
@@ -120,6 +121,7 @@
 
 <iteration_statement> ::= while ( <expression> ) <statement>
                         | for ( {<expression>}? ; {<expression>}? ; {<expression>}? ) <statement>
+                        | for ( <declaration> {<expression>}? ; {<expression>}? ) <statement>
 
 <jump_statement> ::= break ;
                    | return {<expression>}? ;
@@ -129,3 +131,4 @@
 <print_statement> ::= print ( {<argument_expression_list>}? ) ;
 
 <read_statement> ::= read ( <argument_expression_list> ) ;
+```

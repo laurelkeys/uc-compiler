@@ -1,8 +1,4 @@
-import re
-
-from ply.lex import LexToken
-
-from uC_parser import UCParser
+from uC_parser import UCParser, Coord
 
 ###########################################################
 ## misc ###################################################

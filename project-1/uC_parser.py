@@ -36,6 +36,7 @@ from uC_AST import *
 
 class UCParser:
 
+    # FIXME check if we should remove some of these
     # ref.: https://en.cppreference.com/w/c/language/operator_precedence
     precedence = (
         ('left', 'COMMA'),
@@ -105,10 +106,10 @@ class UCParser:
         while modifier_tail.type:
             modifier_tail = modifier_tail.type
 
-        if isinstance(decl, VarDecl):
+        if isinstance(decl, VarDecl): # decl is a basic type
             modifier_tail.type = decl
             return modifier
-        else:
+        else: # decl is a list of modifiers
             decl_tail = decl
             while not isinstance(decl_tail.type, VarDecl):
                 decl_tail = decl_tail.type
@@ -155,8 +156,7 @@ class UCParser:
                 decl.get('init'),
                 coord=decl['decl'].coord
             )
-            # FIXME I changed spec to spec.names, should the former work, or maybe spec['type'] ?
-            fixed_decl = self._fix_decl_name_type(declaration, spec.names)
+            fixed_decl = self._fix_decl_name_type(declaration, spec)
             declarations.append(fixed_decl)
 
         return declarations
@@ -170,9 +170,10 @@ class UCParser:
         )
 
         return FuncDef(
-            decl=declaration,
-            param_decls=param_decls,
-            body=body,
+            spec,
+            declaration,
+            param_decls,
+            body,
             coord=decl.coord
         )
 
@@ -214,6 +215,7 @@ class UCParser:
         ''' identifier : ID '''
         p[0] = ID(p[1], coord=self._token_coord(p, 1))
         # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1307
+        # FIXME convert p_identifier__list into a p_identifier_list (separated by COMMA's)
 
     def p_identifier__list__opt(self, p):
         ''' identifier__list__opt : empty
@@ -316,7 +318,7 @@ class UCParser:
         '''
         # FIXME type = None ?
         if len(p) == 2:
-            p[0] = VarDecl(None, p[1], coord=self._token_coord(p, 1))
+            p[0] = VarDecl(p[1], None, coord=self._token_coord(p, 1))
         elif len(p) == 4:
             p[0] = p[2]
         else:
@@ -324,7 +326,7 @@ class UCParser:
                 array = ArrayDecl(None, p[3], coord=p[1].coord)
                 p[0] = self._type_modify_decl(decl=p[1], modifier=array)
             else:
-                func = FuncDecl(None, p[3], coord=p[1].coord)
+                func = FuncDecl(p[3], None, coord=p[1].coord)
                 p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
 
@@ -392,7 +394,7 @@ class UCParser:
         '''
         if len(p) == 2:
             p[0] = p[1]
-        elif len(p) == 4:
+        elif len(p) == 5:
             if p[2] == '[':
                 p[0] = ArrayRef(p[1], p[3], coord=p[1].coord)
             else:
@@ -430,7 +432,7 @@ class UCParser:
             p[0] = p[1]
         else:
             if not isinstance(p[1], ExprList):
-                p[1] = ExprList([p[1]], coord=p[1].coord)
+                p[1] = ExprList([p[1]], coord=p[1].coord) # FIXME should we pass coord here ?
             p[1].exprs.append(p[3])
             p[0] = p[1]
 
@@ -446,8 +448,10 @@ class UCParser:
                                      | argument_expression_list COMMA assignment_expression
         '''
         if len(p) == 2:
-            p[0] = ExprList([p[1]], coord=p[1].coord)
+            p[0] = p[1]
         else:
+            if not isinstance(p[1], ExprList):
+                p[1] = ExprList([p[1]], coord=p[1].coord)
             p[1].exprs.append(p[3])
             p[0] = p[1]
 
@@ -502,11 +506,7 @@ class UCParser:
 
     def p_parameter_declaration(self, p):
         ''' parameter_declaration : type_specifier declarator '''
-        # FIXME double check this xD
-        spec = p[1]
-        if not spec['type']:
-            spec['type'] = [Type(_default_function_return_type, coord=self._token_coord(p, 1))]
-        p[0], *_ = self._build_declarations(spec, decls=[dict(decl=p[2])])
+        p[0], *_ = self._build_declarations(spec=p[1], decls=[dict(decl=p[2])])
 
 
     def p_declaration(self, p):
@@ -526,9 +526,7 @@ class UCParser:
         ''' declaration__list : declaration
                               | declaration__list declaration
         '''
-        # FIXME declaration might already be a list (so just use p[1] or add p[2])
-        # p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
-        p[0] = p[1] if len(p) == 2 else p[1] + p[2]
+        p[0] = p[1] if len(p) == 2 else p[1] + p[2] # NOTE declaration is already a list
 
 
     def p_init_declarator_list(self, p):
@@ -584,7 +582,7 @@ class UCParser:
     def p_compound_statement(self, p):
         ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
         # NOTE pycparser actually defines a 'block_item', do we need it (?)
-        p[0] = Compound(p[2], p[3], coord=self._token_coord(p, 1))
+        p[0] = Compound(p[2], p[3], coord=self._token_coord(p, 1)) # FIXME coord is wrong
 
 
     def p_statement(self, p):
@@ -627,17 +625,20 @@ class UCParser:
         if len(p) == 6:
             p[0] = If(p[3], p[5], None, coord=self._token_coord(p, 1))
         else:
-            p[0] = If(p[3], p[5], p[6], coord=self._token_coord(p, 1))
+            p[0] = If(p[3], p[5], p[7], coord=self._token_coord(p, 1))
 
 
     def p_iteration_statement(self, p):
         ''' iteration_statement : WHILE LPAREN expression RPAREN statement
                                 | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN statement
+                                | FOR LPAREN declaration expression__opt SEMI expression__opt RPAREN statement
         '''
-        if len(p) == 5:
+        if len(p) == 6:
             p[0] = While(p[3], p[5], coord=self._token_coord(p, 1))
-        else:
+        elif len(p) == 10:
             p[0] = For(p[3], p[5], p[7], p[9], coord=self._token_coord(p, 1))
+        else:
+            p[0] = For(DeclList(p[3], coord=self._token_coord(p, 1)), p[4], p[6], p[8], coord=self._token_coord(p, 1))
 
 
     def p_jump_statement(self, p):
@@ -677,8 +678,7 @@ class Coord(object):
         self.line = line
         self.column = column
 
-    # FIXME I changed __str__ to __repr__, should the former work ?
-    def __repr__(self):
+    def __str__(self):
         if self.line:
             return "   @ %s:%s" % (self.line, self.column)
         return ""
