@@ -10,7 +10,7 @@ import sys
 
 from contextlib import contextmanager
 
-from uC_parser import UCParser
+from uc_parser import UCParser
 
 ###########################################################
 ## uC Compiler ############################################
@@ -175,3 +175,10 @@ if __name__ == "__main__":
 #          with subscribe_errors(errs.append):
 #               run_compiler()
 #          # Check errs for specific errors
+
+
+###########################################################
+## MC921 (1s 2020) ########################################
+## Carlos Avelar (168605) #################################
+## Tiago Loureiro Chaves (187690) #########################
+###########################################################

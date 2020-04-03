@@ -1,26 +1,26 @@
 Program: 
     GlobalDecl: 
         Decl: ID(name='j'  )
-            VarDecl:
+            VarDecl: 
                 Type: ['int']   @ 2:1
             Constant: int, 3   @ 2:9
     FuncDef: 
         Type: ['int']   @ 3:1
         Decl: ID(name='main'  )
             FuncDecl: 
-                VarDecl:
+                VarDecl: 
                     Type: ['int']   @ 3:1
         Compound:    @ 3:1
             Decl: ID(name='i'  )
-                VarDecl:
+                VarDecl: 
                     Type: ['int']   @ 4:3
                 ID: j   @ 4:11
             Decl: ID(name='k'  )
-                VarDecl:
+                VarDecl: 
                     Type: ['int']   @ 5:3
                 Constant: int, 3   @ 5:11
             Decl: ID(name='p'  )
-                VarDecl:
+                VarDecl: 
                     Type: ['int']   @ 6:3
                 BinaryOp: *   @ 6:11
                     Constant: int, 2   @ 6:11
