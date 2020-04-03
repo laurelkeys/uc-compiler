@@ -120,6 +120,7 @@
 
 <iteration_statement> ::= while ( <expression> ) <statement>
                         | for ( {<expression>}? ; {<expression>}? ; {<expression>}? ) <statement>
+                        | for ( <declaration> {<expression>}? ; {<expression>}? ) <statement>
 
 <jump_statement> ::= break ;
                    | return {<expression>}? ;

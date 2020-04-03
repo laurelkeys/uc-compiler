@@ -1,8 +1,6 @@
 import re
 import ply.lex as lex
 
-from ply.lex import LexToken
-
 # NOTE For simple tokens, the regular expression can be specified as strings,
 #      with the name following 't_' matching exactly one of the names supplied in `tokens`.
 #      When a function is used, the regular expression rule is specified in the function documentation string.

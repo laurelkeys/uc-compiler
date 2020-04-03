@@ -158,13 +158,13 @@ class For(Node):
 class FuncCall(Node):
     _fields = ['name', 'args']
 
-class FuncDecl(Node): # NOTE reversed order
-    _fields = ['type', 'args']
+class FuncDecl(Node):
+    _fields = ['args', 'type']
 
 class FuncDef(Node):
     _fields = ['decl', 'param_decls', 'body']
 
-class GlobalDecl(Node):
+class GlobalDecl(Node): # FIXME
     _fields = ['gdecl']
 
 class ID(Node):
@@ -172,7 +172,7 @@ class ID(Node):
     attr_names = ('name', )
 
 class If(Node):
-    _fields = ['cond', 'then', 'else']
+    _fields = ['cond', 'ifthen', 'ifelse']
 
 class InitList(Node):
     _fields = ['exprs']
@@ -183,7 +183,7 @@ class ParamList(Node):
 class Print(Node):
     _fields = ['expr']
 
-class Program(Node):
+class Program(Node): # FIXME
     ''' This is the top of the AST, representing a uC program (a translation unit in K&R jargon).\n
         It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
     '''
@@ -202,8 +202,9 @@ class Type(Node):
     _fields = ['names']
     attr_names = ('names', )
 
-class VarDecl(Node): # NOTE reversed order
-    _fields = ['type', 'declname']
+class VarDecl(Node):
+    _fields = ['declname', 'type']
+    attr_names = ('declname', ) # TODO don't print this
 
 class UnaryOp(Node):
     _fields = ['op', 'expr']

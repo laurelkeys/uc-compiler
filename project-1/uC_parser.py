@@ -2,7 +2,7 @@ import re
 import ply.yacc as yacc
 
 from uC_lexer import UCLexer
-from uC_AST import *
+from _uC_AST import *
 
 # NOTE Each rule is defined by a function whose docstring contains the appropriate context-free grammar specification.
 #      The statements that make up the function body implement the semantic actions of the rule.
@@ -105,10 +105,10 @@ class UCParser:
         while modifier_tail.type:
             modifier_tail = modifier_tail.type
 
-        if isinstance(decl, VarDecl):
+        if isinstance(decl, VarDecl): # decl is a basic type
             modifier_tail.type = decl
             return modifier
-        else:
+        else: # decl is a list of modifiers
             decl_tail = decl
             while not isinstance(decl_tail.type, VarDecl):
                 decl_tail = decl_tail.type
@@ -214,6 +214,7 @@ class UCParser:
         ''' identifier : ID '''
         p[0] = ID(p[1], coord=self._token_coord(p, 1))
         # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1307
+        # FIXME convert p_identifier__list into a p_identifier_list (separated by COMMA's)
 
     def p_identifier__list__opt(self, p):
         ''' identifier__list__opt : empty
@@ -316,7 +317,7 @@ class UCParser:
         '''
         # FIXME type = None ?
         if len(p) == 2:
-            p[0] = VarDecl(None, p[1], coord=self._token_coord(p, 1))
+            p[0] = VarDecl(p[1], None, coord=self._token_coord(p, 1))
         elif len(p) == 4:
             p[0] = p[2]
         else:
@@ -324,7 +325,7 @@ class UCParser:
                 array = ArrayDecl(None, p[3], coord=p[1].coord)
                 p[0] = self._type_modify_decl(decl=p[1], modifier=array)
             else:
-                func = FuncDecl(None, p[3], coord=p[1].coord)
+                func = FuncDecl(p[3], None, coord=p[1].coord)
                 p[0] = self._type_modify_decl(decl=p[1], modifier=func)
 
 
@@ -430,7 +431,7 @@ class UCParser:
             p[0] = p[1]
         else:
             if not isinstance(p[1], ExprList):
-                p[1] = ExprList([p[1]], coord=p[1].coord)
+                p[1] = ExprList([p[1]], coord=p[1].coord) # FIXME should we pass coord here ?
             p[1].exprs.append(p[3])
             p[0] = p[1]
 
@@ -633,11 +634,14 @@ class UCParser:
     def p_iteration_statement(self, p):
         ''' iteration_statement : WHILE LPAREN expression RPAREN statement
                                 | FOR LPAREN expression__opt SEMI expression__opt SEMI expression__opt RPAREN statement
+                                | FOR LPAREN declaration expression__opt SEMI expression__opt RPAREN statement
         '''
         if len(p) == 5:
             p[0] = While(p[3], p[5], coord=self._token_coord(p, 1))
-        else:
+        elif len(p) == 10:
             p[0] = For(p[3], p[5], p[7], p[9], coord=self._token_coord(p, 1))
+        else:
+            p[0] = For(DeclList(p[3], self._token_coord(p, 1)), p[4], p[6], p[8], coord=self._token_coord(p, 1))
 
 
     def p_jump_statement(self, p):
@@ -677,8 +681,7 @@ class Coord(object):
         self.line = line
         self.column = column
 
-    # FIXME I changed __str__ to __repr__, should the former work ?
-    def __repr__(self):
+    def __str__(self):
         if self.line:
             return "   @ %s:%s" % (self.line, self.column)
         return ""
