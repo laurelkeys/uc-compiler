@@ -11,6 +11,7 @@ class Node:
         Any additional arguments specified as keywords are also assigned.
     '''
     _fields = []
+    attr_names = ()
 
     def __init__(self, *args, **kwargs):
         assert len(args) == len(self._fields)
@@ -55,7 +56,6 @@ class Node:
         else:
             buf.write(lead + self.__class__.__name__+ ': ')
 
-        self.attr_names = self._fields # FIXME
         if self.attr_names:
             if attrnames:
                 nvlist = [(n, getattr(self, n)) for n in self.attr_names if getattr(self, n) is not None]
@@ -66,7 +66,7 @@ class Node:
             buf.write(attrstr)
 
         if showcoord:
-            if hasattr(self, 'coord'): # FIXME self.coord:
+            if self.coord:
                 buf.write('%s' % self.coord)
         buf.write('\n')
 
@@ -120,9 +120,11 @@ class Assert(Node):
 
 class Assignment(Node):
     _fields = ['op', 'lvalue', 'rvalue']
+    attr_names = ('op', )
 
 class BinaryOp(Node):
-    _fields = ['op', 'lvalue', 'rvalue']
+    _fields = ['op', 'left', 'right']
+    attr_names = ('op', )
 
 class Break(Node):
     _fields = []
@@ -135,9 +137,11 @@ class Compound(Node):
 
 class Constant(Node):
     _fields = ['type', 'value']
+    attr_names = ('type', 'value', )
 
 class Decl(Node):
     _fields = ['name', 'type', 'init']
+    attr_names = ('name', )
 
 class DeclList(Node):
     _fields = ['decls']
@@ -154,7 +158,7 @@ class For(Node):
 class FuncCall(Node):
     _fields = ['name', 'args']
 
-class FuncDecl(Node):
+class FuncDecl(Node): # NOTE reversed order
     _fields = ['type', 'args']
 
 class FuncDef(Node):
@@ -165,6 +169,7 @@ class GlobalDecl(Node):
 
 class ID(Node):
     _fields = ['name']
+    attr_names = ('name', )
 
 class If(Node):
     _fields = ['cond', 'then', 'else']
@@ -180,8 +185,8 @@ class Print(Node):
 
 class Program(Node):
     ''' This is the top of the AST, representing a uC program (a translation unit in K&R jargon).\n
-       It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
-   '''
+        It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
+    '''
     _fields = ['gdecls']
 
 class PtrDecl(Node):
@@ -195,12 +200,14 @@ class Return(Node):
 
 class Type(Node):
     _fields = ['names']
+    attr_names = ('names', )
 
-class VarDecl(Node):
-    _fields = ['declname', 'type']
+class VarDecl(Node): # NOTE reversed order
+    _fields = ['type', 'declname']
 
 class UnaryOp(Node):
     _fields = ['op', 'expr']
+    attr_names = ('op', )
 
 class While(Node):
     _fields = ['cond', 'body']
