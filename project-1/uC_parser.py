@@ -527,9 +527,7 @@ class UCParser:
         ''' declaration__list : declaration
                               | declaration__list declaration
         '''
-        # FIXME declaration might already be a list (so just use p[1] or add p[2])
-        # p[0] = [p[1]] if len(p) == 2 else p[1] + [p[2]]
-        p[0] = p[1] if len(p) == 2 else p[1] + p[2]
+        p[0] = p[1] if len(p) == 2 else p[1] + p[2] # NOTE declaration is already a list
 
 
     def p_init_declarator_list(self, p):

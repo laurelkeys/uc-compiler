@@ -1,7 +1,6 @@
 # PLY
 parser.out
 parsetab.py
-_*.py
 
 # VS Code
 .vscode/

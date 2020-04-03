@@ -14,7 +14,7 @@ class Node:
     attr_names = ()
 
     def __init__(self, *args, **kwargs):
-        assert len(args) == len(self._fields)
+        assert len(args) == len(self._fields), f"{len(args)} != {len(self._fields)}"
 
         for name, value in zip(self._fields, args):
             setattr(self, name, value)
