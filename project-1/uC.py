@@ -6,11 +6,16 @@
 # This file defines some generic functionality for dealing with errors throughout the compiler project.
 #
 
+import os
 import sys
+sys.path.insert(0, os.path.abspath(
+    os.path.dirname(os.path.realpath(__file__)) + "/../project-2"
+))
 
 from contextlib import contextmanager
 
 from uC_parser import UCParser
+from uC_sema import Visitor
 
 ###########################################################
 ## uC Compiler ############################################
@@ -68,14 +73,25 @@ class Compiler:
         '''
         self.parser = UCParser()
         self.ast = self.parser.parse(self.code, '', debug)
-        if susy:
-            self.ast.show(showcoord=True)
-        elif ast_file is not None:
-            self.ast.show(buf=ast_file, showcoord=True)
+
+    def _sema(self, susy, ast_file):
+        ''' Decorate the AST with semantic actions.\n
+            If `ast_file` is not `None`, prints out the abstract syntax tree (AST). '''
+        try:
+            self.sema = Visitor()
+            self.sema.visit(self.ast)
+            if susy:
+                self.ast.show(showcoord=True)
+            elif ast_file is not None:
+                self.ast.show(buf=ast_file, showcoord=True)
+        except AssertionError as e:
+           error(None, e)
 
     def _do_compile(self, susy, ast_file, debug):
         ''' Compiles the code to the given file object. '''
         self._parse(susy, ast_file, debug)
+        if not errors_reported():
+            self._sema(susy, ast_file)
 
     def compile(self, code, susy, ast_file, debug):
         ''' Compiles the given code string. '''

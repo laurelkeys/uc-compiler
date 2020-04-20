@@ -64,8 +64,8 @@ class NodeVisitor(object):
     ''' Abstract base class for visiting the AST nodes.\n
         Define a `visit_<>` method for each class named `<>` you want to visit.\n
         Notes:\n
-        - `generic_visit()` will be called for AST nodes for which no `visit_<>` method was defined
-        - The children of nodes for which a `visit_<> was defined will not be visited.
+        - `generic_visit()` will be called for AST nodes for which no `visit_<>` method was defined.
+        - The children of nodes for which a `visit_<>` was defined will not be visited.
           If you need this, call `generic_visit()` on the node.
     '''
 
@@ -98,9 +98,9 @@ class NodeVisitor(object):
 
 class ArrayDecl(Node):
     __slots__ = ('type', 'dim', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, type, dim, coord=None):
         self.type = type
         self.dim = dim
@@ -121,9 +121,9 @@ class ArrayDecl(Node):
 
 class ArrayRef(Node):
     __slots__ = ('name', 'subscript', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, name, subscript, coord=None):
         self.name = name
         self.subscript = subscript
@@ -144,9 +144,9 @@ class ArrayRef(Node):
 
 class Assert(Node):
     __slots__ = ('expr', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, expr, coord=None):
         self.expr = expr
         self.coord = coord
@@ -163,9 +163,9 @@ class Assert(Node):
 
 class Assignment(Node):
     __slots__ = ('op', 'lvalue', 'rvalue', 'coord', '__weakref__')
-    
+
     attr_names = ('op', )
-    
+
     def __init__(self, op, lvalue, rvalue, coord=None):
         self.op = op
         self.lvalue = lvalue
@@ -187,9 +187,9 @@ class Assignment(Node):
 
 class BinaryOp(Node):
     __slots__ = ('op', 'left', 'right', 'coord', '__weakref__')
-    
+
     attr_names = ('op', )
-    
+
     def __init__(self, op, left, right, coord=None):
         self.op = op
         self.left = left
@@ -211,9 +211,9 @@ class BinaryOp(Node):
 
 class Break(Node):
     __slots__ = ('coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, coord=None):
         self.coord = coord
 
@@ -227,9 +227,9 @@ class Break(Node):
 
 class Cast(Node):
     __slots__ = ('type', 'expr', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, type, expr, coord=None):
         self.type = type
         self.expr = expr
@@ -250,9 +250,9 @@ class Cast(Node):
 
 class Compound(Node):
     __slots__ = ('decls', 'stmts', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, decls, stmts, coord=None):
         self.decls = decls
         self.stmts = stmts
@@ -275,9 +275,9 @@ class Compound(Node):
 
 class Constant(Node):
     __slots__ = ('type', 'value', 'coord', '__weakref__')
-    
+
     attr_names = ('type', 'value', )
-    
+
     def __init__(self, type, value, coord=None):
         self.type = type
         self.value = value
@@ -294,9 +294,9 @@ class Constant(Node):
 
 class Decl(Node):
     __slots__ = ('name', 'type', 'init', 'coord', '__weakref__')
-    
+
     attr_names = ('name', )
-    
+
     def __init__(self, name, type, init, coord=None):
         self.name = name
         self.type = type
@@ -318,9 +318,9 @@ class Decl(Node):
 
 class DeclList(Node):
     __slots__ = ('decls', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, decls, coord=None):
         self.decls = decls
         self.coord = coord
@@ -338,9 +338,9 @@ class DeclList(Node):
 
 class EmptyStatement(Node):
     __slots__ = ('coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, coord=None):
         self.coord = coord
 
@@ -354,9 +354,9 @@ class EmptyStatement(Node):
 
 class ExprList(Node):
     __slots__ = ('exprs', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, exprs, coord=None):
         self.exprs = exprs
         self.coord = coord
@@ -374,9 +374,9 @@ class ExprList(Node):
 
 class For(Node):
     __slots__ = ('init', 'cond', 'next', 'body', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, init, cond, next, body, coord=None):
         self.init = init
         self.cond = cond
@@ -405,9 +405,9 @@ class For(Node):
 
 class FuncCall(Node):
     __slots__ = ('name', 'args', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, name, args, coord=None):
         self.name = name
         self.args = args
@@ -428,9 +428,9 @@ class FuncCall(Node):
 
 class FuncDecl(Node):
     __slots__ = ('args', 'type', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, args, type, coord=None):
         self.args = args
         self.type = type
@@ -451,9 +451,9 @@ class FuncDecl(Node):
 
 class FuncDef(Node):
     __slots__ = ('spec', 'decl', 'param_decls', 'body', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, spec, decl, param_decls, body, coord=None):
         self.spec = spec
         self.decl = decl
@@ -483,9 +483,9 @@ class FuncDef(Node):
 
 class GlobalDecl(Node):
     __slots__ = ('decls', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, decls, coord=None):
         self.decls = decls
         self.coord = coord
@@ -503,9 +503,9 @@ class GlobalDecl(Node):
 
 class ID(Node):
     __slots__ = ('name', 'coord', '__weakref__')
-    
+
     attr_names = ('name', )
-    
+
     def __init__(self, name, coord=None):
         self.name = name
         self.coord = coord
@@ -521,9 +521,9 @@ class ID(Node):
 
 class If(Node):
     __slots__ = ('cond', 'ifthen', 'ifelse', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, cond, ifthen, ifelse, coord=None):
         self.cond = cond
         self.ifthen = ifthen
@@ -548,9 +548,9 @@ class If(Node):
 
 class InitList(Node):
     __slots__ = ('exprs', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, exprs, coord=None):
         self.exprs = exprs
         self.coord = coord
@@ -568,9 +568,9 @@ class InitList(Node):
 
 class ParamList(Node):
     __slots__ = ('params', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, params, coord=None):
         self.params = params
         self.coord = coord
@@ -588,9 +588,9 @@ class ParamList(Node):
 
 class Print(Node):
     __slots__ = ('expr', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, expr, coord=None):
         self.expr = expr
         self.coord = coord
@@ -610,9 +610,9 @@ class Program(Node):
         It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
     '''
     __slots__ = ('gdecls', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, gdecls, coord=None):
         self.gdecls = gdecls
         self.coord = coord
@@ -630,9 +630,9 @@ class Program(Node):
 
 class PtrDecl(Node):
     __slots__ = ('type', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, type, coord=None):
         self.type = type
         self.coord = coord
@@ -649,9 +649,9 @@ class PtrDecl(Node):
 
 class Read(Node):
     __slots__ = ('expr', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, expr, coord=None):
         self.expr = expr
         self.coord = coord
@@ -668,9 +668,9 @@ class Read(Node):
 
 class Return(Node):
     __slots__ = ('expr', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, expr, coord=None):
         self.expr = expr
         self.coord = coord
@@ -687,9 +687,9 @@ class Return(Node):
 
 class Type(Node):
     __slots__ = ('names', 'coord', '__weakref__')
-    
+
     attr_names = ('names', )
-    
+
     def __init__(self, names, coord=None):
         self.names = names
         self.coord = coord
@@ -705,9 +705,9 @@ class Type(Node):
 
 class VarDecl(Node):
     __slots__ = ('declname', 'type', 'coord', '__weakref__')
-    
+
     attr_names = () # NOTE don't print declname
-    
+
     def __init__(self, declname, type, coord=None):
         self.declname = declname
         self.type = type
@@ -725,9 +725,9 @@ class VarDecl(Node):
 
 class UnaryOp(Node):
     __slots__ = ('op', 'expr', 'coord', '__weakref__')
-    
+
     attr_names = ('op', )
-    
+
     def __init__(self, op, expr, coord=None):
         self.op = op
         self.expr = expr
@@ -745,9 +745,9 @@ class UnaryOp(Node):
 
 class While(Node):
     __slots__ = ('cond', 'body', 'coord', '__weakref__')
-    
+
     attr_names = ()
-    
+
     def __init__(self, cond, body, coord=None):
         self.cond = cond
         self.body = body
