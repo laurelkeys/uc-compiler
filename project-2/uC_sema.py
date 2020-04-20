@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(
 ))
 
 from uC_AST import NodeVisitor
+from uC_types import *
 
 ###########################################################
 ## uC Semantics ###########################################
@@ -15,7 +16,7 @@ class SymbolTable(object):
         It should provide functionality for adding and looking up nodes associated with identifiers. '''
 
     def __init__(self):
-        self.symtab = {}
+        self.symtab = {} # symbol table
 
     def lookup(self, a):
         return self.symtab.get(a)
@@ -30,4 +31,32 @@ class Visitor(NodeVisitor):
     '''
 
     def __init__(self):
-        # TODO
+        self.symtab = SymbolTable()
+        # add built-in type names to the symbol table
+        self.symtab.add("int", IntType)
+        self.symtab.add("float", FloatType)
+        self.symtab.add("char", CharType)
+
+    def visit_Program(self, node):
+        # 1. Visit all of the global declarations
+        # 2. Record the associated symbol table
+        for _decl in node.gdecls:
+            self.visit(_decl)
+
+    def visit_BinaryOp(self, node):
+        # 1. Make sure left and right operands have the same type
+        # 2. Make sure the operation is supported
+        # 3. Assign the result type
+        self.visit(node.left)
+        self.visit(node.right)
+        node.type = node.left.type
+
+    def visit_Assignment(self, node):
+        # 1. Make sure the location of the assignment is defined
+        sym = self.symtab.lookup(node.location)
+        assert sym, "Assigning to unknown sym"
+        # 2. Check that the types match
+        self.visit(node.value)
+        assert sym.type == node.value.type, "Type mismatch in assignment"
+    
+    # TODO
