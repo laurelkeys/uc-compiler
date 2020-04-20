@@ -1,8 +1,5 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath(
-    os.path.dirname(os.path.realpath(__file__)) + "/../project-1"
-))
 
 from uC_AST import NodeVisitor
 from uC_types import *
@@ -24,9 +21,14 @@ class SymbolTable(object):
     def add(self, a, v):
         self.symtab[a] = v
 
+
 class Visitor(NodeVisitor):
     ''' Program visitor class.\n
-        This class uses the visitor pattern.
+
+        It flattens an uC program into a sequence of SSA code instructions, represented as tuples of the form:
+        `(operation, operands, ..., destination)`\n
+
+        Note: This class uses the visitor pattern.
         You need to define `visit_<>` methods for each kind of AST node that you want to process, where `<>` is the node name.
     '''
 
@@ -36,6 +38,9 @@ class Visitor(NodeVisitor):
         self.symtab.add("int", IntType)
         self.symtab.add("float", FloatType)
         self.symtab.add("char", CharType)
+
+    # NOTE A few sample methods follow. You may have to adjust
+    #      depending on the names of the AST nodes you've defined
 
     def visit_Program(self, node):
         # 1. Visit all of the global declarations
@@ -58,5 +63,5 @@ class Visitor(NodeVisitor):
         # 2. Check that the types match
         self.visit(node.value)
         assert sym.type == node.value.type, "Type mismatch in assignment"
-    
-    # TODO
+
+    # TODO Implement `visit_<>` methods for all of the other AST nodes.

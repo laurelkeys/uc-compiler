@@ -1,3 +1,4 @@
+import uC_ops
 
 ###########################################################
 ## uC Built-in Types ######################################
@@ -10,6 +11,12 @@ class uCType(object):
 
     def __init__(self, typename, unary_ops=None, binary_ops=None, rel_ops=None, assign_ops=None):
         self.typename = typename
+        assert (
+            all(op in uC_ops.unary for op in unary_ops)
+            and all(op in uC_ops.binary for op in binary_ops)
+            and all(op in uC_ops.rel for op in rel_ops)
+            and all(op in uC_ops.assign for op in assign_ops)
+        )
         self.unary_ops = unary_ops or set()
         self.binary_ops = binary_ops or set()
         self.rel_ops = rel_ops or set()
@@ -50,4 +57,4 @@ ArrayType = uCType("array",
     assign_ops  = {"="},
 )
 
-# TODO
+# TODO bool, etc.
