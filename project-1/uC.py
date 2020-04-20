@@ -8,7 +8,6 @@
 
 import os
 import sys
-
 from contextlib import contextmanager
 
 from uC_parser import UCParser
@@ -27,7 +26,7 @@ def error(lineno, message, filename=None):
     if not filename:
         errmsg = "{}: {}".format(lineno, message)
     else:
-        errmsg = "{}:{}: {}".format(filename,lineno,message)
+        errmsg = "{}:{}: {}".format(filename, lineno, message)
     for subscriber in _subscribers:
         subscriber(errmsg)
     _num_errors += 1
@@ -82,7 +81,7 @@ class Compiler:
             elif ast_file is not None:
                 self.ast.show(buf=ast_file, showcoord=True)
         except AssertionError as e:
-           error(None, e)
+            error(None, e)
 
     def _do_compile(self, susy, ast_file, debug):
         ''' Compiles the code to the given file object. '''

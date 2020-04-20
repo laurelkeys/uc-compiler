@@ -1,10 +1,8 @@
 import os
 import sys
-
 from collections import defaultdict
 
 import uC_ops
-
 from uC_AST import NodeVisitor
 
 ###########################################################

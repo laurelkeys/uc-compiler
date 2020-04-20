@@ -1,4 +1,4 @@
-from uC_parser import UCParser, Coord
+from uC_parser import Coord, UCParser
 
 ###########################################################
 ## misc ###################################################

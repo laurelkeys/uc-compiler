@@ -5,19 +5,19 @@
 
 # unary operators: +, -, ++, --, &, *, !
 unary = {
-    'PLUS': '+', 
+    'PLUS': '+',
     'MINUS': '-',
 
     # prefix increment and decrement
-    'PLUSPLUS': '++', 
+    'PLUSPLUS': '++',
     'MINUSMINUS': '--',
 
     # suffix/postfix increment and decrement
-    'pPLUSPLUS': 'p++', 
+    'pPLUSPLUS': 'p++',
     'pMINUSMINUS': 'p--',
 
     # address-of and indirection
-    'ADDRESS': '&', 
+    'ADDRESS': '&',
     'TIMES': '*',
 
     'NOT': '!',
@@ -25,28 +25,29 @@ unary = {
 
 # binary operators: +, -, *, /, %, &&, ||
 binary = {
+
     # additive operators
-    'PLUS': '+', 
+    'PLUS': '+',
     'MINUS': '-',
 
     # multiplicative operators
-    'TIMES': '*', 
-    'DIV': '/', 
+    'TIMES': '*',
+    'DIV': '/',
     'MOD': '%',
 
     # logical operators
-    'AND': '&&', 
+    'AND': '&&',
     'OR': '||',
 }
 
 # relational operators: ==, !=, <, >, <=, >=
 rel = {
-    'EQ': '==', 
+    'EQ': '==',
     'NEQ': '!=',
 
-    'LT': '<', 
-    'GT': '>', 
-    'LEQ': '<=', 
+    'LT': '<',
+    'GT': '>',
+    'LEQ': '<=',
     'GEQ': '>=',
 }
 
@@ -54,10 +55,10 @@ rel = {
 assign = {
     'EQUALS': '=',
 
-    'PLUSEQUALS': '+=', 
+    'PLUSEQUALS': '+=',
     'MINUSEQUALS': '-=',
 
-    'TIMESEQUALS': '*=', 
-    'DIVEQUALS': '/=', 
+    'TIMESEQUALS': '*=',
+    'DIVEQUALS': '/=',
     'MODEQUALS': '%=',
 }
