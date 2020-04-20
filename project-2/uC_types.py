@@ -12,10 +12,10 @@ class uCType(object):
     def __init__(self, typename, unary_ops=None, binary_ops=None, rel_ops=None, assign_ops=None):
         self.typename = typename
         assert (
-            all(op in uC_ops.unary for op in unary_ops)
-            and all(op in uC_ops.binary for op in binary_ops)
-            and all(op in uC_ops.rel for op in rel_ops)
-            and all(op in uC_ops.assign for op in assign_ops)
+            all(op in uC_ops.unary.items() for op in unary_ops)
+            and all(op in uC_ops.binary.items() for op in binary_ops)
+            and all(op in uC_ops.rel.items() for op in rel_ops)
+            and all(op in uC_ops.assign.items() for op in assign_ops)
         )
         self.unary_ops = unary_ops or set()
         self.binary_ops = binary_ops or set()

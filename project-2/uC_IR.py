@@ -4,6 +4,7 @@ import sys
 from collections import defaultdict
 
 import uC_ops
+
 from uC_AST import NodeVisitor
 
 ###########################################################
@@ -32,7 +33,7 @@ class GenerateCode(NodeVisitor):
         target = self.new_temp(node.type)
 
         # Make the SSA opcode and append to list of generated instructions
-        inst = (f'literal_{node.type.name}', node.value, target)
+        inst = (f"literal_{node.type.name}", node.value, target)
         self.code.append(inst)
 
         # Save the name of the temporary variable where the value was placed
@@ -47,7 +48,7 @@ class GenerateCode(NodeVisitor):
         target = self.new_temp(node.type)
 
         # Create the opcode and append to list
-        opcode = binary_ops[node.op] + "_"+node.left.type.name
+        opcode = f"{uC_ops.binary[node.op]}_{node.left.type.name}"
         inst = (opcode, node.left.gen_location, node.right.gen_location, target)
         self.code.append(inst)
 
@@ -59,41 +60,34 @@ class GenerateCode(NodeVisitor):
         self.visit(node.expr)
 
         # Create the opcode and append to list
-        inst = ('print_'+node.expr.type.name, node.expr.gen_location)
+        inst = (f"print_{node.expr.type.name}", node.expr.gen_location)
         self.code.append(inst)
 
     def visit_VarDeclaration(self, node):
         # allocate on stack memory
-        inst = ('alloc_'+node.type.name,
-                    node.id)
+        inst = (f"alloc_{node.type.name}", node.id)
         self.code.append(inst)
         # store optional init val
         if node.value:
             self.visit(node.value)
-            inst = ('store_'+node.type.name,
-                    node.value.gen_location,
-                    node.id)
+            inst = (f"store_{node.type.name}", node.value.gen_location, node.id)
             self.code.append(inst)
 
     def visit_LoadLocation(self, node):
         target = self.new_temp(node.type)
-        inst = ('load_'+node.type.name,
-                node.name,
-                target)
+        inst = (f"load_{node.type.name}", node.name, target)
         self.code.append(inst)
         node.gen_location = target
 
     def visit_AssignmentStatement(self, node):
         self.visit(node.value)
-        inst = ('store_'+node.value.type.name,
-                node.value.gen_location,
-                node.location)
+        inst = (f"store_{node.value.type.name}", node.value.gen_location, node.location)
         self.code.append(inst)
 
     def visit_UnaryOp(self, node):
         self.visit(node.left)
         target = self.new_temp(node.type)
-        opcode = unary_ops[node.op] + "_" + node.left.type.name
+        opcode = f"{uC_ops.unary[node.op]}_{node.left.type.name}"
         inst = (opcode, node.left.gen_location)
         self.code.append(inst)
         node.gen_location = target
