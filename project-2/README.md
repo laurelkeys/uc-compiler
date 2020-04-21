@@ -92,6 +92,8 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
 ```python
        ('uadd_type', source, target)        # target = +source
        ('uneg_type', source, target)        # target = -source
+       ('fptosi', fvalue)                   # (int)fvalue == cast float to int 
+       ('sitofp', ivalue)                   # (float)ivalue == cast int to float
 ```
 ## Relational/Equality/Logical:
 ```python

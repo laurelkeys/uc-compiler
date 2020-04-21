@@ -38,6 +38,7 @@ class Visitor(NodeVisitor):
         self.symtab.add("int", IntType)
         self.symtab.add("float", FloatType)
         self.symtab.add("char", CharType)
+        self.symtab.add("void", VoidType)
 
     # NOTE A few sample methods follow. You may have to adjust
     #      depending on the names of the AST nodes you've defined

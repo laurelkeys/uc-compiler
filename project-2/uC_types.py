@@ -1,5 +1,7 @@
 import uC_ops
 
+# TODO triple-check all of this (also, look for an official C reference)
+
 ###########################################################
 ## uC Built-in Types ######################################
 ###########################################################
@@ -12,10 +14,10 @@ class uCType(object):
     def __init__(self, typename, unary_ops=None, binary_ops=None, rel_ops=None, assign_ops=None):
         self.typename = typename
         assert (
-            all(op in uC_ops.unary.items() for op in unary_ops)
-            and all(op in uC_ops.binary.items() for op in binary_ops)
-            and all(op in uC_ops.rel.items() for op in rel_ops)
-            and all(op in uC_ops.assign.items() for op in assign_ops)
+            all(op in uC_ops.unary_ops.items() for op in unary_ops)
+            and all(op in uC_ops.binary_ops.items() for op in binary_ops)
+            and all(op in uC_ops.rel_ops.items() for op in rel_ops)
+            and all(op in uC_ops.assign_ops.items() for op in assign_ops)
         )
         self.unary_ops = unary_ops or set()
         self.binary_ops = binary_ops or set()
@@ -55,8 +57,32 @@ StringType = uCType(
     assign_ops  =   { '=', '+=' },
 )
 
+VoidType = uCType(
+    'void',
+    unary_ops   =   None,
+    binary_ops  =   None,
+    rel_ops     =   { '==', '!=' },
+    assign_ops  =   { '=' },
+)
+
 ArrayType = uCType(
     'array',
+    unary_ops   =   { '&', '*' },
+    binary_ops  =   None,
+    rel_ops     =   { '==', '!=' },
+    assign_ops  =   { '=' },
+)
+
+FunctionType = uCType(
+    'func',
+    unary_ops   =   { '&', '*' },
+    binary_ops  =   None,
+    rel_ops     =   { '==', '!=' },
+    assign_ops  =   None,
+)
+
+VariableType = uCType(
+    'var',
     unary_ops   =   { '&', '*' },
     binary_ops  =   None,
     rel_ops     =   { '==', '!=' },

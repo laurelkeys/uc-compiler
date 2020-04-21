@@ -1,0 +1,3 @@
+- start by implementing uC_sema (this will also involve uC_types and uC_ops)
+- move on to uC_IR
+- finally, implement uC_interpreter

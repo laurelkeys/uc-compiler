@@ -4,7 +4,7 @@
 ###########################################################
 
 # unary operators: +, -, ++, --, &, *, !
-unary = {
+unary_ops = {
     'PLUS': '+',
     'MINUS': '-',
 
@@ -24,7 +24,7 @@ unary = {
 }
 
 # binary operators: +, -, *, /, %, &&, ||
-binary = {
+binary_ops = {
 
     # additive operators
     'PLUS': '+',
@@ -41,7 +41,7 @@ binary = {
 }
 
 # relational operators: ==, !=, <, >, <=, >=
-rel = {
+rel_ops = {
     'EQ': '==',
     'NEQ': '!=',
 
@@ -52,7 +52,7 @@ rel = {
 }
 
 # assignment operators: =, +=, -=, *=, /=, %=
-assign = {
+assign_ops = {
     'EQUALS': '=',
 
     'PLUSEQUALS': '+=',
