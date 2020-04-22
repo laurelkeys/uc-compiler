@@ -11,7 +11,7 @@
   - [Unary Operations:](#unary-operations)
   - [Relational/Equality/Logical:](#relationalequalitylogical)
   - [Labels & Branches:](#labels--branches)
-  - [Functions & Builtins:](#functions--builtins)
+  - [Functions & Built-ins:](#functions--built-ins)
 
 # Sematic Rules
 
@@ -106,12 +106,12 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
        ('jump', target)                                     # Jump to a target label
        ('cbranch', expr_test, true_target, false_target)    # Conditional branch
 ```
-## Functions & Builtins:
+## Functions & Built-ins:
 ```python
        ('define', source)               # Function definition. `source` is a function label 
        ('end', )                        # End of a function definition
        ('call', source, target)         # Call a function. `target` is an optional return value
-       ('return_type', source, target)  # Return from function. `target` is an optional return value
+       ('return_type', target)          # Return from function. `target` is an optional return value
        ('param_type', source)           # `source` is an actual parameter
        ('read_type', source)            # Read value to `source`
        ('print_type',source)            # Print value of `source`

@@ -11,8 +11,9 @@ class uCType(object):
         Types are declared as singleton instances of this type.
     '''
 
-    def __init__(self, typename, unary_ops=None, binary_ops=None, rel_ops=None, assign_ops=None):
+    def __init__(self, typename, default, unary_ops=None, binary_ops=None, rel_ops=None, assign_ops=None):
         self.typename = typename
+        self.default = default
         assert (
             all(op in uC_ops.unary_ops.items() for op in unary_ops)
             and all(op in uC_ops.binary_ops.items() for op in binary_ops)
@@ -24,9 +25,15 @@ class uCType(object):
         self.rel_ops = rel_ops or set()
         self.assign_ops = assign_ops or set()
 
+    def __eq__(self, other):
+        if isinstance(other, uCType):
+            return other.typename == self.typename
+        return False
+
 
 IntType = uCType(
     'int',
+    default     =   0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
     binary_ops  =   { '+', '-', '*', '/', '%' },
     rel_ops     =   { '==', '!=', '<', '>', '<=', '>=' },
@@ -35,6 +42,7 @@ IntType = uCType(
 
 FloatType = uCType(
     'float',
+    default     =   0.0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
     binary_ops  =   { '+', '-', '*', '/', '%' },
     rel_ops     =   { '==', '!=', '<', '>', '<=', '>=' },
@@ -43,6 +51,7 @@ FloatType = uCType(
 
 CharType = uCType(
     'char',
+    default     =   '',
     unary_ops   =   None,
     binary_ops  =   { '+', '-' },
     rel_ops     =   { '==', '!=', '<', '>', '<=', '>=' },
@@ -51,14 +60,25 @@ CharType = uCType(
 
 StringType = uCType(
     'string',
+    default     =   "",
     unary_ops   =   None,
     binary_ops  =   { '+' },
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=', '+=' },
 )
 
+BoolType = uCType(
+    'bool',
+    default     =   False,
+    unary_ops   =   { '!' },
+    binary_ops  =   { '&&', '||' },
+    rel_ops     =   { '==', '!=' },
+    assign_ops  =   { '=' },
+)
+
 VoidType = uCType(
     'void',
+    default     =   None,
     unary_ops   =   None,
     binary_ops  =   None,
     rel_ops     =   { '==', '!=' },
@@ -67,26 +87,20 @@ VoidType = uCType(
 
 ArrayType = uCType(
     'array',
+    default     =   [],
     unary_ops   =   { '&', '*' },
     binary_ops  =   None,
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=' },
 )
 
-FunctionType = uCType(
-    'func',
-    unary_ops   =   { '&', '*' },
-    binary_ops  =   None,
-    rel_ops     =   { '==', '!=' },
-    assign_ops  =   None,
-)
 
-VariableType = uCType(
-    'var',
-    unary_ops   =   { '&', '*' },
-    binary_ops  =   None,
-    rel_ops     =   { '==', '!=' },
-    assign_ops  =   { '=' },
-)
+int_type    = IntType()
+float_type  = FloatType()
+char_type   = CharType()
+string_type = StringType()
+bool_type   = BoolType()
+void_type   = VoidType()
+array_type  = ArrayType()
 
-# TODO bool, etc.
+# TODO do we need something like a func_type, ptr_type, etc.?

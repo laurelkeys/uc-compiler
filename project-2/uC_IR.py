@@ -14,13 +14,16 @@ class GenerateCode(NodeVisitor):
 
     def __init__(self):
         super(GenerateCode, self).__init__()
-        self.versions = defaultdict(int) # version dictionary for temporaries
+        self.fname = 'main'
+        self.versions = { self.fname: 0 } # version dictionary for temporaries
         self.code = [] # generated code as a list of tuples
 
-    def new_temp(self, typeobj):
-        ''' Create a new temporary variable of a given type. '''
-        name = "t_%d" % (self.versions[typeobj.name])
-        self.versions[typeobj.name] += 1
+    def new_temp(self):
+        ''' Create a new temporary variable of a given scope (function name). '''
+        if self.fname not in self.versions:
+            self.versions[self.fname] = 0
+        name = "t_%d" % (self.versions[self.fname])
+        self.versions[self.fname] += 1
         return name
 
     # NOTE A few sample methods follow. You may have to adjust
@@ -28,7 +31,7 @@ class GenerateCode(NodeVisitor):
 
     def visit_Literal(self, node):
         # Create a new temporary variable name
-        target = self.new_temp(node.type)
+        target = self.new_temp()
 
         # Make the SSA opcode and append to list of generated instructions
         inst = (f"literal_{node.type.name}", node.value, target)
@@ -43,7 +46,7 @@ class GenerateCode(NodeVisitor):
         self.visit(node.right)
 
         # Make a new temporary for storing the result
-        target = self.new_temp(node.type)
+        target = self.new_temp()
 
         # Create the opcode and append to list
         opcode = f"{uC_ops.binary[node.op]}_{node.left.type.name}"
@@ -72,7 +75,7 @@ class GenerateCode(NodeVisitor):
             self.code.append(inst)
 
     def visit_LoadLocation(self, node):
-        target = self.new_temp(node.type)
+        target = self.new_temp()
         inst = (f"load_{node.type.name}", node.name, target)
         self.code.append(inst)
         node.gen_location = target
@@ -84,7 +87,7 @@ class GenerateCode(NodeVisitor):
 
     def visit_UnaryOp(self, node):
         self.visit(node.left)
-        target = self.new_temp(node.type)
+        target = self.new_temp()
         opcode = f"{uC_ops.unary[node.op]}_{node.left.type.name}"
         inst = (opcode, node.left.gen_location)
         self.code.append(inst)

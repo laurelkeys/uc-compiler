@@ -35,10 +35,13 @@ class Visitor(NodeVisitor):
     def __init__(self):
         self.symtab = SymbolTable()
         # add built-in type names to the symbol table
-        self.symtab.add("int", IntType)
-        self.symtab.add("float", FloatType)
-        self.symtab.add("char", CharType)
-        self.symtab.add("void", VoidType)
+        self.symtab.add("int", int_type)
+        self.symtab.add("float", float_type)
+        self.symtab.add("char", char_type)
+        self.symtab.add("string", string_type)
+        self.symtab.add("bool", bool_type)
+        self.symtab.add("void", void_type)
+        self.symtab.add("array", array_type)
 
     # NOTE A few sample methods follow. You may have to adjust
     #      depending on the names of the AST nodes you've defined
