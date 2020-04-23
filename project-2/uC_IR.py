@@ -22,7 +22,7 @@ class GenerateCode(NodeVisitor):
         ''' Create a new temporary variable of a given scope (function name). '''
         if self.fname not in self.versions:
             self.versions[self.fname] = 0
-        name = "t_%d" % (self.versions[self.fname])
+        name = "%" + "%d" % (self.versions[self.fname])
         self.versions[self.fname] += 1
         return name
 

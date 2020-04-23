@@ -1,12 +1,10 @@
 import uC_ops
 
-# TODO triple-check all of this (also, look for an official C reference)
-
 ###########################################################
 ## uC Built-in Types ######################################
 ###########################################################
 
-class uCType(object):
+class uCType:
     ''' Class that represents a type in the uC language.\n
         Types are declared as singleton instances of this type.
     '''

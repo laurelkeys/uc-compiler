@@ -667,7 +667,7 @@ class UCParser:
         p[0] = Read(p[3], coord=self._token_coord(p, 1))
 
 
-class Coord(object):
+class Coord:
     ''' Coordinates of a syntactic element.\n
         Consists of:
         - `line`: Line number.

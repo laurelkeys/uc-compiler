@@ -60,7 +60,7 @@ class Node:
         for (child_name, child) in self.children():
             child.show(buf, offset + 4, attrnames, nodenames, showcoord, child_name)
 
-class NodeVisitor(object):
+class NodeVisitor:
     ''' Abstract base class for visiting the AST nodes.\n
         Define a `visit_<>` method for each class named `<>` you want to visit.\n
         Notes:\n

@@ -7,10 +7,10 @@ from uC_types import (array_type, bool_type, char_type, float_type, int_type,
                       string_type, void_type)
 
 ###########################################################
-## uC Semantics ###########################################
+## uC Semantic Analysis ###################################
 ###########################################################
 
-class SymbolTable(object):
+class SymbolTable:
     ''' Class representing a symbol table.\n
         It should provide functionality for adding and looking up nodes associated with identifiers. '''
 
@@ -53,16 +53,16 @@ class Visitor(NodeVisitor):
         raise NotImplementedError
 
     def visit_Assert(self, node): # [expr*]
-        raise NotImplementedError
+        self.visit(node.expr)
 
     def visit_Assignment(self, node): # [op, lvalue*, rvalue*]
         sym = self.symtab.lookup(node.lvalue)
-        assert sym is not None, f"Assignment to unknown lvalue `{node.lvalue}`"
+        assert sym is None, f"Assignment to unknown lvalue `{node.lvalue}`"
         self.visit(node.rvalue)
 
         _str = _Assignment_str(node)
         _ltype, _rtype = node.lvalue.type, node.rvalue.type
-        assert _ltype == _rtype, f"Type mismatch: {_str}"
+        assert _ltype == _rtype, f"Type mismatch: `{_str}`"
         node.type = _ltype
 
     def visit_BinaryOp(self, node): # [op, left*, right*]
@@ -71,13 +71,14 @@ class Visitor(NodeVisitor):
 
         _str = _BinaryOp_str(node)
         _ltype, _rtype = node.left.type, node.right.type
-        assert _ltype == _rtype, f"Type mismatch: {_str}"
+        assert _ltype == _rtype, f"Type mismatch: `{_str}`"
         node.type = _ltype
 
-        assert node.op in node.left.type.binary_ops, f"Operation not supported by type {_ltype}: {_str}"
+        _type_ops = node.left.type.binary_ops
+        assert binary_ops[node.op] in _type_ops, f"Operation not supported by type {_ltype}: `{_str}`"
 
     def visit_Break(self, node): # []
-        raise NotImplementedError
+        pass
 
     def visit_Cast(self, node): # [type*, expr*]
         raise NotImplementedError
@@ -95,7 +96,7 @@ class Visitor(NodeVisitor):
         raise NotImplementedError
 
     def visit_EmptyStatement(self, node): # []
-        raise NotImplementedError
+        pass
 
     def visit_ExprList(self, node): # [exprs**]
         raise NotImplementedError
@@ -128,7 +129,7 @@ class Visitor(NodeVisitor):
         raise NotImplementedError
 
     def visit_Print(self, node): # [expr*]
-        raise NotImplementedError
+        self.visit(node.expr)
 
     def visit_Program(self, node): # [gdecls**]
         for gdecl in node.gdecls:
@@ -138,10 +139,10 @@ class Visitor(NodeVisitor):
         raise NotImplementedError
 
     def visit_Read(self, node): # [expr*]
-        raise NotImplementedError
+        self.visit(node.expr)
 
     def visit_Return(self, node): # [expr*]
-        raise NotImplementedError
+        self.visit(node.expr)
 
     def visit_Type(self, node): # [names]
         raise NotImplementedError
@@ -150,7 +151,13 @@ class Visitor(NodeVisitor):
         raise NotImplementedError
 
     def visit_UnaryOp(self, node): # [op, expr*]
-        raise NotImplementedError
+        self.visit(node.expr)
+        node.type = node.expr.type
+
+        _str = _UnaryOp_str(node)
+        _type = node.expr.type
+        _type_ops = node.expr.type.unary_ops
+        assert unary_ops[node.op] in _type_ops, f"Operation not supported by type {_type}: `{_str}`"
 
     def visit_While(self, node): # [cond*, body*]
         raise NotImplementedError
@@ -158,12 +165,12 @@ class Visitor(NodeVisitor):
 
 # Helper functions for error printing
 def _Assignment_str(node):
-    return f"`{node.lvalue.type} {assign_ops[node.op]} {node.rvalue.type}`"
+    return f"{node.lvalue.type} {assign_ops[node.op]} {node.rvalue.type}"
 
 def _BinaryOp_str(node):
-    return f"`{node.left.type} {binary_ops[node.op]} {node.right.type}`"
+    return f"{node.left.type} {binary_ops[node.op]} {node.right.type}"
 
 def _UnaryOp_str(node):
     if node.op[0] == 'p': # suffix/postfix increment and decrement
-        return f"`{node.expr.type}{unary_ops[node.op][1:]}`"
-    return f"`{unary_ops[node.op]}{node.expr.type}`"
+        return f"{node.expr.type}{unary_ops[node.op][1:]}"
+    return f"{unary_ops[node.op]}{node.expr.type}"
