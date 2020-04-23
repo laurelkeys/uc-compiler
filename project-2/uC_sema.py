@@ -46,24 +46,26 @@ class Visitor(NodeVisitor):
         self.symtab.add("array", array_type)
         # TODO should we add built-in functions as well (e.g. read, assert, etc.)?
 
-    # NOTE A few sample methods follow. You may have to adjust
-    #      depending on the names of the AST nodes you've defined
-
-    def visit_Program(self, node):
-        for gdecl in node.gdecls:
-            self.visit(gdecl)
-
-    def visit_ArrayDecl(self, node):
+    def visit_ArrayDecl(self, node): # [type*, dim*]
         raise NotImplementedError
 
-    def visit_Assignment(self, node):
+    def visit_ArrayRef(self, node): # [name*, subscript*]
+        raise NotImplementedError
+
+    def visit_Assert(self, node): # [expr*]
+        raise NotImplementedError
+
+    def visit_Assignment(self, node): # [op, lvalue*, rvalue*]
         sym = self.symtab.lookup(node.lvalue)
-        assert sym, f"Assignment to unknown lvalue `{node.lvalue}`"
-
+        assert sym is not None, f"Assignment to unknown lvalue `{node.lvalue}`"
         self.visit(node.rvalue)
-        assert sym.type == node.rvalue.type, f"Type mismatch: {_Assignment_str(node)}"
 
-    def visit_BinaryOp(self, node):
+        _str = _Assignment_str(node)
+        _ltype, _rtype = node.lvalue.type, node.rvalue.type
+        assert _ltype == _rtype, f"Type mismatch: {_str}"
+        node.type = _ltype
+
+    def visit_BinaryOp(self, node): # [op, left*, right*]
         self.visit(node.left)
         self.visit(node.right)
 
@@ -72,11 +74,86 @@ class Visitor(NodeVisitor):
         assert _ltype == _rtype, f"Type mismatch: {_str}"
         node.type = _ltype
 
-        _ltype_ops, _rtype_ops = node.left.type.binary_ops, node.right.type.binary_ops
-        assert node.op in _ltype_ops, f"Operation not supported by type {_ltype}: {_str}"
-        assert node.op in _rtype_ops, f"Operation not supported by type {_rtype}: {_str}"
+        assert node.op in node.left.type.binary_ops, f"Operation not supported by type {_ltype}: {_str}"
 
-    # TODO Implement `visit_<>` methods for all of the other AST nodes.
+    def visit_Break(self, node): # []
+        raise NotImplementedError
+
+    def visit_Cast(self, node): # [type*, expr*]
+        raise NotImplementedError
+
+    def visit_Compound(self, node): # [decls**, stmts**]
+        raise NotImplementedError
+
+    def visit_Constant(self, node): # [type, value]
+        raise NotImplementedError
+
+    def visit_Decl(self, node): # [name, type*, init*]
+        raise NotImplementedError
+
+    def visit_DeclList(self, node): # [decls**]
+        raise NotImplementedError
+
+    def visit_EmptyStatement(self, node): # []
+        raise NotImplementedError
+
+    def visit_ExprList(self, node): # [exprs**]
+        raise NotImplementedError
+
+    def visit_For(self, node): # [init*, cond*, next*, body*]
+        raise NotImplementedError
+
+    def visit_FuncCall(self, node): # [name*, args*]
+        raise NotImplementedError
+
+    def visit_FuncDecl(self, node): # [args*, type*]
+        raise NotImplementedError
+
+    def visit_FuncDef(self, node): # [spec*, decl*, param_decls**, body*]
+        raise NotImplementedError
+
+    def visit_GlobalDecl(self, node): # [decls**]
+        raise NotImplementedError
+
+    def visit_ID(self, node): # [name]
+        raise NotImplementedError
+
+    def visit_If(self, node): # [cond*, ifthen*, ifelse*]
+        raise NotImplementedError
+
+    def visit_InitList(self, node): # [exprs**]
+        raise NotImplementedError
+
+    def visit_ParamList(self, node): # [params**]
+        raise NotImplementedError
+
+    def visit_Print(self, node): # [expr*]
+        raise NotImplementedError
+
+    def visit_Program(self, node): # [gdecls**]
+        for gdecl in node.gdecls:
+            self.visit(gdecl)
+
+    def visit_PtrDecl(self, node): # [type*]
+        raise NotImplementedError
+
+    def visit_Read(self, node): # [expr*]
+        raise NotImplementedError
+
+    def visit_Return(self, node): # [expr*]
+        raise NotImplementedError
+
+    def visit_Type(self, node): # [names]
+        raise NotImplementedError
+
+    def visit_VarDecl(self, node): # [declname, type*]
+        raise NotImplementedError
+
+    def visit_UnaryOp(self, node): # [op, expr*]
+        raise NotImplementedError
+
+    def visit_While(self, node): # [cond*, body*]
+        raise NotImplementedError
 
 
 # Helper functions for error printing
