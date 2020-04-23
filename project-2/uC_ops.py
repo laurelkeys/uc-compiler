@@ -62,3 +62,10 @@ assign_ops = {
     'DIVEQUALS': '/=',
     'MODEQUALS': '%=',
 }
+
+
+if __name__ == "__main__":
+    print("unary operators:", ', '.join(unary_ops.values()))
+    print("binary operators:", ', '.join(binary_ops.values()))
+    print("relational operators:", ', '.join(rel_ops.values()))
+    print("assignment operators:", ', '.join(assign_ops.values()))

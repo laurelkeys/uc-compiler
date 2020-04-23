@@ -30,8 +30,11 @@ class uCType(object):
             return other.typename == self.typename
         return False
 
+    def __str__(self):
+        return '{' + self.typename + '}'
 
-IntType = uCType(
+
+__IntType = uCType(
     'int',
     default     =   0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -40,7 +43,7 @@ IntType = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-FloatType = uCType(
+__FloatType = uCType(
     'float',
     default     =   0.0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -49,7 +52,7 @@ FloatType = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-CharType = uCType(
+__CharType = uCType(
     'char',
     default     =   '',
     unary_ops   =   None,
@@ -58,7 +61,7 @@ CharType = uCType(
     assign_ops  =   { '=', '+=', '-=' },
 )
 
-StringType = uCType(
+__StringType = uCType(
     'string',
     default     =   "",
     unary_ops   =   None,
@@ -67,7 +70,7 @@ StringType = uCType(
     assign_ops  =   { '=', '+=' },
 )
 
-BoolType = uCType(
+__BoolType = uCType(
     'bool',
     default     =   False,
     unary_ops   =   { '!' },
@@ -76,7 +79,7 @@ BoolType = uCType(
     assign_ops  =   { '=' },
 )
 
-VoidType = uCType(
+__VoidType = uCType(
     'void',
     default     =   None,
     unary_ops   =   None,
@@ -85,7 +88,7 @@ VoidType = uCType(
     assign_ops  =   { '=' },
 )
 
-ArrayType = uCType(
+__ArrayType = uCType(
     'array',
     default     =   [],
     unary_ops   =   { '&', '*' },
@@ -94,13 +97,13 @@ ArrayType = uCType(
     assign_ops  =   { '=' },
 )
 
+# Singletons
+int_type    = __IntType()
+float_type  = __FloatType()
+char_type   = __CharType()
+string_type = __StringType()
+bool_type   = __BoolType()
+void_type   = __VoidType()
+array_type  = __ArrayType()
 
-int_type    = IntType()
-float_type  = FloatType()
-char_type   = CharType()
-string_type = StringType()
-bool_type   = BoolType()
-void_type   = VoidType()
-array_type  = ArrayType()
-
-# TODO do we need something like a func_type, ptr_type, etc.?
+# TODO do we need something like a function_type, pointer_type / reference_type, etc.?
