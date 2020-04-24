@@ -233,7 +233,7 @@ class UCParser:
     # NOTE top level rule
     def p_program(self, p):
         ''' program : global_declaration__list '''
-        p[0] = Program(p[1]) # FIXME should we pass coord=None ?
+        p[0] = Program(p[1])
 
 
     def p_global_declaration(self, p):
@@ -432,7 +432,7 @@ class UCParser:
             p[0] = p[1]
         else:
             if not isinstance(p[1], ExprList):
-                p[1] = ExprList([p[1]], coord=p[1].coord) # FIXME should we pass coord here ?
+                p[1] = ExprList([p[1]], coord=p[1].coord)
             p[1].exprs.append(p[3])
             p[0] = p[1]
 
@@ -582,7 +582,7 @@ class UCParser:
     def p_compound_statement(self, p):
         ''' compound_statement : LBRACE declaration__list__opt statement__list__opt RBRACE '''
         coord = self._token_coord(p, 1)
-        coord.column = 1 # NOTE this is a hack to match the expected coord value
+        coord.column = 1 # FIXME this is a hack to match the expected coord value
         p[0] = Compound(p[2], p[3], coord=coord)
 
 

@@ -31,6 +31,9 @@ class uCType:
     def __str__(self):
         return '{' + self.typename + '}'
 
+    def __repr__(self):
+        return '{' + self.typename + '}'
+
 
 __IntType = uCType(
     'int',
@@ -62,7 +65,7 @@ __CharType = uCType(
 __StringType = uCType(
     'string',
     default     =   "",
-    unary_ops   =   None,
+    unary_ops   =   None, # FIXME is { '&', '*' } valid ?
     binary_ops  =   { '+' },
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=', '+=' },
@@ -71,7 +74,7 @@ __StringType = uCType(
 __BoolType = uCType(
     'bool',
     default     =   False,
-    unary_ops   =   { '!' },
+    unary_ops   =   { '!' }, # FIXME is { '&', '*' } valid ?
     binary_ops  =   { '&&', '||' },
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=' },
@@ -80,7 +83,7 @@ __BoolType = uCType(
 __VoidType = uCType(
     'void',
     default     =   None,
-    unary_ops   =   None,
+    unary_ops   =   None, # FIXME is { '&', '*' } valid ?
     binary_ops  =   None,
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=' },

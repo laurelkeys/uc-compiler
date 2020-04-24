@@ -54,6 +54,7 @@ class Visitor(NodeVisitor):
 
     def visit_Assert(self, node): # [expr*]
         self.visit(node.expr)
+        assert node.expr.type == bool_type, f"No implementation for: `assert {node.expr.type}`"
 
     def visit_Assignment(self, node): # [op, lvalue*, rvalue*]
         sym = self.symtab.lookup(node.lvalue)
@@ -108,7 +109,10 @@ class Visitor(NodeVisitor):
         raise NotImplementedError
 
     def visit_FuncDecl(self, node): # [args*, type*]
-        raise NotImplementedError
+        if node.args is not None:
+            for arg in node.args:
+                self.visit(arg)
+        self.visit(node.type)
 
     def visit_FuncDef(self, node): # [spec*, decl*, param_decls**, body*]
         raise NotImplementedError
@@ -123,10 +127,12 @@ class Visitor(NodeVisitor):
         raise NotImplementedError
 
     def visit_InitList(self, node): # [exprs**]
-        raise NotImplementedError
+        for expr in node.exprs:
+            self.visit(expr)
 
     def visit_ParamList(self, node): # [params**]
-        raise NotImplementedError
+        for param in node.params:
+            self.visit(param)
 
     def visit_Print(self, node): # [expr*]
         self.visit(node.expr)
