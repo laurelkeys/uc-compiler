@@ -76,19 +76,20 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
 
 ## Variables & Values:
 ```python
-       ('alloc_type', varname)          # Allocate on stack (ref by register) a variable of a given type
-       ('global_type', varname, value)  # Allocate on heap a global var of a given type. value is optional
-       ('load_type', varname, target)   # Load the value of a variable (stack or heap) into target (register)
-       ('store_type', source, target)   # Store the source/register into target/varname
-       ('literal_type', value, target)  # Load a literal value into target
+       ('alloc_type', varname)                   # Allocate on stack (ref by register) a variable of a given type
+       ('global_type', varname, value)           # Allocate on heap a global var of a given type. value is optional
+       ('load_type', varname, target)            # Load the value of a variable (stack/heap) into target (register)
+       ('store_type', source, target)            # Store the source/register into target/varname
+       ('literal_type', value, target)           # Load a literal value into target
+       ('elem_type', source, index, target)      # Load into target the address of source (array) indexed by index
 ```
 ## Binary Operations:
 ```python
-       ('add_type', left, right, target )   # target = left + right
+       ('add_type', left, right, target)    # target = left + right
        ('sub_type', left, right, target)    # target = left - right
        ('mul_type', left, right, target)    # target = left * right
        ('div_type', left, right, target)    # target = left / right  (integer truncation)
-       ('mod_type', left, right, target)    # target = left % rigth
+       ('mod_type', left, right, target)    # target = left % right
 ```
 ## Unary Operations:
 ```python
@@ -99,7 +100,7 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
 ```
 ## Relational/Equality/Logical:
 ```python
-       (`oper`, left, right, target)    # target = left `oper` rigth, where `oper` is:
+       (`oper`, left, right, target)    # target = left `oper` right, where `oper` is:
                                         #          lt, le, ge, gt, eq, ne, and, or
 ```
 ## Labels & Branches:
