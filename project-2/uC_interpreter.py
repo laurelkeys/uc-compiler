@@ -5,18 +5,18 @@
 
 # NOTE Given a sequence of instruction tuples such as:
 #          code = [ 
-#              ('literal_int', 1, 't_1'),
-#              ('literal_int', 2, 't_2'),
-#              ('add_int', 't_1', 't_2, 't_3')
-#              ('print_int', 't_3')
+#              ('literal_int', 1, '%1'),
+#              ('literal_int', 2, '%2'),
+#              ('add_int', '%1', '%2, '%3')
+#              ('print_int', '%3')
 #              ...
 #          ]
 #
 #      The class executes methods self.run_opcode(args), for example:
-#          self.run_literal_int(1, 't_1')
-#          self.run_literal_int(2, 't_2')
-#          self.run_add_int('t_1', 't_2', 't_3')
-#          self.run_print_int('t_3')
+#          self.run_literal_int(1, '%1')
+#          self.run_literal_int(2, '%2')
+#          self.run_add_int('%1', '%2', '%3')
+#          self.run_print_int('%3')
 #          ...
 
 # NOTE To store the values of variables created in the IR, we simply use a dictionary.

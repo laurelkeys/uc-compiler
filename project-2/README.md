@@ -12,6 +12,8 @@
   - [Relational/Equality/Logical:](#relationalequalitylogical)
   - [Labels & Branches:](#labels--branches)
   - [Functions & Built-ins:](#functions--built-ins)
+  - [A note about arrays:](#a-note-about-arrays)
+  - [A note about pointers:](#a-note-about-pointers)
 
 # Sematic Rules
 
@@ -115,3 +117,10 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
        ('param_type', source)           # `source` is an actual parameter
        ('read_type', source)            # Read value to `source`
        ('print_type',source)            # Print value of `source`
+```
+
+## A note about arrays:
+The dimensions of an array in uC are known at compile time. Thus, the type described in the allocation must express the dimension of the same. The `initializer_list` are always allocated in the heap, either directly in the declaration of the variable, if it is global, or by defining a new temporary, based on the name of the local variable. ##
+
+## A note about pointers:
+The allocation and operations with pointers in uC follow the same structure used for arrays. The exception is that reading the referenced value requires two instructions.
