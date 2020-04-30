@@ -12,16 +12,16 @@ class uCType:
     def __init__(self, typename, default, unary_ops=None, binary_ops=None, rel_ops=None, assign_ops=None):
         self.typename = typename
         self.default = default
-        assert (
-            all(op in uC_ops.unary_ops.items() for op in unary_ops)
-            and all(op in uC_ops.binary_ops.items() for op in binary_ops)
-            and all(op in uC_ops.rel_ops.items() for op in rel_ops)
-            and all(op in uC_ops.assign_ops.items() for op in assign_ops)
-        )
+        
         self.unary_ops = unary_ops or set()
         self.binary_ops = binary_ops or set()
         self.rel_ops = rel_ops or set()
         self.assign_ops = assign_ops or set()
+        
+        assert all(op in uC_ops.unary_ops.values() for op in self.unary_ops)
+        assert all(op in uC_ops.binary_ops.values() for op in self.binary_ops)
+        assert all(op in uC_ops.rel_ops.values() for op in self.rel_ops)
+        assert all(op in uC_ops.assign_ops.values() for op in self.assign_ops)
 
     def __eq__(self, other):
         if isinstance(other, uCType):
@@ -107,3 +107,4 @@ TYPE_array = uCType(
 #     rel_ops     =   { '==', '!=' },
 #     assign_ops  =   { '=' },
 # )
+
