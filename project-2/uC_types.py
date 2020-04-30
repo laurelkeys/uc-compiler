@@ -12,12 +12,12 @@ class uCType:
     def __init__(self, typename, default, unary_ops=None, binary_ops=None, rel_ops=None, assign_ops=None):
         self.typename = typename
         self.default = default
-        
+
         self.unary_ops = unary_ops or set()
         self.binary_ops = binary_ops or set()
         self.rel_ops = rel_ops or set()
         self.assign_ops = assign_ops or set()
-        
+
         assert all(op in uC_ops.unary_ops.values() for op in self.unary_ops)
         assert all(op in uC_ops.binary_ops.values() for op in self.binary_ops)
         assert all(op in uC_ops.rel_ops.values() for op in self.rel_ops)
@@ -101,10 +101,10 @@ TYPE_array = uCType(
 # TODO implement for pointers / references
 # TYPE_ptr = uCType(
 #     'ptr',
-#     default     =   None, # FIXME maybe 0 ?
-#     unary_ops   =   { '&', '*' },
-#     binary_ops  =   None,
-#     rel_ops     =   { '==', '!=' },
-#     assign_ops  =   { '=' },
+#     default     =   None, # 0
+#     unary_ops   =   { '&', '*' }, # '++', '--', 'p++', 'p--',
+#     binary_ops  =   None, # '+', '-',
+#     rel_ops     =   { '==', '!=' }, # '<', '>', '<=', '>='
+#     assign_ops  =   { '=' }, # '+=', '-='
 # )
 

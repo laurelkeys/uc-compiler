@@ -6,9 +6,9 @@
 # This file defines some generic functionality for dealing with errors throughout the compiler project.
 #
 
-import os
+import __context_root__
+
 import sys
-import context
 
 from uC_errors import error, errors_reported, clear_errors, \
                       subscribe_errors

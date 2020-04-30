@@ -511,7 +511,7 @@ class UCParser:
     def p_declaration(self, p):
         ''' declaration : type_specifier init_declarator_list__opt SEMI '''
         if p[2] is None:
-            # FIXME
+            # FIXME this will lead to an assertion error
             p[0] = self._build_declarations(spec=p[1], decls=[dict(decl=None, init=None)])
         else:
             p[0] = self._build_declarations(spec=p[1], decls=p[2])
