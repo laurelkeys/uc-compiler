@@ -300,7 +300,7 @@ class UCParser:
             while type_tail.type is not None:
                 type_tail = type_tail.type
             type_tail.type = type_head
-            p[0] = p[3]
+            p[0] = p[2]
 
     def p_pointer__opt(self, p):
         ''' pointer__opt : empty

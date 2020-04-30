@@ -35,7 +35,7 @@ class uCType:
         return '{' + self.typename + '}'
 
 
-__IntType = uCType(
+TYPE_int = uCType(
     'int',
     default     =   0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -44,7 +44,7 @@ __IntType = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-__FloatType = uCType(
+TYPE_float = uCType(
     'float',
     default     =   0.0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -53,7 +53,7 @@ __FloatType = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-__CharType = uCType(
+TYPE_char = uCType(
     'char',
     default     =   '',
     unary_ops   =   None,
@@ -62,7 +62,7 @@ __CharType = uCType(
     assign_ops  =   { '=', '+=', '-=' },
 )
 
-__StringType = uCType(
+TYPE_string = uCType(
     'string',
     default     =   "",
     unary_ops   =   None, # FIXME is { '&', '*' } valid ?
@@ -71,7 +71,7 @@ __StringType = uCType(
     assign_ops  =   { '=', '+=' },
 )
 
-__BoolType = uCType(
+TYPE_bool = uCType(
     'bool',
     default     =   False,
     unary_ops   =   { '!' }, # FIXME is { '&', '*' } valid ?
@@ -80,7 +80,7 @@ __BoolType = uCType(
     assign_ops  =   { '=' },
 )
 
-__VoidType = uCType(
+TYPE_void = uCType(
     'void',
     default     =   None,
     unary_ops   =   None, # FIXME is { '&', '*' } valid ?
@@ -89,7 +89,7 @@ __VoidType = uCType(
     assign_ops  =   { '=' },
 )
 
-__ArrayType = uCType(
+TYPE_array = uCType(
     'array',
     default     =   [],
     unary_ops   =   { '&', '*' },
@@ -98,13 +98,12 @@ __ArrayType = uCType(
     assign_ops  =   { '=' },
 )
 
-# Singletons
-int_type    = __IntType()
-float_type  = __FloatType()
-char_type   = __CharType()
-string_type = __StringType()
-bool_type   = __BoolType()
-void_type   = __VoidType()
-array_type  = __ArrayType()
-
-# TODO do we need something like a function_type, pointer_type / reference_type, etc.?
+# TODO implement for pointers / references
+# TYPE_ptr = uCType(
+#     'ptr',
+#     default     =   None, # FIXME maybe 0 ?
+#     unary_ops   =   { '&', '*' },
+#     binary_ops  =   None,
+#     rel_ops     =   { '==', '!=' },
+#     assign_ops  =   { '=' },
+# )

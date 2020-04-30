@@ -1,10 +1,10 @@
 import os
 import sys
 
-from uC_AST import NodeVisitor
+from uC_AST import *
 from uC_ops import *
-from uC_types import (array_type, bool_type, char_type, float_type, int_type,
-                      string_type, void_type)
+from uC_types import (TYPE_array, TYPE_bool, TYPE_char, TYPE_float, TYPE_int,
+                      TYPE_string, TYPE_void)
 
 ###########################################################
 ## uC Semantic Analysis ###################################
@@ -12,7 +12,8 @@ from uC_types import (array_type, bool_type, char_type, float_type, int_type,
 
 class SymbolTable:
     ''' Class representing a symbol table.\n
-        It should provide functionality for adding and looking up nodes associated with identifiers. '''
+        It should provide functionality for adding and looking up nodes associated with identifiers.
+    '''
 
     def __init__(self):
         self.symtab = {} # symbol table
@@ -37,26 +38,26 @@ class Visitor(NodeVisitor):
     def __init__(self):
         self.symtab = SymbolTable()
         # add built-in type names to the symbol table
-        self.symtab.add("int", int_type)
-        self.symtab.add("float", float_type)
-        self.symtab.add("char", char_type)
-        self.symtab.add("string", string_type)
-        self.symtab.add("bool", bool_type)
-        self.symtab.add("void", void_type)
-        self.symtab.add("array", array_type)
+        self.symtab.add("int", TYPE_int)
+        self.symtab.add("float", TYPE_float)
+        self.symtab.add("char", TYPE_char)
+        self.symtab.add("string", TYPE_string)
+        self.symtab.add("bool", TYPE_bool)
+        self.symtab.add("void", TYPE_void)
+        self.symtab.add("array", TYPE_array)
         # TODO should we add built-in functions as well (e.g. read, assert, etc.)?
 
-    def visit_ArrayDecl(self, node): # [type*, dim*]
+    def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         raise NotImplementedError
 
-    def visit_ArrayRef(self, node): # [name*, subscript*]
+    def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         raise NotImplementedError
 
-    def visit_Assert(self, node): # [expr*]
+    def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
-        assert node.expr.type == bool_type, f"No implementation for: `assert {node.expr.type}`"
+        assert node.expr.type == TYPE_bool, f"No implementation for: `assert {node.expr.type}`"
 
-    def visit_Assignment(self, node): # [op, lvalue*, rvalue*]
+    def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
         sym = self.symtab.lookup(node.lvalue)
         assert sym is None, f"Assignment to unknown lvalue `{node.lvalue}`"
         self.visit(node.rvalue)
@@ -66,7 +67,7 @@ class Visitor(NodeVisitor):
         assert _ltype == _rtype, f"Type mismatch: `{_str}`"
         node.type = _ltype
 
-    def visit_BinaryOp(self, node): # [op, left*, right*]
+    def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         self.visit(node.left)
         self.visit(node.right)
 
@@ -78,85 +79,85 @@ class Visitor(NodeVisitor):
         _type_ops = node.left.type.binary_ops
         assert binary_ops[node.op] in _type_ops, f"Operation not supported by type {_ltype}: `{_str}`"
 
-    def visit_Break(self, node): # []
+    def visit_Break(self, node: Break): # []
         pass
 
-    def visit_Cast(self, node): # [type*, expr*]
+    def visit_Cast(self, node: Cast): # [type*, expr*]
         raise NotImplementedError
 
-    def visit_Compound(self, node): # [decls**, stmts**]
+    def visit_Compound(self, node: Compound): # [decls**, stmts**]
         raise NotImplementedError
 
-    def visit_Constant(self, node): # [type, value]
+    def visit_Constant(self, node: Constant): # [type, value]
         raise NotImplementedError
 
-    def visit_Decl(self, node): # [name, type*, init*]
+    def visit_Decl(self, node: Decl): # [name, type*, init*]
         raise NotImplementedError
 
-    def visit_DeclList(self, node): # [decls**]
+    def visit_DeclList(self, node: DeclList): # [decls**]
         raise NotImplementedError
 
-    def visit_EmptyStatement(self, node): # []
+    def visit_EmptyStatement(self, node: EmptyStatement): # []
         pass
 
-    def visit_ExprList(self, node): # [exprs**]
+    def visit_ExprList(self, node: ExprList): # [exprs**]
         raise NotImplementedError
 
-    def visit_For(self, node): # [init*, cond*, next*, body*]
+    def visit_For(self, node: For): # [init*, cond*, next*, body*]
         raise NotImplementedError
 
-    def visit_FuncCall(self, node): # [name*, args*]
+    def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         raise NotImplementedError
 
-    def visit_FuncDecl(self, node): # [args*, type*]
+    def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         if node.args is not None:
             for arg in node.args:
                 self.visit(arg)
         self.visit(node.type)
 
-    def visit_FuncDef(self, node): # [spec*, decl*, param_decls**, body*]
+    def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
         raise NotImplementedError
 
-    def visit_GlobalDecl(self, node): # [decls**]
+    def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         raise NotImplementedError
 
-    def visit_ID(self, node): # [name]
+    def visit_ID(self, node: ID): # [name]
         raise NotImplementedError
 
-    def visit_If(self, node): # [cond*, ifthen*, ifelse*]
+    def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         raise NotImplementedError
 
-    def visit_InitList(self, node): # [exprs**]
+    def visit_InitList(self, node: InitList): # [exprs**]
         for expr in node.exprs:
             self.visit(expr)
 
-    def visit_ParamList(self, node): # [params**]
+    def visit_ParamList(self, node: ParamList): # [params**]
         for param in node.params:
             self.visit(param)
 
-    def visit_Print(self, node): # [expr*]
+    def visit_Print(self, node: Print): # [expr*]
         self.visit(node.expr)
 
-    def visit_Program(self, node): # [gdecls**]
+    def visit_Program(self, node: Program): # [gdecls**]
         for gdecl in node.gdecls:
             self.visit(gdecl)
 
-    def visit_PtrDecl(self, node): # [type*]
+    def visit_PtrDecl(self, node: PtrDecl): # [type*]
         raise NotImplementedError
 
-    def visit_Read(self, node): # [expr*]
+    def visit_Read(self, node: Read): # [expr*]
         self.visit(node.expr)
 
-    def visit_Return(self, node): # [expr*]
+    def visit_Return(self, node: Return): # [expr*]
         self.visit(node.expr)
 
-    def visit_Type(self, node): # [names]
+    def visit_Type(self, node: Type): # [names]
         raise NotImplementedError
 
-    def visit_VarDecl(self, node): # [declname, type*]
+    def visit_VarDecl(self, node: VarDecl): # [declname, type*]
         raise NotImplementedError
 
-    def visit_UnaryOp(self, node): # [op, expr*]
+    def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
         self.visit(node.expr)
         node.type = node.expr.type
 
@@ -165,7 +166,7 @@ class Visitor(NodeVisitor):
         _type_ops = node.expr.type.unary_ops
         assert unary_ops[node.op] in _type_ops, f"Operation not supported by type {_type}: `{_str}`"
 
-    def visit_While(self, node): # [cond*, body*]
+    def visit_While(self, node: While): # [cond*, body*]
         raise NotImplementedError
 
 

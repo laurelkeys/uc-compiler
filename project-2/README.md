@@ -8,7 +8,7 @@
 - [SSA code instructions](#ssa-code-instructions)
   - [Variables & Values:](#variables--values)
   - [Binary Operations:](#binary-operations)
-  - [Unary Operations:](#unary-operations)
+  - [Cast Operations:](#cast-operations)
   - [Relational/Equality/Logical:](#relationalequalitylogical)
   - [Labels & Branches:](#labels--branches)
   - [Functions & Built-ins:](#functions--built-ins)
@@ -91,17 +91,15 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
        ('div_type', left, right, target)    # target = left / right  (integer truncation)
        ('mod_type', left, right, target)    # target = left % right
 ```
-## Unary Operations:
+## Cast Operations:
 ```python
-       ('uadd_type', source, target)        # target = +source
-       ('uneg_type', source, target)        # target = -source
        ('fptosi', fvalue)                   # (int)fvalue == cast float to int 
        ('sitofp', ivalue)                   # (float)ivalue == cast int to float
 ```
 ## Relational/Equality/Logical:
 ```python
-       (`oper`, left, right, target)    # target = left `oper` right, where `oper` is:
-                                        #          lt, le, ge, gt, eq, ne, and, or
+       (`oper`_type, left, right, target)        # target = left `oper` right, where `oper` is:
+                                                 #          lt, le, ge, gt, eq, ne, and, or
 ```
 ## Labels & Branches:
 ```python
