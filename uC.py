@@ -6,7 +6,8 @@
 # This file defines some generic functionality for dealing with errors throughout the compiler project.
 #
 
-import os
+import __context_root__
+
 import sys
 
 from uC_errors import error, errors_reported, clear_errors, \
@@ -18,6 +19,8 @@ from uC_sema import Visitor
 ###########################################################
 ## uC Compiler ############################################
 ###########################################################
+
+PARSE_ONLY = True # FIXME quick hack for not running uC_sema
 
 class Compiler:
     ''' This object encapsulates the compiler and serves as a facade interface for the compiler itself. '''
@@ -37,8 +40,9 @@ class Compiler:
         ''' Decorate the AST with semantic actions.\n
             If `ast_file` is not `None`, prints out the abstract syntax tree (AST). '''
         try:
-            self.sema = Visitor()
-            self.sema.visit(self.ast)
+            if not PARSE_ONLY:
+                self.sema = Visitor()
+                self.sema.visit(self.ast)
             if susy:
                 self.ast.show(showcoord=True)
             elif ast_file is not None:

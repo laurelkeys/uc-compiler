@@ -103,7 +103,7 @@ class UCParser:
         modifier_head = modifier
         modifier_tail = modifier
 
-        while modifier_tail.type:
+        while modifier_tail.type is not None:
             modifier_tail = modifier_tail.type
 
         if isinstance(decl, VarDecl): # decl is a basic type
@@ -119,56 +119,56 @@ class UCParser:
 
 
     def _fix_decl_name_type(self, decl, typename):
-        ''' Fixes a declaration. Modifies `decl`. '''
+        ''' Fixes a declaration. Modifies `decl`.\n
+            Note: a type always has an underlying `VarDecl`, but it can be wrapped
+            by modifiers, which are composed by `FuncDecl`, `ArrayDecl` and `PtrDecl`.
+            This fixes the `Decl`'s `.name` to be equal to the `VarDecl`'s `.declname`.
+        '''
         type = decl
         while not isinstance(type, VarDecl):
             type = type.type # reach the underlying basic type
-
         decl.name = type.declname
 
-        for tn in typename:
-            if not isinstance(tn, Type):
-                if len(typename) > 1:
-                    self._parse_error("Invalid multiple types specified", tn.coord)
-                else:
-                    type.type = tn
-                    return decl
-
-        if not typename:
+        if typename is None:
             if not isinstance(decl.type, FuncDecl):
                 self._parse_error("Missing type in declaration", decl.coord)
             type.type = Type(_default_function_return_type, coord=decl.coord)
         else:
-            type.type = Type([typename.names[0]], coord=typename.coord)
+            type.type = typename # NOTE this fixes the type=None passed to AST nodes
 
         return decl
 
 
+    def _build_declaration(self, spec, decl, init=None):
+        ''' Builds a declaration with the given specifier. '''
+        declaration = Decl(None, decl, init, coord=decl.coord)
+        return self._fix_decl_name_type(
+            decl=Decl(None, decl, init, coord=decl.coord),
+            typename=spec
+        )
+
+
     def _build_declarations(self, spec, decls):
-        ''' Builds a list of declarations all sharing the given specifiers. '''
+        ''' Builds a list of declarations all sharing the given specifiers.\n
+            Note: `decls` is a list of dictionaries, mapping a declaration `decl`
+            to its (optional) initialization `init` (i.e. `[dict(decl=.., init..),..]`).
+        '''
         declarations = []
-
-        for decl in decls:
-            assert decl['decl'] is not None
-            declaration = Decl(
-                None,
-                decl['decl'],
-                decl.get('init'),
-                coord=decl['decl'].coord
+        for decl_with_init in decls:
+            assert decl_with_init.get('decl') is not None
+            declarations.append(
+                self._build_declaration(
+                    spec, # type specifier
+                    decl_with_init['decl'], # declarator
+                    decl_with_init.get('init') # optional initializer
+                )
             )
-            fixed_decl = self._fix_decl_name_type(declaration, spec)
-            declarations.append(fixed_decl)
-
         return declarations
 
 
     def _build_function_definition(self, spec, decl, param_decls, body):
         ''' Builds a function definition. '''
-        declaration, *_ = self._build_declarations(
-            spec=spec,
-            decls=[dict(decl=decl, init=None)]
-        )
-
+        declaration = self._build_declaration(spec, decl, init=None)
         return FuncDef(
             spec,
             declaration,
@@ -261,10 +261,8 @@ class UCParser:
         if p[1] is not None:
             spec = p[1]
         else:
-            spec = dict(
-                type=[Type(_default_function_return_type, coord=self._token_coord(p, 1))],
-                function=[]
-            )
+            spec = Type(_default_function_return_type, coord=self._token_coord(p, 1))
+
         p[0] = self._build_function_definition(
             spec,
             decl=p[2],
@@ -292,6 +290,7 @@ class UCParser:
 
     def p_pointer(self, p):
         ''' pointer : TIMES pointer__opt %prec __DEREFERENCE '''
+        # NOTE type=None later gets fixed by _fix_decl_name_type
         type_head = PtrDecl(None, coord=self._token_coord(p, 1))
         if p[2] is None:
             p[0] = type_head
@@ -316,7 +315,7 @@ class UCParser:
                               | direct_declarator LPAREN parameter_list RPAREN
                               | direct_declarator LPAREN identifier__list__opt RPAREN
         '''
-        # FIXME type = None ?
+        # NOTE type=None later gets fixed by _fix_decl_name_type
         if len(p) == 2:
             p[0] = VarDecl(p[1], None, coord=self._token_coord(p, 1))
         elif len(p) == 4:
@@ -506,12 +505,13 @@ class UCParser:
 
     def p_parameter_declaration(self, p):
         ''' parameter_declaration : type_specifier declarator '''
-        p[0], *_ = self._build_declarations(spec=p[1], decls=[dict(decl=p[2])])
+        p[0] = self._build_declaration(spec=p[1], decl=p[2], init=None)
 
 
     def p_declaration(self, p):
         ''' declaration : type_specifier init_declarator_list__opt SEMI '''
         if p[2] is None:
+            # FIXME this will lead to an assertion error
             p[0] = self._build_declarations(spec=p[1], decls=[dict(decl=None, init=None)])
         else:
             p[0] = self._build_declarations(spec=p[1], decls=p[2])
