@@ -4,7 +4,7 @@ import uC_ops
 ## uC Built-in Types ######################################
 ###########################################################
 
-class uCType:
+class UCType:
     ''' Class that represents a type in the uC language.\n
         Types are declared as singleton instances of this type.
     '''
@@ -24,7 +24,7 @@ class uCType:
         assert all(op in uC_ops.assign_ops.values() for op in self.assign_ops)
 
     def __eq__(self, other):
-        if isinstance(other, uCType):
+        if isinstance(other, UCType):
             return other.typename == self.typename
         return False
 
@@ -35,7 +35,7 @@ class uCType:
         return '{' + self.typename + '}'
 
 
-TYPE_int = uCType(
+INT_TYPE = UCType(
     'int',
     default     =   0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -44,7 +44,7 @@ TYPE_int = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-TYPE_float = uCType(
+FLOAT_TYPE = UCType(
     'float',
     default     =   0.0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -53,7 +53,7 @@ TYPE_float = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-TYPE_char = uCType(
+CHAR_TYPE = UCType(
     'char',
     default     =   '',
     unary_ops   =   None,
@@ -62,7 +62,7 @@ TYPE_char = uCType(
     assign_ops  =   { '=', '+=', '-=' },
 )
 
-TYPE_string = uCType(
+STRING_TYPE = UCType(
     'string',
     default     =   "",
     unary_ops   =   None, # FIXME is { '&', '*' } valid ?
@@ -71,7 +71,7 @@ TYPE_string = uCType(
     assign_ops  =   { '=', '+=' },
 )
 
-TYPE_bool = uCType(
+BOOL_TYPE = UCType(
     'bool',
     default     =   False,
     unary_ops   =   { '!' }, # FIXME is { '&', '*' } valid ?
@@ -80,7 +80,7 @@ TYPE_bool = uCType(
     assign_ops  =   { '=' },
 )
 
-TYPE_void = uCType(
+VOID_TYPE = UCType(
     'void',
     default     =   None,
     unary_ops   =   None, # FIXME is { '&', '*' } valid ?
@@ -89,7 +89,7 @@ TYPE_void = uCType(
     assign_ops  =   { '=' },
 )
 
-TYPE_array = uCType(
+ARRAY_TYPE = UCType(
     'array',
     default     =   [],
     unary_ops   =   { '&', '*' },
@@ -99,7 +99,7 @@ TYPE_array = uCType(
 )
 
 # TODO implement for pointers / references
-# TYPE_ptr = uCType(
+PTR_# TYPE = UCType(
 #     'ptr',
 #     default     =   None, # 0
 #     unary_ops   =   { '&', '*' }, # '++', '--', 'p++', 'p--',

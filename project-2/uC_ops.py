@@ -3,8 +3,6 @@
 ## uC Operators ###########################################
 ###########################################################
 
-# NOTE maps from `node.type` to the operator symbol
-
 # unary operators: +, -, ++, --, &, *, !
 unary_ops = {
     'PLUS': '+',

@@ -141,7 +141,6 @@ class UCParser:
 
     def _build_declaration(self, spec, decl, init=None):
         ''' Builds a declaration with the given specifier. '''
-        declaration = Decl(None, decl, init, coord=decl.coord)
         return self._fix_decl_name_type(
             decl=Decl(None, decl, init, coord=decl.coord),
             typename=spec
