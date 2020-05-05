@@ -4,7 +4,7 @@
 ###########################################################
 
 # NOTE Given a sequence of instruction tuples such as:
-#          code = [ 
+#          code = [
 #              ('literal_int', 1, '%1'),
 #              ('literal_int', 2, '%2'),
 #              ('add_int', '%1', '%2, '%3')
@@ -21,18 +21,20 @@
 
 # NOTE To store the values of variables created in the IR, we simply use a dictionary.
 
-# NOTE For built-in function declarations, we allow specific Python modules 
+# NOTE For built-in function declarations, we allow specific Python modules
 #      (e.g.: print, input, etc.) to be registered with the interpreter.
 
 class Interpreter:
     ''' Runs an interpreter on the generated SSA intermediate code. '''
-    
+
+    # FIXME update this to the latest mc921/ code before starting
+
     def __init__(self, name="module"):
         # Dictionary of currently defined variables
         self.vars = {}
 
     def run(self, ircode):
-        ''' Run intermediate code in the interpreter, where `ircode` is a list of instruction tuples.\n            
+        ''' Run intermediate code in the interpreter, where `ircode` is a list of instruction tuples.\n
             Each instruction `(opcode, *args)` is dispatched to a method `self.run_opcode(*args)`.
         '''
         self.pc = 0
@@ -49,7 +51,7 @@ class Interpreter:
                 getattr(self, f"run_{opcode}")(*op[1:])
             else:
                 print(f"Warning: No run_{opcode}() method")
-        
+
     # TODO Implement methods for different opcodes.
     #      A few sample opcodes are shown below to get you started.
 
@@ -68,7 +70,7 @@ class Interpreter:
 
     run_literal_float = run_literal_int
     run_literal_char = run_literal_int
-    
+
     def run_add_int(self, left, right, target):
         ''' Add two integer variables. '''
         self.vars[target] = self.vars[left] + self.vars[right]
