@@ -3,8 +3,8 @@ import sys
 
 from uC_AST import *
 from uC_ops import *
-from uC_types import (TYPE_array, TYPE_bool, TYPE_char, TYPE_float, TYPE_int,
-                      TYPE_string, TYPE_void)
+from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_INT,
+                      TYPE_STRING, TYPE_VOID)
 
 ###########################################################
 ## uC Semantic Analysis ###################################
@@ -38,13 +38,13 @@ class Visitor(NodeVisitor):
     def __init__(self):
         self.symtab = SymbolTable()
         # add built-in type names to the symbol table
-        self.symtab.add("int", TYPE_int)
-        self.symtab.add("float", TYPE_float)
-        self.symtab.add("char", TYPE_char)
-        self.symtab.add("string", TYPE_string)
-        self.symtab.add("bool", TYPE_bool)
-        self.symtab.add("void", TYPE_void)
-        self.symtab.add("array", TYPE_array)
+        self.symtab.add("int", TYPE_INT)
+        self.symtab.add("float", TYPE_FLOAT)
+        self.symtab.add("char", TYPE_CHAR)
+        self.symtab.add("string", TYPE_STRING)
+        self.symtab.add("bool", TYPE_BOOL)
+        self.symtab.add("void", TYPE_VOID)
+        self.symtab.add("array", TYPE_ARRAY)
         # TODO should we add built-in functions as well (e.g. read, assert, etc.)?
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
@@ -55,7 +55,7 @@ class Visitor(NodeVisitor):
 
     def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
-        assert node.expr.type == TYPE_bool, f"No implementation for: `assert {node.expr.type}`"
+        assert node.expr.type == TYPE_BOOL, f"No implementation for: `assert {node.expr.type}`"
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
         sym = self.symtab.lookup(node.lvalue)
