@@ -10,28 +10,96 @@ from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_INT,
 ## uC Semantic Analysis ###################################
 ###########################################################
 
-class SymbolTable:
+class SymbolTable(dict):
     ''' Class representing a symbol table.\n
         It should provide functionality for adding and looking up nodes associated with identifiers.
     '''
 
-    def __init__(self):
-        self.symtab = {} # symbol table
+    def __init__(self, decl=None):
+        super().__init__()
+        self.decl = decl
 
     def lookup(self, name):
-        return self.symtab.get(name, None)
+        return self.get(name, None)
 
     def add(self, name, value):
-        self.symtab[name] = value
+        self[name] = value
     
-    def begin_scope(self, node):
-        assert isinstance(node, (Program, FuncDef, For)) # , FuncCall, FuncDecl
-        raise NotImplementedError
+    # def begin_scope(self, node):
+    #     assert isinstance(node, (Program, FuncDef, For)) # , FuncCall, FuncDecl
+    #     raise NotImplementedError
     
-    def end_scope(self):
-        raise NotImplementedError
+    # def end_scope(self):
+    #     raise NotImplementedError
 
     # TODO create a within_scope() function to replace begin_scope() ... end_scope()
+
+
+class Environment(object):
+    def __init__(self, buf=sys.stdout):
+        self.buf = buf
+        self.cur_rtype = []
+        self.cur_offset = 0
+        self.par_offset = 0
+        self.lbl_addr = 1
+        self.current_ret_label = None
+        self.offset = [[None], 0, 0]
+        self.stack = []
+        self.root = SymbolTable()
+        self.stack.append(self.root)
+        self.root.update({
+            "int": IntType,
+            "float": FloatType,
+            "char": CharType,
+            "bool": BoolType,
+            "array": ArrayType,
+            "string": StringType,
+            "ptr": PtrType,
+            "void": VoidType,
+        })
+
+    def push(self, enclosure):
+        # Save the offset of the current stack
+        self.offset.append([self.cur_rtype, self.cur_offset, self.par_offset])
+        # FIXME there may be more stuff here
+        self.cur_offset = 0
+        self.par_offset = 0
+
+    def pop(self):
+        self.stack.pop()
+        self.cur_rtype, self.cur_offset, self.par_offset = self.offset.pop()
+    
+    def peek(self):
+        return self.stack[-1]
+
+    def peek_root(self):
+        return self.stack[0]
+
+    def scope_level(self):
+        return len(stack) - 1
+    
+    def add_local(self, identifier, kind):
+        self.peek().add(identifier.name, identifier)
+        identifier.kind = kind
+        identifier.scope = self.scope_level()
+
+    def add_root(self, name, value):
+        """ Add uCTypes and Gobal Decl """
+        self.root.add(name, value)
+
+    def lookup(self, name):
+        for scope in reversed(self.stack):
+            hit = scope.lookup(name)
+            if hit is not None:
+                return hit
+        return None
+    
+    def find(self, name):
+        _cur_symtable = self.stack[-1]
+        if name in _cur_symtable:
+            pass
+            # FIXME there is more
+
 
 
 class Visitor(NodeVisitor):
@@ -148,10 +216,10 @@ class Visitor(NodeVisitor):
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         # TODO add this function to symtab
-        self.visit(node.type)
         if node.args is not None:
             for arg in node.args:
                 self.visit(arg)
+        self.visit(node.type)
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
         # TODO check if begin_scope should be done at visit_FuncDecl
