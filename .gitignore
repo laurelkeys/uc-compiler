@@ -1,3 +1,6 @@
+*.uc
+*.ast
+
 # PLY
 parser.out
 parsetab.py

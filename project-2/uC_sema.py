@@ -29,11 +29,12 @@ class SymbolTable:
     def update(self, other):
         self.symtab.update(other)
 
-    def begin_scope(self, node):
+    def begin_scope(self, node=None, **kwargs):
         # assert isinstance(node, (Program, FuncDef, For)) # , FuncCall, FuncDecl
         self.symtab = self.symtab.new_child()
+        self.symtab.update(**kwargs)
         # TODO verify if node is needed
-    
+
     def end_scope(self):
         self.symtab = self.symtab.parents
 
@@ -63,8 +64,8 @@ class Visitor(NodeVisitor):
             "void": TYPE_VOID,
             "array": TYPE_ARRAY
         })
+        self.symtab.begin_scope(_scope="global")
 
-        # self.symtab.begin_scope()
         # TODO should we add built-in functions as well (e.g. read, assert, etc.)?
 
     # NOTE some functions have type assertions (i.e. assert isinstance),
@@ -82,7 +83,7 @@ class Visitor(NodeVisitor):
 
     def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
-        assert node.expr.type == TYPE_BOOL, f"No implementation for: `assert {node.expr.type}`"
+        assert node.expr._uctype == TYPE_BOOL, f"No implementation for: `assert {node.expr.type}`"
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
         sym = self.symtab.lookup(node.lvalue)
@@ -90,7 +91,7 @@ class Visitor(NodeVisitor):
         self.visit(node.rvalue)
 
         _str = _Assignment_str(node)
-        _ltype, _rtype = node.lvalue.type, node.rvalue.type
+        _ltype, _rtype = node.lvalue._uctype, node.rvalue._uctype
         assert _ltype == _rtype, f"Type mismatch: `{_str}`"
         node.type = _ltype
 
@@ -131,8 +132,21 @@ class Visitor(NodeVisitor):
 
     def visit_Decl(self, node: Decl): # [name, type*, init*]
         assert isinstance(node.type, (VarDecl, ArrayDecl, PtrDecl, FuncDecl))
-        #raise NotImplementedError
-        pass
+
+        # FIXME check if we need a special check for FuncDecl
+
+        if self.symtab.lookup(node.name) is not None:
+            assert node.name not in self.symtab.symtab.parents, f"Redeclaration of `{node.name}`"
+
+        self.visit(node.type)
+        if node.init is not None:
+            self.visit(node.init)
+            assert node.type._uctype == node.init._uctype, (
+                f"Type mismatch for `{node.name}`: `{node.type._uctype}` = `{node.init._uctype}`"
+            )
+
+        node._uctype = node.type._uctype
+        self.symtab.add(node.name, value=node)
 
     def visit_DeclList(self, node: DeclList): # [decls**]
         #raise NotImplementedError
@@ -150,7 +164,7 @@ class Visitor(NodeVisitor):
         if isinstance(node.init, DeclList):
             # NOTE these values declared should only be visible inside the for-loop
             self.symtab.begin_scope(node)
-        
+
         # TODO add some kind of curr_loop to be used by Break to
         #      bind itself to the For for easier code generation
         self.visit(node.init)
@@ -175,7 +189,7 @@ class Visitor(NodeVisitor):
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
         # TODO check if begin_scope should be done at visit_FuncDecl
         self.symtab.begin_scope(node)
-        
+
         self.visit(node.spec)
         self.visit(node.decl)
         if node.param_decls is not None:
@@ -183,14 +197,13 @@ class Visitor(NodeVisitor):
                 self.visit(param)
         assert isinstance(node.body, Compound)
         self.visit(node.body)
-        
+
         self.symtab.end_scope()
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
-        self.symtab.add("a", "b")
-        print("yo", self.symtab)
-        #raise NotImplementedError
-        pass
+        assert self.symtab.lookup("_scope") == "global"
+        for decl in node.decls:
+            self.visit(decl)
 
     def visit_ID(self, node: ID): # [name]
         #raise NotImplementedError
@@ -274,12 +287,12 @@ class Visitor(NodeVisitor):
 
 # Helper functions for error printing
 def _Assignment_str(node):
-    return f"{node.lvalue.type} {assign_ops[node.op]} {node.rvalue.type}"
+    return f"{node.lvalue._uctype} {assign_ops[node.op]} {node.rvalue._uctype}"
 
 def _BinaryOp_str(node):
-    return f"{node.left.type} {binary_ops[node.op]} {node.right.type}"
+    return f"{node.left._uctype} {binary_ops[node.op]} {node.right._uctype}"
 
 def _UnaryOp_str(node):
     if node.op[0] == 'p': # suffix/postfix increment and decrement
-        return f"{node.expr.type}{unary_ops[node.op][1:]}"
-    return f"{unary_ops[node.op]}{node.expr.type}"
+        return f"{node.expr._uctype}{unary_ops[node.op][1:]}"
+    return f"{unary_ops[node.op]}{node.expr._uctype}"

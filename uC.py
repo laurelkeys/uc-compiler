@@ -20,8 +20,6 @@ from uC_sema import Visitor
 ## uC Compiler ############################################
 ###########################################################
 
-PARSE_ONLY = True # FIXME quick hack for not running uC_sema
-
 class Compiler:
     ''' This object encapsulates the compiler and serves as a facade interface for the compiler itself. '''
 
@@ -36,11 +34,11 @@ class Compiler:
         self.parser = UCParser()
         self.ast = self.parser.parse(self.code, '', debug)
 
-    def _sema(self, susy, ast_file):
+    def _sema(self, susy, ast_file, parse_only):
         ''' Decorate the AST with semantic actions.\n
             If `ast_file` is not `None`, prints out the abstract syntax tree (AST). '''
         try:
-            if not PARSE_ONLY:
+            if not parse_only:
                 self.sema = Visitor()
                 self.sema.visit(self.ast)
             if susy:
@@ -50,17 +48,17 @@ class Compiler:
         except AssertionError as e:
             error(None, e)
 
-    def _do_compile(self, susy, ast_file, debug):
+    def _do_compile(self, susy, ast_file, debug, parse_only):
         ''' Compiles the code to the given file object. '''
         self._parse(susy, ast_file, debug)
         if not errors_reported():
-            self._sema(susy, ast_file)
+            self._sema(susy, ast_file, parse_only)
 
-    def compile(self, code, susy, ast_file, debug):
+    def compile(self, code, susy, ast_file, debug, parse_only):
         ''' Compiles the given code string. '''
         self.code = code
         with subscribe_errors(lambda msg: sys.stderr.write(msg + "\n")):
-            self._do_compile(susy, ast_file, debug)
+            self._do_compile(susy, ast_file, debug, parse_only)
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
         return 0
@@ -76,6 +74,7 @@ def run_compiler():
     emit_ast = True
     susy = False
     debug = False
+    parse_only = False
 
     params = sys.argv[1:]
     files = sys.argv[1:]
@@ -88,6 +87,8 @@ def run_compiler():
                 susy = True
             elif param == '-debug':
                 debug = True
+            elif param == '-p':
+                parse_only = True
             else:
                 print("Unknown option: %s" % param)
                 sys.exit(1)
@@ -111,7 +112,7 @@ def run_compiler():
         code = source.read()
         source.close()
 
-        retval = Compiler().compile(code, susy, ast_file, debug)
+        retval = Compiler().compile(code, susy, ast_file, debug, parse_only)
         for f in open_files:
             f.close()
         if retval != 0:
