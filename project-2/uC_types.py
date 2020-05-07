@@ -35,7 +35,7 @@ class UCType:
         return '{' + self.typename + '}'
 
 
-TYPE_INT = uCType(
+TYPE_INT = UCType(
     'int',
     default     =   0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -44,7 +44,7 @@ TYPE_INT = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-TYPE_FLOAT = uCType(
+TYPE_FLOAT = UCType(
     'float',
     default     =   0.0,
     unary_ops   =   { '+', '-', '++', '--', 'p++', 'p--', '&', '*' },
@@ -53,7 +53,7 @@ TYPE_FLOAT = uCType(
     assign_ops  =   { '=', '+=', '-=', '*=', '/=', '%=' },
 )
 
-TYPE_CHAR = uCType(
+TYPE_CHAR = UCType(
     'char',
     default     =   '',
     unary_ops   =   None,
@@ -62,7 +62,7 @@ TYPE_CHAR = uCType(
     assign_ops  =   { '=', '+=', '-=' },
 )
 
-TYPE_STRING = uCType(
+TYPE_STRING = UCType(
     'string',
     default     =   "",
     unary_ops   =   None, # FIXME is { '&', '*' } valid ?
@@ -71,7 +71,7 @@ TYPE_STRING = uCType(
     assign_ops  =   { '=', '+=' },
 )
 
-TYPE_BOOL = uCType(
+TYPE_BOOL = UCType(
     'bool',
     default     =   False,
     unary_ops   =   { '!' }, # FIXME is { '&', '*' } valid ?
@@ -80,7 +80,7 @@ TYPE_BOOL = uCType(
     assign_ops  =   { '=' },
 )
 
-TYPE_VOID = uCType(
+TYPE_VOID = UCType(
     'void',
     default     =   None,
     unary_ops   =   None, # FIXME is { '&', '*' } valid ?
@@ -89,7 +89,7 @@ TYPE_VOID = uCType(
     assign_ops  =   { '=' },
 )
 
-TYPE_ARRAY = uCType(
+TYPE_ARRAY = UCType(
     'array',
     default     =   [],
     unary_ops   =   { '&', '*' },
@@ -99,7 +99,7 @@ TYPE_ARRAY = uCType(
 )
 
 # TODO implement for pointers / references
-# TYPE_PTR = uCType(
+# TYPE_PTR = UCType(
 #     'ptr',
 #     default     =   None, # 0
 #     unary_ops   =   { '&', '*' }, # '++', '--', 'p++', 'p--',

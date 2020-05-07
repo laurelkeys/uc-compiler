@@ -1,6 +1,8 @@
 import os
 import sys
 
+from collections import ChainMap
+
 from uC_AST import *
 from uC_ops import *
 from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_INT,
@@ -10,96 +12,33 @@ from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_INT,
 ## uC Semantic Analysis ###################################
 ###########################################################
 
-class SymbolTable(dict):
+class SymbolTable:
     ''' Class representing a symbol table.\n
         It should provide functionality for adding and looking up nodes associated with identifiers.
     '''
 
-    def __init__(self, decl=None):
-        super().__init__()
-        self.decl = decl
-
-    def lookup(self, name):
-        return self.get(name, None)
+    def __init__(self):
+        self.symtab = ChainMap()
 
     def add(self, name, value):
-        self[name] = value
-    
-    # def begin_scope(self, node):
-    #     assert isinstance(node, (Program, FuncDef, For)) # , FuncCall, FuncDecl
-    #     raise NotImplementedError
-    
-    # def end_scope(self):
-    #     raise NotImplementedError
-
-    # TODO create a within_scope() function to replace begin_scope() ... end_scope()
-
-
-class Environment(object):
-    def __init__(self, buf=sys.stdout):
-        self.buf = buf
-        self.cur_rtype = []
-        self.cur_offset = 0
-        self.par_offset = 0
-        self.lbl_addr = 1
-        self.current_ret_label = None
-        self.offset = [[None], 0, 0]
-        self.stack = []
-        self.root = SymbolTable()
-        self.stack.append(self.root)
-        self.root.update({
-            "int": IntType,
-            "float": FloatType,
-            "char": CharType,
-            "bool": BoolType,
-            "array": ArrayType,
-            "string": StringType,
-            "ptr": PtrType,
-            "void": VoidType,
-        })
-
-    def push(self, enclosure):
-        # Save the offset of the current stack
-        self.offset.append([self.cur_rtype, self.cur_offset, self.par_offset])
-        # FIXME there may be more stuff here
-        self.cur_offset = 0
-        self.par_offset = 0
-
-    def pop(self):
-        self.stack.pop()
-        self.cur_rtype, self.cur_offset, self.par_offset = self.offset.pop()
-    
-    def peek(self):
-        return self.stack[-1]
-
-    def peek_root(self):
-        return self.stack[0]
-
-    def scope_level(self):
-        return len(stack) - 1
-    
-    def add_local(self, identifier, kind):
-        self.peek().add(identifier.name, identifier)
-        identifier.kind = kind
-        identifier.scope = self.scope_level()
-
-    def add_root(self, name, value):
-        """ Add uCTypes and Gobal Decl """
-        self.root.add(name, value)
+        self.symtab[name] = value
 
     def lookup(self, name):
-        for scope in reversed(self.stack):
-            hit = scope.lookup(name)
-            if hit is not None:
-                return hit
-        return None
-    
-    def find(self, name):
-        _cur_symtable = self.stack[-1]
-        if name in _cur_symtable:
-            pass
-            # FIXME there is more
+        return self.symtab.get(name, None)
 
+    def update(self, other):
+        self.symtab.update(other)
+
+    def begin_scope(self, node):
+        # assert isinstance(node, (Program, FuncDef, For)) # , FuncCall, FuncDecl
+        self.symtab = self.symtab.new_child()
+        # TODO verify if node is needed
+    
+    def end_scope(self):
+        self.symtab = self.symtab.parents
+
+    def __str__(self):
+        return str(self.symtab)
 
 
 class Visitor(NodeVisitor):
@@ -115,13 +54,17 @@ class Visitor(NodeVisitor):
     def __init__(self):
         self.symtab = SymbolTable()
         # add built-in type names to the symbol table
-        self.symtab.add("int", TYPE_INT)
-        self.symtab.add("float", TYPE_FLOAT)
-        self.symtab.add("char", TYPE_CHAR)
-        self.symtab.add("string", TYPE_STRING)
-        self.symtab.add("bool", TYPE_BOOL)
-        self.symtab.add("void", TYPE_VOID)
-        self.symtab.add("array", TYPE_ARRAY)
+        self.symtab.update({
+            "int": TYPE_INT,
+            "float": TYPE_FLOAT,
+            "char": TYPE_CHAR,
+            "string": TYPE_STRING,
+            "bool": TYPE_BOOL,
+            "void": TYPE_VOID,
+            "array": TYPE_ARRAY
+        })
+
+        # self.symtab.begin_scope()
         # TODO should we add built-in functions as well (e.g. read, assert, etc.)?
 
     # NOTE some functions have type assertions (i.e. assert isinstance),
@@ -130,10 +73,12 @@ class Visitor(NodeVisitor):
     # TODO put UCType into the result of BInaryOp, UnaryOp, Assignment, ... (any other?)
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
@@ -172,21 +117,26 @@ class Visitor(NodeVisitor):
         self.visit(node.expr)
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
-        for decl in node.decls:
-            self.visit(decl)
-        for stmt in node.stmts:
-            self.visit(stmt)
+        if node.decls is not None:
+            for decl in node.decls:
+                self.visit(decl)
+        if node.stmts is not None:
+            for stmt in node.stmts:
+                self.visit(stmt)
 
     def visit_Constant(self, node: Constant): # [type, value]
         # TODO convert node.type from string name to UCType
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_Decl(self, node: Decl): # [name, type*, init*]
         assert isinstance(node.type, (VarDecl, ArrayDecl, PtrDecl, FuncDecl))
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_DeclList(self, node: DeclList): # [decls**]
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_EmptyStatement(self, node: EmptyStatement): # []
         pass
@@ -212,14 +162,15 @@ class Visitor(NodeVisitor):
             self.symtab.end_scope()
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         # TODO add this function to symtab
+        self.visit(node.type)
         if node.args is not None:
             for arg in node.args:
                 self.visit(arg)
-        self.visit(node.type)
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
         # TODO check if begin_scope should be done at visit_FuncDecl
@@ -236,10 +187,14 @@ class Visitor(NodeVisitor):
         self.symtab.end_scope()
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
-        raise NotImplementedError
+        self.symtab.add("a", "b")
+        print("yo", self.symtab)
+        #raise NotImplementedError
+        pass
 
     def visit_ID(self, node: ID): # [name]
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         self.visit(node.cond)
@@ -274,7 +229,8 @@ class Visitor(NodeVisitor):
         # while not isinstance(type, VarDecl):
         #     basic_type = basic_type.type
         # basic_type.type.names.insert(0, TYPE_PTR)
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_Read(self, node: Read): # [expr*]
         assert isinstance(node.expr, ExprList)
@@ -285,13 +241,21 @@ class Visitor(NodeVisitor):
         self.visit(node.expr)
 
     def visit_Type(self, node: Type): # [names]
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_VarDecl(self, node: VarDecl): # [declname, type*]
-        raise NotImplementedError
+        #raise NotImplementedError
+        pass
 
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
         self.visit(node.expr)
+        _source = node.expr.gen_location
+
+        if node.op == '&': # get the reference
+            node.gen_location = node.expr.gen_location
+        elif node.op == '*':
+            pass
         node.type = node.expr.type
 
         _str = _UnaryOp_str(node)
