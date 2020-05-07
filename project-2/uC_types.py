@@ -4,7 +4,7 @@ import uC_ops
 ## uC Built-in Types ######################################
 ###########################################################
 
-class uCType:
+class UCType:
     ''' Class that represents a type in the uC language.\n
         Types are declared as singleton instances of this type.
     '''
@@ -24,7 +24,7 @@ class uCType:
         assert all(op in uC_ops.assign_ops.values() for op in self.assign_ops)
 
     def __eq__(self, other):
-        if isinstance(other, uCType):
+        if isinstance(other, UCType):
             return other.typename == self.typename
         return False
 

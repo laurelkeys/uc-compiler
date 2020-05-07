@@ -606,8 +606,9 @@ class Print(Node):
 
 
 class Program(Node):
-    ''' This is the top of the AST, representing a uC program (a translation unit in K&R jargon).\n
-        It contains a list of <global_declaration>'s, which are either declarations (Decl), or function definitions (FuncDef).
+    ''' This is the top of the AST, representing a uC program.\n
+        It contains a list of <global_declaration>'s, which are either 
+        declarations (`Decl` wrapped by `GlobalDecl`), or function definitions (`FuncDef`).
     '''
     __slots__ = ('gdecls', 'coord', '__weakref__')
 
