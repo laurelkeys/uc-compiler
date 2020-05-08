@@ -44,6 +44,10 @@ class Visitor(NodeVisitor):
     # [ ] _uctype
     # see added values to class ID on 28-04 mid
 
+    # FIXME use node.attrs['uctype'] instead of node._uctype,
+    #       node.attrs['scope'] instead of node._scope, etc.
+    # ref.: https://www.tutorialspoint.com/compiler_design/compiler_design_semantic_analysis.htm
+
     def __init__(self):
         self.symtab = SymbolTable()
         # add built-in type names to the symbol table
