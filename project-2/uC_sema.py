@@ -6,7 +6,7 @@ from collections import ChainMap
 from uC_AST import *
 from uC_ops import *
 from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_INT,
-                      TYPE_STRING, TYPE_VOID)
+                      TYPE_STRING, TYPE_VOID, from_typename)
 
 ###########################################################
 ## uC Semantic Analysis ###################################
@@ -66,20 +66,37 @@ class Visitor(NodeVisitor):
         })
         self.symtab.begin_scope(_scope="global")
 
-        # TODO should we add built-in functions as well (e.g. read, assert, etc.)?
-
     # NOTE some functions have type assertions (i.e. assert isinstance),
     #      these will fail, just add the missing types to the assert as they appear :)
 
-    # TODO put UCType into the result of BInaryOp, UnaryOp, Assignment, ... (any other?)
+    # TODO put UCType into the result of BinaryOp, UnaryOp, Assignment, ... (any other?)
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
-        #raise NotImplementedError
-        pass
+        self.visit(node.type)
+
+        _var_type = node.type # NOTE ArrayDecl is a type modifier
+        while not isinstance(_var_type, VarDecl):
+            _var_type = _var_type.type
+        _var_type.type.names.insert(0, TYPE_ARRAY)
+
+        if node.dim is not None:
+            self.visit(node.dim)
+            assert node.dim._uctype == TYPE_INT, (
+                f"Array dimensions specified with non-integer type: {node.dim._uctype}"
+            )
+
+        node._uctype = TYPE_ARRAY
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
-        #raise NotImplementedError
-        pass
+        self.visit(node.name)
+        # TODO assert the name is in scope
+
+        self.visit(node.subscript)
+        # TODO if isinstance(node.subscript, ID) assert it's in scope
+        assert node.subscript._uctype == TYPE_INT, (
+            f"Array indexed with non-integer type: {node.subscript._uctype}"
+        )
+
 
     def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
@@ -101,7 +118,7 @@ class Visitor(NodeVisitor):
 
         # TODO add "bool" type for relational operators
         _str = _BinaryOp_str(node)
-        _ltype, _rtype = node.left.type, node.right.type
+        _ltype, _rtype = node.left.type, node.right.type # FIXME we may need to compare .names[-1]
         assert _ltype == _rtype, f"Type mismatch: `{_str}`"
         node.type = _ltype
 
@@ -116,6 +133,7 @@ class Visitor(NodeVisitor):
         # TODO should we check if the conversion is valid ?
         self.visit(node.type)
         self.visit(node.expr)
+        node._uctype = from_typename(node.type.names[-1]) # FIXME check 23-04 topright
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
         if node.decls is not None:
@@ -149,6 +167,9 @@ class Visitor(NodeVisitor):
         self.symtab.add(node.name, value=node)
 
     def visit_DeclList(self, node: DeclList): # [decls**]
+        for decl in node.decls:
+            self.visit(decl)
+        # TODO is there anything else to do in here ?()
         #raise NotImplementedError
         pass
 
@@ -211,6 +232,7 @@ class Visitor(NodeVisitor):
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         self.visit(node.cond)
+        # TODO check cond._uctype == TYPE_BOOL
         self.visit(node.ifthen)
         if node.ifelse is not None:
             self.visit(node.ifelse)
@@ -265,15 +287,17 @@ class Visitor(NodeVisitor):
         self.visit(node.expr)
         _source = node.expr.gen_location
 
-        if node.op == '&': # get the reference
-            node.gen_location = node.expr.gen_location
-        elif node.op == '*':
-            pass
-        node.type = node.expr.type
-
+        #if node.op == '&': # get the reference
+        #    node.gen_location = node.expr.gen_location
+        #elif node.op == '*':
+        #    pass
+        #node.type = node.expr.type
+        # TODO check 23-04 bottomright
+        
+        # FIXME might need ._uctype below
         _str = _UnaryOp_str(node)
         _type = node.expr.type
-        _type_ops = node.expr.type.unary_ops
+        _type_ops = node.expr.type.unary_ops 
         assert unary_ops[node.op] in _type_ops, f"Operation not supported by type {_type}: `{_str}`"
 
     def visit_While(self, node: While): # [cond*, body*]
@@ -281,6 +305,9 @@ class Visitor(NodeVisitor):
         # TODO check if the type of cond is BOOL_TYPE
         #      for this we first have to replace the .type
         #      values with UCType singletons from uC_types
+        assert node.cond._uctype == TYPE_BOOL, (
+            f"While condition does not evaluate to boolean: while ({node.cond._uctype})"
+        )
         if node.body is not None:
             self.visit(node.body)
 

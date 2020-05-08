@@ -56,7 +56,7 @@ TYPE_FLOAT = UCType(
 TYPE_CHAR = UCType(
     'char',
     default     =   '',
-    unary_ops   =   None,
+    unary_ops   =   { '&', '*' },
     binary_ops  =   { '+', '-' },
     rel_ops     =   { '==', '!=', '<', '>', '<=', '>=' },
     assign_ops  =   { '=', '+=', '-=' },
@@ -65,7 +65,7 @@ TYPE_CHAR = UCType(
 TYPE_STRING = UCType(
     'string',
     default     =   "",
-    unary_ops   =   None, # FIXME is { '&', '*' } valid ?
+    unary_ops   =   None,
     binary_ops  =   { '+' },
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=', '+=' },
@@ -74,7 +74,7 @@ TYPE_STRING = UCType(
 TYPE_BOOL = UCType(
     'bool',
     default     =   False,
-    unary_ops   =   { '!' }, # FIXME is { '&', '*' } valid ?
+    unary_ops   =   { '!', '&', '*' },
     binary_ops  =   { '&&', '||' },
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=' },
@@ -83,7 +83,7 @@ TYPE_BOOL = UCType(
 TYPE_VOID = UCType(
     'void',
     default     =   None,
-    unary_ops   =   None, # FIXME is { '&', '*' } valid ?
+    unary_ops   =   { '&', '*' },
     binary_ops  =   None,
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=' },
@@ -102,9 +102,25 @@ TYPE_ARRAY = UCType(
 # TYPE_PTR = UCType(
 #     'ptr',
 #     default     =   None, # 0
-#     unary_ops   =   { '&', '*' }, # '++', '--', 'p++', 'p--',
-#     binary_ops  =   None, # '+', '-',
-#     rel_ops     =   { '==', '!=' }, # '<', '>', '<=', '>='
-#     assign_ops  =   { '=' }, # '+=', '-='
+#     unary_ops   =   { '&', '*' },
+#     binary_ops  =   None,
+#     rel_ops     =   { '==', '!=' },
+#     assign_ops  =   { '=' },
 # )
 
+
+def from_typename(typename: str) -> UCType:
+    if typename == "int":
+        return TYPE_INT
+    elif typename == "float":
+        return TYPE_FLOAT
+    elif typename == "char":
+        return TYPE_CHAR
+    elif typename == "string":
+        return TYPE_STRING
+    elif typename == "bool":
+        return TYPE_BOOL
+    elif typename == "void":
+        return TYPE_VOID
+    else:
+        assert False, f"Unkown type name: '{typename}'"
