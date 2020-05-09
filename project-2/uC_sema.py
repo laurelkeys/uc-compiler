@@ -17,8 +17,8 @@ class SymbolTable:
         It should provide functionality for adding and looking up nodes associated with identifiers.
     '''
 
-    def __init__(self):
-        self.symtab = ChainMap()
+    def __init__(self, global_scope=None):
+        self.symtab = ChainMap() if global_scope is None else ChainMap(global_scope)
 
     def add(self, name, attributes):
         ''' Inserts `attributes` associated to `name` in the current scope. '''
@@ -28,37 +28,29 @@ class SymbolTable:
         ''' Returns the `attributes` associated to `name` if it exists, or `None`. '''
         return self.symtab.get(name, None)
 
-    def update(self, other):
-        ''' Update `symtab` with entries from another symbol table.\n
-            Note: entries are added to the current scope's table.
-        '''
-        self.symtab.update(other)
-
-    # NOTE called for Program, Function and For AST nodes
     def begin_scope(self):
-        ''' Push a new symbol table for the current scope (i.e. a new scope is created). '''
+        ''' Push a new symbol table for the current scope (i.e. a new scope is created).\n
+            Note: this should only be called for `Program`, `Function` and `For` AST nodes.
+        '''
+        # TODO verify if we need to pass an AST node,
+        #      or something like a scope_name string
         self.symtab = self.symtab.new_child()
-        # TODO verify if we need to pass an AST node, or something like a scope_name
 
     def end_scope(self):
         ''' Pop the current scope's symbol table (i.e. the current scope is deleted). '''
         self.symtab = self.symtab.parents
 
-    # Helper methods
+    @property
+    def current_scope(self):
+        return self.symtab # everything that's currently visible
 
-    def _in_scope(self, name: str) -> bool:
-        '''' Check if `name` is declared (in any active scope, local or global). '''
-        return name in self.symtab
+    @property
+    def local_scope(self):
+        return self.symtab.maps[0]
 
-    # NOTE self.symtab.maps[0] is the current scope
-    def _in_current_scope(self, name: str) -> bool:
-        '''' Check if `name` is declared specifically in the current (local) scope. '''
-        return name in self.symtab.maps[0]
-
-    # NOTE self.symtab.maps[-1] is the global scope
-    def _in_global_scope(self, name: str) -> bool:
-        '''' Check if `name` is declared specifically in the global scope. '''
-        return name in self.symtab.maps[-1]
+    @property
+    def global_scope(self):
+        return self.symtab.maps[-1]
 
     def __str__(self):
         return str(self.symtab)
@@ -75,16 +67,17 @@ class Visitor(NodeVisitor):
     '''
 
     def __init__(self):
-        self.symtab = SymbolTable()
-        # add built-in type names to the symbol table
-        self.symtab.update({
+        self.symtab = SymbolTable({
+            # built-in types
             "int": TYPE_INT,
             "float": TYPE_FLOAT,
             "char": TYPE_CHAR,
             "string": TYPE_STRING,
-            "bool": TYPE_BOOL,
             "void": TYPE_VOID,
-            "array": TYPE_ARRAY
+            # semantic types
+            "array": TYPE_ARRAY,
+            "bool": TYPE_BOOL,
+            #"ptr": TYPE_PTR,
         })
 
     # NOTE some functions have type assertions (i.e. assert isinstance),
@@ -124,12 +117,21 @@ class Visitor(NodeVisitor):
         assert node.expr._uctype == TYPE_BOOL, f"No implementation for: `assert {node.expr.type}`"
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
-        sym = self.symtab.lookup(node.lvalue)
-        assert sym is None, f"Assignment to unknown lvalue `{node.lvalue}`"
+        assert isinstance(node.lvalue, ID), (
+            f"Assignment to invalid lvalue `{node.lvalue}`"
+        )
+        assert node.lvalue in self.symtab.current_scope, (
+            f"Assignment to unknown lvalue `{node.lvalue}`"
+        )
+        if isinstance(node.rvalue, (ID, FuncCall)):
+            assert node.rvalue in self.symtab.current_scope, (
+                f"Assignment of unknown rvalue: `{node.lvalue}` = `{node.rvalue}`"
+            )
+        self.visit(node.lvalue)
         self.visit(node.rvalue)
 
         _str = _Assignment_str(node)
-        _ltype, _rtype = node.lvalue._uctype, node.rvalue._uctype
+        _ltype, _rtype = node.lvalue._uctype, node.rvalue._uctype # FIXME
         assert _ltype == _rtype, f"Type mismatch: `{_str}`"
         node.type = _ltype
 
