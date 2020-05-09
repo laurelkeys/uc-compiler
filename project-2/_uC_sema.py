@@ -158,8 +158,20 @@ class Visitor(NodeVisitor):
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         self.visit(node.left)
         self.visit(node.right)
-        _ltype = node.left.attrs['type']
-        _rtype = node.right.attrs['type']
+
+        # FIXME if one operand is an ID or FuncCall, check that it's defined
+
+        try:
+            _ltype = node.left.attrs['type']
+        except:
+            assert isinstance(node.left, ID)
+            _ltype = self.symtab.lookup(node.left.name)['type']
+
+        try:
+            _rtype = node.right.attrs['type']
+        except:
+            assert isinstance(node.right, ID)
+            _rtype = self.symtab.lookup(node.right.name)['type']
 
         if node.op in uC_ops.binary_ops.values():
             _type_ops = _ltype[0].binary_ops # use the "outermost" type
