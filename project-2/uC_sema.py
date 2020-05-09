@@ -14,6 +14,13 @@ from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_FUNC,
 ## uC Semantic Analysis ###################################
 ###########################################################
 
+class Scope:
+    def __init__(self, flavor: str, name: str, node: str):
+        assert kind in ["global", "local", "func", "loop"]
+        self.kind = kind
+        self.name = name
+        self.node = node
+
 class SymbolTable:
     ''' Class representing a symbol table.\n
         It should provide functionality for adding and looking up nodes associated with identifiers.
@@ -25,9 +32,11 @@ class SymbolTable:
         self.funcs = [] # list of funcs that wrap the current scope
 
     @property
-    def in_loop(self): return not self.loops
+    def in_loop(self): return not self.loops # return any(scope.kind == "loop" for scope in self.scope_stack)
     @property
-    def in_func(self): return not self.funcs
+    def in_func(self): return not self.funcs # return any(scope.kind == "func" for scope in self.scope_stack)
+
+    # NOTE maybe use in_* to refer to the current scope (self.scope_stack[-1]) and wrapped_by_* to search all
 
     @property
     def curr_loop(self): return self.loops[-1]
