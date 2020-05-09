@@ -43,10 +43,9 @@ class Compiler:
                 self.sema.visit(self.ast)
             if susy:
                 self.ast.show(showcoord=True)
+                if not parse_only: print("----\n" + str(self.sema.symtab)) # FIXME remove
             elif ast_file is not None:
                 self.ast.show(buf=ast_file, showcoord=True)
-            # FIXME remove
-            print("----\n" + str(self.sema.symtab))
         except AssertionError as e:
             error(None, e)
 

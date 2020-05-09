@@ -118,18 +118,31 @@ class Visitor(NodeVisitor):
         })
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
-        print("====>", type(node.type))
-        print("====>", type(node.dim))
-        sym_dim = None
+        assert isinstance(node.type, (VarDecl, ArrayDecl))
+        self.visit(node.type)
+        if node.type.attrs['type'][0] == TYPE_CHAR:
+            assert len(node.type.attrs['type']) == 1
+            node.attrs['type'] = [TYPE_STRING] # represents a [TYPE_ARRAY, TYPE_CHAR]
+        else:
+            node.attrs['type'] = [TYPE_ARRAY] + node.type.attrs['type']
+
         if node.dim is not None:
             self.visit(node.dim)
-        #     if isinstance(node.dim, Constant):
-        #         sym_dim = node.dim.attrs
-        #     elif isinstance(node.dim, ID):
-        #     else:
-        #         assert False, str(type(node.dim)) # FIXME
-
-        pass
+            if isinstance(node.dim, Constant):
+                node.attrs['dim'] = node.dim.attrs['value']
+                _dim_type = node.dim.attrs['type']
+            elif isinstance(node.dim, ID):
+                node.attrs['dim'] = node.dim.name # FIXME
+                # NOTE we may only have this value at run-time
+                assert node.dim.name in self.symtab.current_scope, (
+                    f"Undeclared identifier in array dimension: `{node.dim.name}`"
+                )
+                _dim_type = self.symtab.lookup(node.dim.name)['type']
+            else:
+                assert False, str(type(node.dim)) # FIXME
+            assert _dim_type == [TYPE_INT], (
+                f"Size of array has non-integer type {_dim_type}"
+            )
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         pass
@@ -162,32 +175,29 @@ class Visitor(NodeVisitor):
         sym_name = node.name.name
         assert sym_name not in self.symtab.local_scope, f"Redeclaration of `{sym_name}`"
 
+        sym_attrs = {}
+        self.visit(node.type)
+        sym_attrs['type'] = node.type.attrs['type']
         if isinstance(node.type, VarDecl):
             pass
         elif isinstance(node.type, ArrayDecl):
-            pass
+            sym_attrs['dim'] = node.type.attrs.get('dim', None)
         elif isinstance(node.type, FuncDecl):
             pass
         else:
             assert False, f"Unexpected type {type(node.type)} for node.type"
-        self.visit(node.type)
-        sym_type = node.type.attrs['type']
-        
-        sym_value = None
+
         if node.init is not None:
             self.visit(node.init)
-            assert node.init.attrs['type'] == sym_type, (
-                f"Implicit conversions are not supported: {sym_type} = {node.init.attrs['type']}"
+            print(f"%%%% type(node.init) == {type(node.init)}") # FIXME remove
+            assert node.init.attrs['type'] == sym_attrs['type'], (
+                f"Implicit conversions are not supported: {sym_attrs['type']} = {node.init.attrs['type']}"
             )
-            sym_value = node.init.attrs['value']
+            sym_attrs['value'] = node.init.attrs['value']
 
         self.symtab.add(
             name=sym_name,
-            attributes={
-                "type": sym_type,
-                "value": sym_value,
-                # TODO add scope
-            } # FIXME add param info if FuncDecl
+            attributes=sym_attrs # TODO add scope (and param info if FuncDecl)
         )
 
     def visit_DeclList(self, node: DeclList): # [decls**]
@@ -206,13 +216,19 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
+        self.symtab.begin_scope()
+
         assert isinstance(node.type, VarDecl)
         self.visit(node.type)
-        node.attrs['type'] = node.type.attrs['type']
+        node.attrs['type'] = [TYPE_FUNC] + node.type.attrs['type']
 
-        assert isinstance(node.type, ParamList) # FIXME maybe (?)
-        self.visit(node.args)
-        # TODO add param info to attrs
+        if node.args is not None:
+            assert isinstance(node.args, ParamList)
+            self.visit(node.args)
+            node.attrs['param_types'] = node.args.attrs['param_types']
+            # TODO add param info to attrs
+
+        ## self.symtab.end_scope()
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
         pass
@@ -234,7 +250,12 @@ class Visitor(NodeVisitor):
         param_types = []
         for param in node.params:
             self.visit(param)
-            param_types.append(param.attrs['type'])
+            # FIXME a type(param) == Decl, which means it's added
+            # to the current scope.. a special check in visit_Decl
+            # may be needed to avoid this (and simply use .attrs)
+            assert isinstance(param, Decl)
+            _param_type = self.symtab.lookup(param.name.name)['type']
+            param_types.append(_param_type)
         node.attrs['param_types'] = param_types
 
     def visit_Print(self, node: Print): # [expr*]
@@ -242,12 +263,12 @@ class Visitor(NodeVisitor):
 
     def visit_Program(self, node: Program): # [gdecls**]
         self.symtab.begin_scope()
-        
+
         for gdecl in node.gdecls:
             assert isinstance(gdecl, (GlobalDecl, FuncDef))
             self.visit(gdecl)
-        
-        # self.symtab.end_scope()
+
+        ## self.symtab.end_scope()
 
     def visit_PtrDecl(self, node: PtrDecl): # [type*]
         pass
