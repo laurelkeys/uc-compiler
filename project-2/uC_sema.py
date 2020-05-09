@@ -3,10 +3,12 @@ import sys
 
 from collections import ChainMap
 
+import uC_types
+
 from uC_AST import *
 from uC_ops import *
-from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_INT,
-                      TYPE_STRING, TYPE_VOID, from_typename)
+from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_FUNC,
+                      TYPE_INT, TYPE_STRING, TYPE_VOID)
 
 ###########################################################
 ## uC Semantic Analysis ###################################
@@ -19,41 +21,51 @@ class SymbolTable:
 
     def __init__(self, global_scope=None):
         self.symbol_table = ChainMap() if global_scope is None else ChainMap(global_scope)
-        self.in_loop = False
+        self.loops = [] # list of loops that wrap the current scope
+        self.funcs = [] # list of funcs that wrap the current scope
+
+    @property
+    def in_loop(self): return not self.loops
+    @property
+    def in_func(self): return not self.funcs
+
+    @property
+    def curr_loop(self): return self.loops[-1]
+    @property
+    def curr_func(self): return self.funcs[-1]
 
     def add(self, name: str, value: Node):
         ''' Inserts a node with attributes (`value.attrs`) associated to `name` in the current scope. '''
-        assert isinstance(name, str), f"{type(name)} is not str ({name})"
+        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}"
         self.symbol_table[name] = value
 
     def lookup(self, name: str):
-        ''' Returns the attributes associated to `name` if it exists, otherwise `None`. '''
-        assert isinstance(name, str), f"{type(name)} is not str ({name})"
+        ''' Returns the node with attributes associated to `name` if it exists, otherwise `None`. '''
+        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}"
         return self.symbol_table.get(name, None)
 
-    def begin_scope(self):
-        ''' Push a new symbol table, generating a new current scope.\n
-            Note: this should only be called for `Program`, `Function` and `For` AST nodes.
+    def begin_scope(self, loop: Node = None, func: Node = None):
+        ''' Push a new symbol table, generating a new (current) scope.\n
+            If `loop`/`func` is not `None`, it becomes the `curr_loop`/`curr_func`.
         '''
-        # TODO verify if we need to pass an AST node,
-        #      or something like a scope_name string
         self.symbol_table = self.symbol_table.new_child()
+        if loop is not None: self.loops.append(loop)
+        if func is not None: self.funcs.append(func)
 
-    def end_scope(self):
-        ''' Pop the current scope's symbol table, effectively deleting it. '''
+    def end_scope(self, loop: bool = False, func: bool = False):
+        ''' Pop the current scope's symbol table, effectively deleting it.\n
+            If `loop`/`func` is `True`, the `curr_loop`/`curr_func` is also popped.
+        '''
         self.symbol_table = self.symbol_table.parents
+        if loop: self.loops.pop()
+        if func: self.funcs.pop()
 
     @property
-    def current_scope(self):
-        return self.symbol_table # contains everything that's currently visible
-
+    def current_scope(self): return self.symbol_table # contains everything that's currently visible
     @property
-    def local_scope(self):
-        return self.symbol_table.maps[0]
-
+    def global_scope(self): return self.symbol_table.maps[-1]
     @property
-    def global_scope(self):
-        return self.symbol_table.maps[-1]
+    def local_scope(self): return self.symbol_table.maps[0]
 
     def __str__(self):
         return str(self.symbol_table)
@@ -80,14 +92,11 @@ class Visitor(NodeVisitor):
             # semantic types
             "array": TYPE_ARRAY,
             "bool": TYPE_BOOL,
+            "func": TYPE_FUNC,
             #"ptr": TYPE_PTR,
         })
 
-    # NOTE some functions have type assertions (i.e. assert isinstance),
-    #      these will fail, just add the missing types to the assert as they appear :)
-
     # TODO put UCType into the result of BinaryOp, UnaryOp, Assignment, ... (any other?)
-
     # TODO add name to symtab on visit_.*Decl
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
@@ -235,14 +244,17 @@ class Visitor(NodeVisitor):
         self.visit(node.args)
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
+        self.symtab.begin_scope(node) # NOTE this is closed at FuncDef
+
         self.visit(node.type)
+        node.attrs['base_type'] = node.type.attrs['base_type']
+        node.attrs['full_type'] = node.type.attrs['full_type']
         if node.args is not None:
             for arg in node.args:
                 self.visit(arg)
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
-        # TODO check if begin_scope should be done at visit_FuncDecl
-        self.symtab.begin_scope(node)
+        self.symtab.in_func = True
 
         self.visit(node.spec)
         self.visit(node.decl)
@@ -252,7 +264,12 @@ class Visitor(NodeVisitor):
         assert isinstance(node.body, Compound)
         self.visit(node.body)
 
-        self.symtab.end_scope()
+        sym = self.symtab.lookup(node.decl.name.name)
+        sym['defined?'] = True
+        sym['declared?'] = False
+
+        self.symtab.in_func = False
+        self.symtab.end_scope() # NOTE this was opened at FuncDecl
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         assert self.symtab.lookup("_scope") == "global"
@@ -264,11 +281,15 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
+        self.symtab.begin_scope()
+
         self.visit(node.cond)
         # TODO check cond._uctype == TYPE_BOOL
         self.visit(node.ifthen)
         if node.ifelse is not None:
             self.visit(node.ifelse)
+
+        self.symtab.end_scope()
 
     def visit_InitList(self, node: InitList): # [exprs**]
         for expr in node.exprs:
@@ -309,12 +330,18 @@ class Visitor(NodeVisitor):
         self.visit(node.expr)
 
     def visit_Type(self, node: Type): # [names]
-        #raise NotImplementedError
-        pass
+        node.attrs['base_type'] = uC_types.from_name(node.names[-1])
+        if len(node.names) > 1:
+            node.attrs['full_type'] = [uC_types.from_name(name) for name in node.names]
 
     def visit_VarDecl(self, node: VarDecl): # [declname, type*]
-        #raise NotImplementedError
-        pass
+        assert isinstance(node.declname, ID)
+        node.attrs['name'] = node.declname.name
+
+        self.visit(node.type)
+        node.attrs['type'] = node.type.attrs['type']
+
+        # TODO check if we should assert for some kind of type mismatch in here
 
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
         self.visit(node.expr)
@@ -334,7 +361,9 @@ class Visitor(NodeVisitor):
         assert unary_ops[node.op] in _type_ops, f"Operation not supported by type {_type}: `{_str}`"
 
     def visit_While(self, node: While): # [cond*, body*]
-        self.symtab.in_loop = True
+        self.symtab.curr_loop = node
+        self.symtab.begin_scope()
+
         self.visit(node.cond)
         # TODO check if the type of cond is BOOL_TYPE
         #      for this we first have to replace the .type
@@ -344,7 +373,9 @@ class Visitor(NodeVisitor):
         )
         if node.body is not None:
             self.visit(node.body)
-        self.symtab.in_loop = False
+
+        self.symtab.end_scope()
+        self.symtab.curr_loop = None
 
 
 # Helper functions for error printing

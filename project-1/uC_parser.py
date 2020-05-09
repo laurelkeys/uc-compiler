@@ -124,17 +124,17 @@ class UCParser:
             by modifiers, which are composed by `FuncDecl`, `ArrayDecl` and `PtrDecl`.
             This fixes the `Decl`'s `.name` to be equal to the `VarDecl`'s `.declname`.
         '''
-        type = decl
-        while not isinstance(type, VarDecl):
-            type = type.type # reach the underlying basic type
-        decl.name = type.declname
+        decl_tail = decl
+        while not isinstance(decl_tail, VarDecl):
+            decl_tail = decl_tail.type # reach the underlying basic type
+        decl.name = decl_tail.declname # NOTE Decl.name and VarDecl.declname are of type ID
 
         if typename is None:
             if not isinstance(decl.type, FuncDecl):
                 self._parse_error("Missing type in declaration", decl.coord)
-            type.type = Type(_default_function_return_type, coord=decl.coord)
+            decl_tail.type = Type(_default_function_return_type, coord=decl.coord)
         else:
-            type.type = typename # NOTE this fixes the type=None passed to AST nodes
+            decl_tail.type = typename # NOTE this fixes the type=None passed to AST nodes
 
         return decl
 
