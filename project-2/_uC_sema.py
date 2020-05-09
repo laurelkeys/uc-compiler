@@ -148,13 +148,33 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_Assert(self, node: Assert): # [expr*]
-        pass
+        self.visit(node.expr)
+        _expr_type = node.expr.attrs['type']
+        assert _expr_type == [TYPE_BOOL], f"No implementation for: `assert {_expr_type}`"
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
         pass
 
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
-        pass
+        self.visit(node.left)
+        self.visit(node.right)
+        _ltype = node.left.attrs['type']
+        _rtype = node.right.attrs['type']
+
+        if node.op in uC_ops.binary_ops.values():
+            _type_ops = _ltype[0].binary_ops # use the "outermost" type
+            node.attrs['type'] = _ltype
+
+        elif node.op in uC_ops.rel_ops.values():
+            _type_ops = _ltype[0].rel_ops # use the "outermost" type
+            node.attrs['type'] = [TYPE_BOOL]
+
+        else:
+            assert False, f"Unexpected operator in binary operation: `{node.op}`"
+
+        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`"
+
+        assert node.op in _type_ops, f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`"
 
     def visit_Break(self, node: Break): # []
         pass
@@ -163,7 +183,14 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
-        pass
+        # FIXME we probably need a new scope in here,
+        # just visiting stuff to treat other nodes:
+        if node.decls is not None:
+            for decl in node.decls:
+                self.visit(decl)
+        if node.stmts is not None:
+            for stmt in node.stmts:
+                self.visit(stmt)
 
     def visit_Constant(self, node: Constant): # [type, value]
         node.attrs['type'] = [uC_types.from_name(node.type)]
@@ -183,7 +210,7 @@ class Visitor(NodeVisitor):
         elif isinstance(node.type, ArrayDecl):
             sym_attrs['dim'] = node.type.attrs.get('dim', None)
         elif isinstance(node.type, FuncDecl):
-            pass
+            sym_attrs['param_types'] = node.type.attrs.get('param_types', None)
         else:
             assert False, f"Unexpected type {type(node.type)} for node.type"
 
@@ -197,7 +224,7 @@ class Visitor(NodeVisitor):
 
         self.symtab.add(
             name=sym_name,
-            attributes=sym_attrs # TODO add scope (and param info if FuncDecl)
+            attributes=sym_attrs # TODO add scope
         )
 
     def visit_DeclList(self, node: DeclList): # [decls**]
@@ -226,12 +253,31 @@ class Visitor(NodeVisitor):
             assert isinstance(node.args, ParamList)
             self.visit(node.args)
             node.attrs['param_types'] = node.args.attrs['param_types']
-            # TODO add param info to attrs
 
         ## self.symtab.end_scope()
 
-    def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
-        pass
+    # FIXME
+    def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
+        self.symtab.begin_scope()
+
+        sym_attrs = {}
+        assert isinstance(node.spec, Type)
+        self.visit(node.spec)
+        sym_attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type']
+
+        assert isinstance(node.decl, Decl)
+        self.visit(node.decl)
+        _param_types = self.symtab.lookup(node.decl.name.name)['param_types']
+        if _param_types is not None:
+            pass
+            # TODO assert params types
+
+        # TODO assert type
+
+        assert isinstance(node.body, Compound)
+        self.visit(node.body)
+
+        ## self.symtab.end_scope()
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         for decl in node.decls:

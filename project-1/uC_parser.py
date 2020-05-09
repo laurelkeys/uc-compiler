@@ -265,7 +265,7 @@ class UCParser:
         p[0] = self._build_function_definition(
             spec,
             decl=p[2],
-            param_decls=p[3],
+            param_decls=p[3], # NOTE this seems to always be None, so simply ignore it
             body=p[4]
         )
 
