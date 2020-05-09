@@ -18,42 +18,45 @@ class SymbolTable:
     '''
 
     def __init__(self, global_scope=None):
-        self.symtab = ChainMap() if global_scope is None else ChainMap(global_scope)
+        self.symbol_table = ChainMap() if global_scope is None else ChainMap(global_scope)
+        self.in_loop = False
 
-    def add(self, name, attributes):
-        ''' Inserts `attributes` associated to `name` in the current scope. '''
-        self.symtab[name] = attributes
+    def add(self, name: str, value: Node):
+        ''' Inserts a node with attributes (`value.attrs`) associated to `name` in the current scope. '''
+        assert isinstance(name, str), f"{type(name)} is not str ({name})"
+        self.symbol_table[name] = value
 
-    def lookup(self, name):
-        ''' Returns the `attributes` associated to `name` if it exists, or `None`. '''
-        return self.symtab.get(name, None)
+    def lookup(self, name: str):
+        ''' Returns the attributes associated to `name` if it exists, otherwise `None`. '''
+        assert isinstance(name, str), f"{type(name)} is not str ({name})"
+        return self.symbol_table.get(name, None)
 
     def begin_scope(self):
-        ''' Push a new symbol table for the current scope (i.e. a new scope is created).\n
+        ''' Push a new symbol table, generating a new current scope.\n
             Note: this should only be called for `Program`, `Function` and `For` AST nodes.
         '''
         # TODO verify if we need to pass an AST node,
         #      or something like a scope_name string
-        self.symtab = self.symtab.new_child()
+        self.symbol_table = self.symbol_table.new_child()
 
     def end_scope(self):
-        ''' Pop the current scope's symbol table (i.e. the current scope is deleted). '''
-        self.symtab = self.symtab.parents
+        ''' Pop the current scope's symbol table, effectively deleting it. '''
+        self.symbol_table = self.symbol_table.parents
 
     @property
     def current_scope(self):
-        return self.symtab # everything that's currently visible
+        return self.symbol_table # contains everything that's currently visible
 
     @property
     def local_scope(self):
-        return self.symtab.maps[0]
+        return self.symbol_table.maps[0]
 
     @property
     def global_scope(self):
-        return self.symtab.maps[-1]
+        return self.symbol_table.maps[-1]
 
     def __str__(self):
-        return str(self.symtab)
+        return str(self.symbol_table)
 
 
 class Visitor(NodeVisitor):
@@ -85,6 +88,8 @@ class Visitor(NodeVisitor):
 
     # TODO put UCType into the result of BinaryOp, UnaryOp, Assignment, ... (any other?)
 
+    # TODO add name to symtab on visit_.*Decl
+
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         self.visit(node.type)
 
@@ -102,8 +107,12 @@ class Visitor(NodeVisitor):
         node._uctype = TYPE_ARRAY
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
+        assert isinstance(node.name, ID)
+
         self.visit(node.name)
-        # TODO assert the name is in scope
+        assert node.name.name in self.symtab.current_scope, (
+            f"Reference to undeclared array `{node.name.name}`"
+        )
 
         self.visit(node.subscript)
         # TODO if isinstance(node.subscript, ID) assert it's in scope
@@ -111,12 +120,12 @@ class Visitor(NodeVisitor):
             f"Array indexed with non-integer type: {node.subscript._uctype}"
         )
 
-
     def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
         assert node.expr._uctype == TYPE_BOOL, f"No implementation for: `assert {node.expr.type}`"
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
+        # FIXME this might be dealt with by visit_ID
         assert isinstance(node.lvalue, ID), (
             f"Assignment to invalid lvalue `{node.lvalue}`"
         )
@@ -150,7 +159,7 @@ class Visitor(NodeVisitor):
 
     def visit_Break(self, node: Break): # []
         # TODO check we're currently inside a loop and bind the node with it
-        pass
+        assert self.symtab.in_loop, f"Invalid call of break outside of any loop"
 
     def visit_Cast(self, node: Cast): # [type*, expr*]
         # TODO should we check if the conversion is valid ?
@@ -176,8 +185,7 @@ class Visitor(NodeVisitor):
 
         # FIXME check if we need a special check for FuncDecl
 
-        if self.symtab.lookup(node.name) is not None:
-            assert node.name not in self.symtab.symtab.parents, f"Redeclaration of `{node.name}`"
+        assert node.name not in self.symtab.local_scope, f"Redeclaration of `{node.name}` in scope"
 
         self.visit(node.type)
         if node.init is not None:
@@ -192,9 +200,6 @@ class Visitor(NodeVisitor):
     def visit_DeclList(self, node: DeclList): # [decls**]
         for decl in node.decls:
             self.visit(decl)
-        # TODO is there anything else to do in here ?()
-        #raise NotImplementedError
-        pass
 
     def visit_EmptyStatement(self, node: EmptyStatement): # []
         pass
@@ -205,26 +210,31 @@ class Visitor(NodeVisitor):
             # TODO if expr is an ID, check if it's in scope
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
-        if isinstance(node.init, DeclList):
-            # NOTE these values declared should only be visible inside the for-loop
-            self.symtab.begin_scope(node)
+        self.symtab.in_loop = True
+        self.symtab.begin_scope()
 
-        # TODO add some kind of curr_loop to be used by Break to
-        #      bind itself to the For for easier code generation
         self.visit(node.init)
         self.visit(node.cond)
         self.visit(node.next)
         self.visit(node.body)
 
-        if isinstance(node.init, DeclList):
-            self.symtab.end_scope()
+        self.symtab.end_scope()
+        self.symtab.in_loop = False
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
-        #raise NotImplementedError
-        pass
+        assert isinstance(node.name, ID)
+
+        assert node.name.name in self.symtab.current_scope, (
+            f"Function `{node.name.name}` has been called, but not defined"
+        )
+
+        # TODO check if name's type is actually a function
+        # TODO check for correct number and type of arguments
+
+        self.visit(node.name)
+        self.visit(node.args)
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
-        # TODO add this function to symtab
         self.visit(node.type)
         if node.args is not None:
             for arg in node.args:
@@ -324,6 +334,7 @@ class Visitor(NodeVisitor):
         assert unary_ops[node.op] in _type_ops, f"Operation not supported by type {_type}: `{_str}`"
 
     def visit_While(self, node: While): # [cond*, body*]
+        self.symtab.in_loop = True
         self.visit(node.cond)
         # TODO check if the type of cond is BOOL_TYPE
         #      for this we first have to replace the .type
@@ -333,6 +344,7 @@ class Visitor(NodeVisitor):
         )
         if node.body is not None:
             self.visit(node.body)
+        self.symtab.in_loop = False
 
 
 # Helper functions for error printing
