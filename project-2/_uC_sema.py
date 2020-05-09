@@ -160,6 +160,10 @@ class Visitor(NodeVisitor):
         self.visit(node.right)
 
         # FIXME if one operand is an ID or FuncCall, check that it's defined
+        if isinstance(node.left, (ID, FuncCall)):
+            assert node.left.name in self.symtab, f"Variable `{node.left.name}` not defined"
+        if isinstance(node.right, (ID, FuncCall)):
+            assert node.left.name in self.symtab, f"Variable `{node.left.name}` not defined"
 
         try:
             _ltype = node.left.attrs['type']
