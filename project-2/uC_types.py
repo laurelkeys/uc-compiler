@@ -119,6 +119,7 @@ TYPE_FUNC = UCType(
 
 
 def from_name(typename: str) -> UCType:
+    # FIXME turn into a dict
     if   typename == "int":     return TYPE_INT
     elif typename == "float":   return TYPE_FLOAT
     elif typename == "char":    return TYPE_CHAR

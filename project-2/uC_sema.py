@@ -15,7 +15,7 @@ from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_FUNC,
 ###########################################################
 
 class Scope:
-    def __init__(self, flavor: str, name: str, node: str):
+    def __init__(self, kind: str, name: str, node: str):
         assert kind in ["global", "local", "func", "loop"]
         self.kind = kind
         self.name = name

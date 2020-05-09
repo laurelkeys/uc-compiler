@@ -14,7 +14,7 @@ from uC_errors import error, errors_reported, clear_errors, \
                       subscribe_errors
 
 from uC_parser import UCParser
-from uC_sema import Visitor
+from _uC_sema import Visitor
 
 ###########################################################
 ## uC Compiler ############################################
@@ -45,6 +45,8 @@ class Compiler:
                 self.ast.show(showcoord=True)
             elif ast_file is not None:
                 self.ast.show(buf=ast_file, showcoord=True)
+            # FIXME remove
+            print("----\n" + str(self.sema.symtab))
         except AssertionError as e:
             error(None, e)
 
