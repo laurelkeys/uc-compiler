@@ -20,23 +20,45 @@ class SymbolTable:
     def __init__(self):
         self.symtab = ChainMap()
 
-    def add(self, name, value):
-        self.symtab[name] = value
+    def add(self, name, attributes):
+        ''' Inserts `attributes` associated to `name` in the current scope. '''
+        self.symtab[name] = attributes
 
     def lookup(self, name):
+        ''' Returns the `attributes` associated to `name` if it exists, or `None`. '''
         return self.symtab.get(name, None)
 
     def update(self, other):
+        ''' Update `symtab` with entries from another symbol table.\n
+            Note: entries are added to the current scope's table.
+        '''
         self.symtab.update(other)
 
-    def begin_scope(self, node=None, **kwargs):
-        # assert isinstance(node, (Program, FuncDef, For)) # , FuncCall, FuncDecl
+    # NOTE called for Program, Function and For AST nodes
+    def begin_scope(self):
+        ''' Push a new symbol table for the current scope (i.e. a new scope is created). '''
         self.symtab = self.symtab.new_child()
-        self.symtab.update(**kwargs)
-        # TODO verify if node is needed
+        # TODO verify if we need to pass an AST node, or something like a scope_name
 
     def end_scope(self):
+        ''' Pop the current scope's symbol table (i.e. the current scope is deleted). '''
         self.symtab = self.symtab.parents
+
+    # Helper methods
+
+    def _in_scope(self, name: str) -> bool:
+        '''' Check if `name` is declared (in any active scope, local or global). '''
+        return name in self.symtab
+
+    # NOTE self.symtab.maps[0] is the current scope
+    def _in_current_scope(self, name: str) -> bool:
+        '''' Check if `name` is declared specifically in the current (local) scope. '''
+        return name in self.symtab.maps[0]
+
+    # NOTE self.symtab.maps[-1] is the global scope
+    def _in_global_scope(self, name: str) -> bool:
+        '''' Check if `name` is declared specifically in the global scope. '''
+        return name in self.symtab.maps[-1]
 
     def __str__(self):
         return str(self.symtab)
@@ -64,7 +86,6 @@ class Visitor(NodeVisitor):
             "void": TYPE_VOID,
             "array": TYPE_ARRAY
         })
-        self.symtab.begin_scope(_scope="global")
 
     # NOTE some functions have type assertions (i.e. assert isinstance),
     #      these will fail, just add the missing types to the assert as they appear :)
@@ -293,11 +314,11 @@ class Visitor(NodeVisitor):
         #    pass
         #node.type = node.expr.type
         # TODO check 23-04 bottomright
-        
+
         # FIXME might need ._uctype below
         _str = _UnaryOp_str(node)
         _type = node.expr.type
-        _type_ops = node.expr.type.unary_ops 
+        _type_ops = node.expr.type.unary_ops
         assert unary_ops[node.op] in _type_ops, f"Operation not supported by type {_type}: `{_str}`"
 
     def visit_While(self, node: While): # [cond*, body*]
