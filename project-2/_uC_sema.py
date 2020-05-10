@@ -129,7 +129,7 @@ class Visitor(NodeVisitor):
         if node.dim is not None:
             self.visit(node.dim)
             if isinstance(node.dim, Constant):
-                node.attrs['dim'] = node.dim.attrs['value']
+                node.attrs['dim'] = node.dim.value # FIXME
                 _dim_type = node.dim.attrs['type']
             elif isinstance(node.dim, ID):
                 node.attrs['dim'] = node.dim.name # FIXME
@@ -239,22 +239,15 @@ class Visitor(NodeVisitor):
 
         self.visit(node.expr)
         _src_type = node.expr.attrs['type']
-        _src_value = node.expr.attrs['value'] # FIXME I think this can raise a KeyError..
 
-        _valid_cast = True
-        if _src_type != _dst_type:
-            if _src_type == [TYPE_INT] and _dst_type == [TYPE_FLOAT]:
-                _dst_value = float(_src_value)
-            elif _src_type == [TYPE_FLOAT] and _dst_type == [TYPE_INT]:
-                _dst_value = int(_src_value)
-            else:
-                _valid_cast = False
-        else:
-            _dst_value = _src_value
+        _valid_cast = False
+        if (_src_type == _dst_type or
+            _src_type == [TYPE_INT] and _dst_type == [TYPE_FLOAT] or
+            _src_type == [TYPE_FLOAT] and _dst_type == [TYPE_INT]):
+            _valid_cast = True
 
         assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported"
         node.attrs['type'] = _dst_type
-        node.attrs['value'] = _dst_value
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
         # FIXME we probably need a new scope in here,
@@ -268,7 +261,6 @@ class Visitor(NodeVisitor):
 
     def visit_Constant(self, node: Constant): # [type, value]
         node.attrs['type'] = [uC_types.from_name(node.type)]
-        node.attrs['value'] = node.value
 
     def visit_Decl(self, node: Decl): # [name, type*, init*]
         assert isinstance(node.name, ID)
@@ -294,7 +286,6 @@ class Visitor(NodeVisitor):
             assert node.init.attrs['type'] == sym_attrs['type'], (
                 f"Implicit conversions are not supported: {sym_attrs['type']} = {node.init.attrs['type']}"
             )
-            sym_attrs['value'] = node.init.attrs['value']
 
         self.symtab.add(
             name=sym_name,
