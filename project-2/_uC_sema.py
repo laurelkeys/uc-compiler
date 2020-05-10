@@ -421,7 +421,17 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_InitList(self, node: InitList): # [exprs**]
-        pass
+        self.visit(node.exprs[0])
+        _type = node.exprs[0].attrs['type']
+        for expr in node.exprs[1:]:
+            self.visit(expr)
+            assert _type == expr.attrs['type'], f"Init list must have homogeneous types: {_type} and {expr.attrs['type']}"
+
+        if _type[0] == TYPE_CHAR:
+            assert len(_type) == 1
+            node.attrs['type'] = [TYPE_STRING]
+        else:
+            node.attrs['type'] = [TYPE_ARRAY] + _type
 
     def visit_ParamList(self, node: ParamList): # [params**]
         param_types = []
