@@ -62,6 +62,7 @@ class SymbolTable:
         ''' Push a new symbol table, generating a new (current) scope.\n
             If `loop`/`func` is not `None`, it becomes the `curr_loop`/`curr_func`.
         '''
+        print(len(self.symbol_table.maps), "> push") # FIXME debug only
         self.symbol_table = self.symbol_table.new_child()
         if loop is not None: self.loops.append(loop)
         if func is not None: self.funcs.append(func)
@@ -70,6 +71,7 @@ class SymbolTable:
         ''' Pop the current scope's symbol table, effectively deleting it.\n
             If `loop`/`func` is `True`, the `curr_loop`/`curr_func` is also popped.
         '''
+        print(len(self.symbol_table.maps) - 1, "> pop", self.local_scope) # FIXME debug only
         self.symbol_table = self.symbol_table.parents
         if loop: self.loops.pop()
         if func: self.funcs.pop()
@@ -145,6 +147,7 @@ class Visitor(NodeVisitor):
             )
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
+        # TODO assert subscript is of type int
         pass
 
     def visit_Assert(self, node: Assert): # [expr*]
@@ -153,22 +156,43 @@ class Visitor(NodeVisitor):
         assert _expr_type == [TYPE_BOOL], f"No implementation for: `assert {_expr_type}`"
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
-        assert isinstance(node.lvalue, ID), f"Assignment to invalid lvalue `{node.lvalue}`"
-
         self.visit(node.lvalue)
-        _lname = node.lvalue.name
+        if isinstance(node.lvalue, ID):
+            _lname = node.lvalue.name
+            _ltype = self.symtab.lookup(_lname)['type']
+        elif isinstance(node.lvalue, ArrayRef):
+            _lname = node.lvalue.name.name
+            _ltype = self.symtab.lookup(_lname)['type']
+            # NOTE we're interested in the indexed type
+            if len(_ltype) == 1:
+                assert _ltype[0] == TYPE_STRING
+                _ltype = [TYPE_CHAR]
+            else:
+                assert _ltype[0] == TYPE_ARRAY
+                _ltype = _ltype[1:]
+        else:
+            assert False, f"Assignment to invalid lvalue `{type(node.lvalue)}`"
+
         assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`"
-        _ltype = self.symtab.lookup(_lname)['type']
 
         self.visit(node.rvalue)
         _rname = None
         if isinstance(node.rvalue, ID):
             _rname = node.rvalue.name
             _rtype = self.symtab.lookup(_rname)['type']
+        elif isinstance(node.rvalue, ArrayRef):
+            _rname = node.rvalue.name.name
+            _rtype = self.symtab.lookup(_rname)['type']
+            # NOTE we're interested in the indexed type
+            if len(_rtype) == 1:
+                assert _rtype[0] == TYPE_STRING
+                _rtype = [TYPE_CHAR]
+            else:
+                assert _rtype[0] == TYPE_ARRAY
+                _rtype = _rtype[1:]
         elif isinstance(node.rvalue, FuncCall):
             _rname = node.rvalue.name.name
             _rtype = self.symtab.lookup(_rname)['type'][1:] # ignore TYPE_FUNC
-        # FIXME do we need a special check for ArrayRef?
         else:
             _rtype = node.rvalue.attrs['type']
 
@@ -308,6 +332,8 @@ class Visitor(NodeVisitor):
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         self.symtab.begin_scope()
+        # FIXME I think we may actually be able use the current scope
+        # and only open one for FuncDef (since it has a Compound stmt)
 
         assert isinstance(node.type, VarDecl)
         self.visit(node.type)
@@ -318,7 +344,7 @@ class Visitor(NodeVisitor):
             self.visit(node.args)
             node.attrs['param_types'] = node.args.attrs['param_types']
 
-        ## self.symtab.end_scope()
+        self.symtab.end_scope()
 
     # FIXME
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
@@ -341,7 +367,7 @@ class Visitor(NodeVisitor):
         assert isinstance(node.body, Compound)
         self.visit(node.body)
 
-        ## self.symtab.end_scope()
+        self.symtab.end_scope()
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         for decl in node.decls:
@@ -395,7 +421,7 @@ class Visitor(NodeVisitor):
             assert isinstance(gdecl, (GlobalDecl, FuncDef))
             self.visit(gdecl)
 
-        ## self.symtab.end_scope()
+        self.symtab.end_scope()
 
     def visit_PtrDecl(self, node: PtrDecl): # [type*]
         raise NotImplementedError

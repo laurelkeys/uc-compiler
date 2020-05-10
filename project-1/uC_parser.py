@@ -86,8 +86,6 @@ class UCParser:
 
 
     # Internal auxiliary methods
-    _default_function_return_type = ['int'] # functions return 'int' by default
-
     def _token_coord(self, p, token_idx):
         last_cr = p.lexer.lexer.lexdata.rfind('\n', 0, p.lexpos(token_idx))
         if last_cr < 0:
@@ -132,7 +130,7 @@ class UCParser:
         if typename is None:
             if not isinstance(decl.type, FuncDecl):
                 self._parse_error("Missing type in declaration", decl.coord)
-            decl_tail.type = Type(_default_function_return_type, coord=decl.coord)
+            decl_tail.type = Type(['int'], coord=decl.coord) # NOTE functions return 'int' by default
         else:
             decl_tail.type = typename # NOTE this fixes the type=None passed to AST nodes
 
@@ -260,7 +258,7 @@ class UCParser:
         if p[1] is not None:
             spec = p[1]
         else:
-            spec = Type(_default_function_return_type, coord=self._token_coord(p, 1))
+            spec = Type(['int'], coord=self._token_coord(p, 1)) # NOTE functions return 'int' by default
 
         p[0] = self._build_function_definition(
             spec,

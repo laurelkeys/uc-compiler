@@ -77,7 +77,7 @@ class NodeVisitor:
         if self._method_cache is None:
             self._method_cache = {}
 
-        print(f"Visitting {node.__class__.__name__}")
+        print(f"v.. {node.__class__.__name__}") # FIXME remove
 
         visitor = self._method_cache.get(node.__class__.__name__, None)
         if visitor is None:

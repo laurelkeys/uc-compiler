@@ -53,8 +53,8 @@ Unary operators return a result that's the same type as the operand.
 ## Supported operators
 Attempts to use unsupported operators should result in an error. For example:
 ```c
-    char[] a = "Hello" + "World";   // OK
-    char[] b = "Hello" * "World";   // Error:  unsupported op *
+    char a[] = "Hello" + "World";   // OK
+    char b[] = "Hello" * "World";   // Error:  unsupported op *
 ```
 
 ## Assignment, indexing, etc.
