@@ -141,7 +141,7 @@ class Visitor(NodeVisitor):
                 )
                 _dim_type = self.symtab.lookup(node.dim.name)['type']
             else:
-                assert False, str(type(node.dim)) # FIXME
+                _dim_type = node.dim.attrs['type']
             assert _dim_type == [TYPE_INT], (
                 f"Size of array has non-integer type {_dim_type}"
             )
@@ -272,15 +272,34 @@ class Visitor(NodeVisitor):
         assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported"
         node.attrs['type'] = _dst_type
 
-    def visit_Compound(self, node: Compound): # [decls**, stmts**]
-        # FIXME we probably need a new scope in here,
-        # just visiting stuff to treat other nodes:
+    def visit_Compound(self, node: Compound, parent: Node = None): # [decls**, stmts**]
+        if parent is None:
+            _new_scope = True # block (local) scope
+            self.symtab.begin_scope()
+        else:
+            _new_scope = False
+            # TODO
+            if isinstance(parent, FuncDef): # function scope
+                # NOTE FuncDecl should also push a scope
+                pass
+            elif isinstance(parent, While): # while-loop scope
+                pass
+            elif isinstance(parent, For): # for-loop scope
+                pass
+            elif isinstance(parent, If): # if-statement scope
+                pass
+            else:
+                assert False, f"Unexpected type openning a compount statement: {type(parent)}"
+
         if node.decls is not None:
             for decl in node.decls:
                 self.visit(decl)
         if node.stmts is not None:
             for stmt in node.stmts:
                 self.visit(stmt)
+
+        if _new_scope:
+            self.symtab.end_scope()
 
     def visit_Constant(self, node: Constant): # [type, value]
         node.attrs['type'] = [uC_types.from_name(node.type)]
@@ -309,6 +328,7 @@ class Visitor(NodeVisitor):
             assert node.init.attrs['type'] == sym_attrs['type'], (
                 f"Implicit conversions are not supported: {sym_attrs['type']} = {node.init.attrs['type']}"
             )
+            # NOTE here's where we'd treat ArrayDecl with init and check that dim is Constant
 
         self.symtab.add(
             name=sym_name,
@@ -469,6 +489,8 @@ class Visitor(NodeVisitor):
             _operand_name = node.expr.name.name
             assert _operand_name in self.symtab.current_scope, f"Function `{_operand_name}` not defined"
             _type = self.symtab.lookup(_operand_name)['type'][1:] # ignore TYPE_FUNC
+
+        # FIXME special check for ArrayRef
 
         else:
             _type = node.expr.attrs['type']
