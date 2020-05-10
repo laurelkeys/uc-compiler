@@ -381,10 +381,24 @@ class Visitor(NodeVisitor):
         ## self.symtab.end_scope()
 
     def visit_PtrDecl(self, node: PtrDecl): # [type*]
-        pass
+        raise NotImplementedError
 
     def visit_Read(self, node: Read): # [expr*]
-        pass
+        self.visit(node.expr)
+        _read_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
+        for _expr in _read_exprs:
+            if isinstance(_expr, ID):
+                assert _expr.name in self.symtab.current_scope, (
+                    f"Attempt to read into unknown identifier: `{_expr.name}`"
+                )
+            elif isinstance(_expr, ArrayRef):
+                assert _expr.name.name in self.symtab.current_scope, (
+                    f"Attempt to read into unknown array: `{_expr.name.name}`"
+                )
+            else:
+                # FIXME does it make sense to read into any other node type?
+                assert False, f"Unexpected node type in read: {type(_expr)}"
+
 
     def visit_Return(self, node: Return): # [expr*]
         # TODO assert we are in a "func" scope
