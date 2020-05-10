@@ -350,9 +350,33 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
+        _name = node.name.name
         # TODO check if it's in scope
+        assert _name in self.symtab.current_scope, f"Function `{_name}` not defined {self.symtab.current_scope}"
+
+        _func = self.symtab.lookup(_name)
+        _decl_params = _func.get('param_types', None)
+        
         # TODO check number and type or arguments match the params
-        pass
+        if node.args is not None:
+            self.visit(node.args)
+
+            _decl_params = [] if _func.get('param_types', []) is None else _func.get('param_types', [])
+
+            if isinstance(node.args, ExprList):
+                assert len(_decl_params) == len(node.args.exprs), f"Number of parameters don't match declaration: {len(_decl_params)} and {len(node.args.exprs)}"
+
+                for param_call, param_decl in zip(_decl_params, node.args.exprs):
+                    assert param_call == param_decl.attrs['type'], f"Parameter types don't match: {param_call} and {param_decl.attrs['type']}"
+            
+            else: # there's only one argument
+                assert len(_decl_params) == 1, f"Number of parameters don't match declaration: {len(_decl_params)} and 1"
+                assert _decl_params[0] == node.args.attrs['type'], f"Parameter types don't match: {_decl_params[0]} and {node.args.attrs['type']}"
+
+        elif _decl_params is not None:
+            assert False, f"Parameters don't match declaration"
+
+        node.attrs['type'] = _func['type'][1:] # Get return type
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         self.symtab.begin_scope()
