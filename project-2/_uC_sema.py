@@ -183,15 +183,12 @@ class Visitor(NodeVisitor):
         assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`"
 
         self.visit(node.rvalue)
-        _rname = None
+        _rname = node.rvalue.attrs.get('name', None)
         if isinstance(node.rvalue, ID):
-            _rname = node.rvalue.name
             _rtype = self.symtab.lookup(_rname)['type']
         elif isinstance(node.rvalue, ArrayRef):
-            _rname = node.rvalue.name.name
             _rtype = node.rvalue.attrs['type']
         elif isinstance(node.rvalue, FuncCall):
-            _rname = node.rvalue.name.name
             _rtype = self.symtab.lookup(_rname)['type'][1:] # ignore TYPE_FUNC
         else:
             _rtype = node.rvalue.attrs['type']
@@ -223,11 +220,6 @@ class Visitor(NodeVisitor):
                 _operand_name = _operand.name
                 assert _operand_name in self.symtab.current_scope, f"Identifier `{_operand_name}` not defined"
                 _type = self.symtab.lookup(_operand_name)['type']
-
-            elif isinstance(_operand, FuncCall):
-                _operand_name = _operand.name.name
-                assert _operand_name in self.symtab.current_scope, f"Function `{_operand_name}` not defined"
-                _type = self.symtab.lookup(_operand_name)['type'][1:] # ignore TYPE_FUNC
 
             else:
                 _type = _operand.attrs['type']
@@ -350,7 +342,8 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
-        _name = node.name.name
+        assert isinstance(node.name, ID)
+        _name = node.name.attrs['name']
         assert _name in self.symtab.current_scope, f"Function `{_name}` not defined"
 
         _func = self.symtab.lookup(_name)
@@ -376,6 +369,7 @@ class Visitor(NodeVisitor):
             assert False, f"Parameters don't match declaration"
 
         node.attrs['type'] = _func['type'][1:] # Get return type
+        node.attrs['name'] = _name
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         self.symtab.begin_scope()
@@ -451,12 +445,12 @@ class Visitor(NodeVisitor):
                         f"Attempt to print unknown identifier: `{_expr.name}`"
                     )
                 elif isinstance(_expr, ArrayRef):
-                    assert _expr.name.name in self.symtab.current_scope, (
-                        f"Attempt to print unknown array: `{_expr.name.name}`"
+                    assert _expr.attrs['name'] in self.symtab.current_scope, (
+                        f"Attempt to print unknown array: `{_expr.attrs['name']}`"
                     )
                 elif isinstance(_expr, FuncCall):
-                    assert _expr.name.name in self.symtab.current_scope, (
-                        f"Attempt to print the return of an unknown function: `{_expr.name.name}`"
+                    assert _expr.attrs['name'] in self.symtab.current_scope, (
+                        f"Attempt to print the return of an unknown function: `{_expr.attrs['name']}`"
                     )
                 else:
                     pass # FIXME I think it's okay to print pretty much anything (binops, unops, functions, etc.)
@@ -482,8 +476,8 @@ class Visitor(NodeVisitor):
                     f"Attempt to read into unknown identifier: `{_expr.name}`"
                 )
             elif isinstance(_expr, ArrayRef):
-                assert _expr.name.name in self.symtab.current_scope, (
-                    f"Attempt to read into unknown array: `{_expr.name.name}`"
+                assert _expr.attrs['name'] in self.symtab.current_scope, (
+                    f"Attempt to read into unknown array: `{_expr.attrs['name']}`"
                 )
             else:
                 # FIXME does it make sense to read into any other node type?
@@ -507,17 +501,14 @@ class Visitor(NodeVisitor):
 
         self.visit(node.expr)
 
+        _operand_name = node.expr.attrs.get('name', None)
         if isinstance(node.expr, ID):
-            _operand_name = node.expr.name
             assert _operand_name in self.symtab.current_scope, f"Identifier `{_operand_name}` not defined"
             _type = self.symtab.lookup(_operand_name)['type']
 
         elif isinstance(node.expr, FuncCall):
-            _operand_name = node.expr.name.name
             assert _operand_name in self.symtab.current_scope, f"Function `{_operand_name}` not defined"
             _type = self.symtab.lookup(_operand_name)['type'][1:] # ignore TYPE_FUNC
-
-        # FIXME special check for ArrayRef
 
         else:
             _type = node.expr.attrs['type']
