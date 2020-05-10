@@ -369,7 +369,24 @@ class Visitor(NodeVisitor):
         node.attrs['param_types'] = param_types
 
     def visit_Print(self, node: Print): # [expr*]
-        pass
+        if node.expr is not None:
+            self.visit(node.expr)
+            _print_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
+            for _expr in _print_exprs:
+                if isinstance(_expr, ID):
+                    assert _expr.name in self.symtab.current_scope, (
+                        f"Attempt to print unknown identifier: `{_expr.name}`"
+                    )
+                elif isinstance(_expr, ArrayRef):
+                    assert _expr.name.name in self.symtab.current_scope, (
+                        f"Attempt to print unknown array: `{_expr.name.name}`"
+                    )
+                elif isinstance(_expr, FuncCall):
+                    assert _expr.name.name in self.symtab.current_scope, (
+                        f"Attempt to print the return of an unknown function: `{_expr.name.name}`"
+                    )
+                else:
+                    pass # FIXME I think it's okay to print pretty much anything (binops, unops, functions, etc.)
 
     def visit_Program(self, node: Program): # [gdecls**]
         self.symtab.begin_scope()
