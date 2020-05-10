@@ -337,9 +337,12 @@ class Visitor(NodeVisitor):
     def visit_ExprList(self, node: ExprList): # [exprs**]
         for expr in node.exprs:
             self.visit(expr)
+        node.attrs['type'] = node.exprs[-1].attrs['type']
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
-        pass
+        self.symtab.begin_scope()
+        # TODO stuff
+        self.symtab.end_scope()
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         assert isinstance(node.name, ID)
@@ -418,7 +421,17 @@ class Visitor(NodeVisitor):
         node.attrs['name'] = node.name
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
-        pass
+        self.symtab.begin_scope()
+
+        self.visit(node.cond)
+        assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}"
+
+        self.visit(node.ifthen)
+
+        if node.ifelse is not None:
+            self.visit(node.ifelse)
+
+        self.symtab.end_scope()
 
     def visit_InitList(self, node: InitList): # [exprs**]
         self.visit(node.exprs[0])
@@ -534,4 +547,6 @@ class Visitor(NodeVisitor):
         node.attrs['type'] = _type
 
     def visit_While(self, node: While): # [cond*, body*]
-        pass
+        self.symtab.begin_scope()
+        # TODO stuff
+        self.symtab.end_scope()
