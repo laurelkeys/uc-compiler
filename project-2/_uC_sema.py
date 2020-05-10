@@ -153,29 +153,65 @@ class Visitor(NodeVisitor):
         assert _expr_type == [TYPE_BOOL], f"No implementation for: `assert {_expr_type}`"
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
-        pass
+        assert isinstance(node.lvalue, ID), f"Assignment to invalid lvalue `{node.lvalue}`"
+
+        self.visit(node.lvalue)
+        _lname = node.lvalue.name
+        assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`"
+        _ltype = self.symtab.lookup(_lname)['type']
+
+        self.visit(node.rvalue)
+        _rname = None
+        if isinstance(node.rvalue, ID):
+            _rname = node.rvalue.name
+            _rtype = self.symtab.lookup(_rname)['type']
+        elif isinstance(node.rvalue, FuncCall):
+            _rname = node.rvalue.name.name
+            _rtype = self.symtab.lookup(_rname)['type'][1:] # ignore TYPE_FUNC
+        # FIXME do we need a special check for ArrayRef?
+        else:
+            _rtype = node.rvalue.attrs['type']
+
+        if _rname is not None:
+            assert _rname in self.symtab.current_scope, (
+                f"Assignment of unknown rvalue: `{_lname}` = `{_rname}`"
+            )
+
+        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`"
+
+        assert node.op in uC_ops.assign_ops.values(), f"Unexpected operator in adssignment operation: `{node.op}`"
+
+        assert node.op in _ltype[0].assign_ops, ( # use the "outermost" type
+            f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`"
+        )
+
+        node.attrs['type'] = _ltype
+
+        # FIXME do operators like +=, -=, etc. need a "special treatment"? (probably)
 
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         self.visit(node.left)
         self.visit(node.right)
 
-        # FIXME if one operand is an ID or FuncCall, check that it's defined
-        if isinstance(node.left, (ID, FuncCall)):
-            assert node.left.name in self.symtab, f"Variable `{node.left.name}` not defined"
-        if isinstance(node.right, (ID, FuncCall)):
-            assert node.left.name in self.symtab, f"Variable `{node.left.name}` not defined"
+        _operand_types = [None, None]
+        for i, _operand in enumerate([node.left, node.right]):
+            if isinstance(_operand, ID):
+                _operand_name = _operand.name
+                assert _operand_name in self.symtab.current_scope, f"Identifier `{_operand_name}` not defined"
+                _type = self.symtab.lookup(_operand_name)['type']
 
-        try:
-            _ltype = node.left.attrs['type']
-        except:
-            assert isinstance(node.left, ID)
-            _ltype = self.symtab.lookup(node.left.name)['type']
+            elif isinstance(_operand, FuncCall):
+                _operand_name = _operand.name.name
+                assert _operand_name in self.symtab.current_scope, f"Function `{_operand_name}` not defined"
+                _type = self.symtab.lookup(_operand_name)['type'][1:] # ignore TYPE_FUNC
 
-        try:
-            _rtype = node.right.attrs['type']
-        except:
-            assert isinstance(node.right, ID)
-            _rtype = self.symtab.lookup(node.right.name)['type']
+            else:
+                _type = _operand.attrs['type']
+
+            assert TYPE_FUNC not in _type
+            _operand_types[i] = _type
+
+        _ltype, _rtype = _operand_types
 
         if node.op in uC_ops.binary_ops.values():
             _type_ops = _ltype[0].binary_ops # use the "outermost" type
@@ -193,10 +229,32 @@ class Visitor(NodeVisitor):
         assert node.op in _type_ops, f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`"
 
     def visit_Break(self, node: Break): # []
+        # TODO assert we are in a "func" scope
         pass
 
     def visit_Cast(self, node: Cast): # [type*, expr*]
-        pass
+        assert isinstance(node.type, Type)
+        self.visit(node.type)
+        _dst_type = node.type.attrs['type']
+
+        self.visit(node.expr)
+        _src_type = node.expr.attrs['type']
+        _src_value = node.expr.attrs['value'] # FIXME I think this can raise a KeyError..
+
+        _valid_cast = True
+        if _src_type != _dst_type:
+            if _src_type == [TYPE_INT] and _dst_type == [TYPE_FLOAT]:
+                _dst_value = float(_src_value)
+            elif _src_type == [TYPE_FLOAT] and _dst_type == [TYPE_INT]:
+                _dst_value = int(_src_value)
+            else:
+                _valid_cast = False
+        else:
+            _dst_value = _src_value
+
+        assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported"
+        node.attrs['type'] = _dst_type
+        node.attrs['value'] = _dst_value
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
         # FIXME we probably need a new scope in here,
@@ -339,6 +397,7 @@ class Visitor(NodeVisitor):
         pass
 
     def visit_Return(self, node: Return): # [expr*]
+        # TODO assert we are in a "func" scope
         pass
 
     def visit_Type(self, node: Type): # [names]
