@@ -147,8 +147,22 @@ class Visitor(NodeVisitor):
             )
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
-        # TODO assert subscript is of type int
-        pass
+        self.visit(node.name)
+
+        _name = node.name.attrs['name']
+        assert _name in self.symtab.current_scope, f"Symbol not defined: {_name}"
+        node.attrs['name'] = _name
+
+        self.visit(node.subscript)
+        assert node.subscript.attrs['type'] == [TYPE_INT], f"Indexing with non-integer type: {node.subscript.attrs['type']}"
+        
+        _name_type = self.symtab.lookup(_name)['type'] if isinstance(node.name, ID) else node.name.attrs['type']
+        if _name_type[0] == TYPE_ARRAY:
+            node.attrs['type'] = _name_type[1:]
+        elif _name_type[0] == TYPE_STRING:
+            node.attrs['type'] = [TYPE_CHAR] + _name_type[1:]
+        else:
+            assert False, f"Type {_name_type} doesn't support array-like indexing"
 
     def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
@@ -161,15 +175,8 @@ class Visitor(NodeVisitor):
             _lname = node.lvalue.name
             _ltype = self.symtab.lookup(_lname)['type']
         elif isinstance(node.lvalue, ArrayRef):
-            _lname = node.lvalue.name.name
-            _ltype = self.symtab.lookup(_lname)['type']
-            # NOTE we're interested in the indexed type
-            if len(_ltype) == 1:
-                assert _ltype[0] == TYPE_STRING
-                _ltype = [TYPE_CHAR]
-            else:
-                assert _ltype[0] == TYPE_ARRAY
-                _ltype = _ltype[1:]
+            _lname = node.lvalue.attrs['name']
+            _ltype = node.lvalue.attrs['type']
         else:
             assert False, f"Assignment to invalid lvalue `{type(node.lvalue)}`"
 
@@ -182,14 +189,7 @@ class Visitor(NodeVisitor):
             _rtype = self.symtab.lookup(_rname)['type']
         elif isinstance(node.rvalue, ArrayRef):
             _rname = node.rvalue.name.name
-            _rtype = self.symtab.lookup(_rname)['type']
-            # NOTE we're interested in the indexed type
-            if len(_rtype) == 1:
-                assert _rtype[0] == TYPE_STRING
-                _rtype = [TYPE_CHAR]
-            else:
-                assert _rtype[0] == TYPE_ARRAY
-                _rtype = _rtype[1:]
+            _rtype = node.rvalue.attrs['type']
         elif isinstance(node.rvalue, FuncCall):
             _rname = node.rvalue.name.name
             _rtype = self.symtab.lookup(_rname)['type'][1:] # ignore TYPE_FUNC
@@ -351,8 +351,7 @@ class Visitor(NodeVisitor):
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         _name = node.name.name
-        # TODO check if it's in scope
-        assert _name in self.symtab.current_scope, f"Function `{_name}` not defined {self.symtab.current_scope}"
+        assert _name in self.symtab.current_scope, f"Function `{_name}` not defined"
 
         _func = self.symtab.lookup(_name)
         _decl_params = _func.get('param_types', None)
@@ -361,7 +360,7 @@ class Visitor(NodeVisitor):
         if node.args is not None:
             self.visit(node.args)
 
-            _decl_params = [] if _func.get('param_types', []) is None else _func.get('param_types', [])
+            _decl_params = [] if _decl_params is None else _decl_params
 
             if isinstance(node.args, ExprList):
                 assert len(_decl_params) == len(node.args.exprs), f"Number of parameters don't match declaration: {len(_decl_params)} and {len(node.args.exprs)}"
@@ -422,7 +421,7 @@ class Visitor(NodeVisitor):
             self.visit(decl)
 
     def visit_ID(self, node: ID): # [name]
-        pass
+        node.attrs['name'] = node.name
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         pass
