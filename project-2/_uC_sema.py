@@ -77,7 +77,7 @@ class SymbolTable:
     @property
     def current_scope(self): return self.symbol_table # contains everything that's currently visible
     @property
-    def global_scope(self): return self.symbol_table.maps[-1]
+    def global_scope(self): return self.symbol_table.maps[-2] # NOTE [-1] has the built-in functions
     @property
     def local_scope(self): return self.symbol_table.maps[0]
 
@@ -210,8 +210,9 @@ class Visitor(NodeVisitor):
 
             assert TYPE_FUNC not in _type
             _operand_types[i] = _type
-
         _ltype, _rtype = _operand_types
+
+        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`"
 
         if node.op in uC_ops.binary_ops.values():
             _type_ops = _ltype[0].binary_ops # use the "outermost" type
@@ -223,8 +224,6 @@ class Visitor(NodeVisitor):
 
         else:
             assert False, f"Unexpected operator in binary operation: `{node.op}`"
-
-        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`"
 
         assert node.op in _type_ops, f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`"
 
@@ -400,7 +399,32 @@ class Visitor(NodeVisitor):
         node.attrs['type'] = node.type.attrs['type']
 
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
-        pass
+        assert node.op in uC_ops.unary_ops.values(), f"Unexpected operator in unary operation: `{node.op}`"
+
+        self.visit(node.expr)
+
+        if isinstance(node.expr, ID):
+            _operand_name = node.expr.name
+            assert _operand_name in self.symtab.current_scope, f"Identifier `{_operand_name}` not defined"
+            _type = self.symtab.lookup(_operand_name)['type']
+
+        elif isinstance(node.expr, FuncCall):
+            _operand_name = node.expr.name.name
+            assert _operand_name in self.symtab.current_scope, f"Function `{_operand_name}` not defined"
+            _type = self.symtab.lookup(_operand_name)['type'][1:] # ignore TYPE_FUNC
+
+        else:
+            _type = node.expr.attrs['type']
+
+        assert TYPE_FUNC not in _type
+
+        assert node.op in _type[0].unary_ops, ( # use the "outermost" type
+            f"Operation not supported by type {_type}: " + (
+                f"`{node.op}{_type}`" if node.op[0] != 'p' else f"`{_type}{node.op[1:]}`"
+            )
+        )
+
+        node.attrs['type'] = _type
 
     def visit_While(self, node: While): # [cond*, body*]
         pass

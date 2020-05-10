@@ -29,10 +29,10 @@ class UCType:
         return False
 
     def __str__(self):
-        return '{' + self.typename + '}'
+        return self.typename
 
     def __repr__(self):
-        return '{' + self.typename + '}'
+        return self.typename
 
 
 TYPE_INT = UCType(
