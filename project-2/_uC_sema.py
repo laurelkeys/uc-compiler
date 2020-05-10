@@ -211,7 +211,7 @@ class Visitor(NodeVisitor):
 
         node.attrs['type'] = _ltype
 
-        # FIXME do operators like +=, -=, etc. need a "special treatment"? (probably)
+        # FIXME do operators like +=, -=, etc. need a "special treatment"?
 
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         self.visit(node.left)
@@ -336,18 +336,22 @@ class Visitor(NodeVisitor):
         )
 
     def visit_DeclList(self, node: DeclList): # [decls**]
-        pass
+        for decl in node.decls:
+            self.visit(decl)
 
     def visit_EmptyStatement(self, node: EmptyStatement): # []
         pass
 
     def visit_ExprList(self, node: ExprList): # [exprs**]
-        pass
+        for expr in node.exprs:
+            self.visit(expr)
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
         pass
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
+        # TODO check if it's in scope
+        # TODO check number and type or arguments match the params
         pass
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
@@ -382,10 +386,10 @@ class Visitor(NodeVisitor):
             pass
             # TODO assert params types
 
-        # TODO assert type
+        # TODO assert return type
 
         assert isinstance(node.body, Compound)
-        self.visit(node.body)
+        self.visit(node.body) # TODO pass parent=node
 
         self.symtab.end_scope()
 
