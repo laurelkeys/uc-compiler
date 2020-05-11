@@ -264,26 +264,27 @@ class Visitor(NodeVisitor):
         assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported"
         node.attrs['type'] = _dst_type
 
-    # FIXME we may need to pass the parent in the node itself, e.g. use
-    # node.attrs['parent'] before calling self.visit on it (see https://stackoverflow.com/a/25053912)
-    def visit_Compound(self, node: Compound, parent: Node = None): # [decls**, stmts**]
-        if parent is None:
+    def visit_Compound(self, node: Compound): # [decls**, stmts**]
+        _parent = node.attrs.get('parent', None) # passed by the parent node on the AST
+        if _parent is None:
             _new_scope = True # block (local) scope
             self.symtab.begin_scope()
         else:
             _new_scope = False
             # TODO
-            if isinstance(parent, FuncDef): # function scope
+            if isinstance(_parent, FuncDef): # function scope
                 # NOTE FuncDecl should also push a scope
                 print("*** in function scope")
-            elif isinstance(parent, While): # while-loop scope
+                print(f"*** parent '{_parent.attrs['name']}'",
+                      self.symtab.lookup(_parent.attrs['name'])) # (debug)
+            elif isinstance(_parent, While): # while-loop scope
                 print("*** in while-loop scope")
-            elif isinstance(parent, For): # for-loop scope
+            elif isinstance(_parent, For): # for-loop scope
                 print("*** in for-loop scope")
-            elif isinstance(parent, If): # if-statement scope
+            elif isinstance(_parent, If): # if-statement scope
                 print("*** in if-statement scope")
             else:
-                assert False, f"Unexpected type openning a compount statement: {type(parent)}"
+                assert False, f"Unexpected type openning a compount statement: {type(_parent)}"
 
         if node.decls is not None:
             for decl in node.decls:
@@ -344,6 +345,8 @@ class Visitor(NodeVisitor):
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
         self.symtab.begin_scope()
         # TODO stuff
+        #if isinstance(node.body, Compound):
+        #    node.body.attrs['parent'] = node
         self.symtab.end_scope()
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
@@ -377,7 +380,8 @@ class Visitor(NodeVisitor):
         node.attrs['name'] = _name
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
-        self.symtab.begin_scope()
+        self.symtab.begin_scope() # TODO not sure we need this, since we only add to symtab on Decl,
+                                  # and this scope will have been popped (I think it's always empty aon.)
         # FIXME I think we may actually be able use the current scope
         # and only open one for FuncDef (since it has a Compound stmt)
 
@@ -411,7 +415,9 @@ class Visitor(NodeVisitor):
         # TODO assert return type
 
         assert isinstance(node.body, Compound)
-        self.visit(node.body, parent=node)
+        node.attrs['name'] = node.decl.name.name # NOTE this is used for lookup on body
+        node.body.attrs['parent'] = node
+        self.visit(node.body)
 
         self.symtab.end_scope()
 
@@ -428,16 +434,16 @@ class Visitor(NodeVisitor):
         self.visit(node.cond)
         assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}"
 
+        # FIXME ifthen/ifelse can be a single expression
+
         if isinstance(node.ifthen, Compound):
-            self.visit(node.ifthen, parent=node)
-        else:
-            self.visit(node.ifthen) # FIXME single expression
+            node.ifthen.attrs['parent'] = node
+        self.visit(node.ifthen)
 
         if node.ifelse is not None:
             if isinstance(node.ifelse, Compound):
-                self.visit(node.ifelse, parent=node)
-            else:
-                self.visit(node.ifelse) # FIXME single expression
+                node.ifelse.attrs['parent'] = node
+            self.visit(node.ifelse)
 
         self.symtab.end_scope()
 
@@ -557,4 +563,6 @@ class Visitor(NodeVisitor):
     def visit_While(self, node: While): # [cond*, body*]
         self.symtab.begin_scope()
         # TODO stuff
+        #if isinstance(node.body, Compound):
+        #    node.body.attrs['parent'] = node
         self.symtab.end_scope()
