@@ -313,6 +313,10 @@ class Visitor(NodeVisitor):
         elif isinstance(node.type, ArrayDecl):
             sym_attrs['dim'] = node.type.attrs.get('dim', None)
         elif isinstance(node.type, FuncDecl):
+            # TODO since a FuncDef has a FuncDecl, we can have two declarations of the same
+            # function, thus, we have to check wheter or not it was already defined
+            #if self.symtab.lookup(sym_name) is not None:
+            #    assert not self.symtab.lookup(sym_name).get('defined?', False), f"Redefinition of `{sym_name}`"
             sym_attrs['param_types'] = node.type.attrs.get('param_types', None)
         else:
             assert False, f"Unexpected type {type(node.type)} for node.type"
@@ -379,8 +383,7 @@ class Visitor(NodeVisitor):
         node.attrs['name'] = _name
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
-        self.symtab.begin_scope() # TODO not sure we need this, since we only add to symtab on Decl,
-                                  # and this scope will have been popped (I think it's always empty aon.)
+        self.symtab.begin_scope() # NOTE we use this so parameter names don't go to the global scope
         # FIXME I think we may actually be able use the current scope
         # and only open one for FuncDef (since it has a Compound stmt)
 
@@ -404,12 +407,17 @@ class Visitor(NodeVisitor):
         self.visit(node.spec)
         sym_attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type']
 
+        # FIXME we may need to pass param_names in FuncDecl attrs and (re-)add them to symtab here,
+        # as they are popped on FuncDecl's symtab, and now we need them in the FuncDef's symtab
         assert isinstance(node.decl, Decl)
         self.visit(node.decl)
-        _param_types = self.symtab.lookup(node.decl.name.name)['param_types']
+        sym = self.symtab.lookup(node.decl.name.name)
+        sym['defined?'] = True
+        _param_types = sym['param_types']
+        # TODO add param names to symtab
         if _param_types is not None:
             pass
-            # TODO assert params types
+            # TODO assert params types (NOTE this may have to be done in Decl, as it's where FuncDecl will return to first)
 
         # TODO assert return type
 
