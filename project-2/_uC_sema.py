@@ -351,32 +351,31 @@ class Visitor(NodeVisitor):
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         assert isinstance(node.name, ID)
+        self.visit(node.name)
         _name = node.name.attrs['name']
         assert _name in self.symtab.current_scope, f"Function `{_name}` not defined"
 
-        _func = self.symtab.lookup(_name)
-        _decl_params = _func.get('param_types', None)
-
-        # TODO check number and type or arguments match the params
         if node.args is not None:
             self.visit(node.args)
 
-            _decl_params = [] if _decl_params is None else _decl_params
+        _func = self.symtab.lookup(_name)
+        _param_types = _func.get('param_types', [])
+        _passed_args = (
+            [] if node.args is None
+            else node.args.exprs if isinstance(node.args, ExprList)
+            else [node.args] # there's only one argument
+        )
+        assert len(_param_types) == len(_passed_args), (
+            ("Too many" if len(_param_types) < len(_passed_args) else "Too few") +
+            f" arguments in call to `{_name}`: {len(_passed_args)} passed, {len(_param_types)} expected"
+        )
 
-            if isinstance(node.args, ExprList):
-                assert len(_decl_params) == len(node.args.exprs), f"Number of parameters don't match declaration: {len(_decl_params)} and {len(node.args.exprs)}"
+        for _passed_arg, _param_type in zip(_passed_args, _param_types):
+            assert _passed_arg.attrs['type'] == _param_type, (
+                f"Wrong argument type in call to `{_name}`: {_passed_arg.attrs['type']} passed, {_param_type} expected"
+            )
 
-                for param_call, param_decl in zip(_decl_params, node.args.exprs):
-                    assert param_call == param_decl.attrs['type'], f"Parameter types don't match: {param_call} and {param_decl.attrs['type']}"
-
-            else: # there's only one argument
-                assert len(_decl_params) == 1, f"Number of parameters don't match declaration: {len(_decl_params)} and 1"
-                assert _decl_params[0] == node.args.attrs['type'], f"Parameter types don't match: {_decl_params[0]} and {node.args.attrs['type']}"
-
-        elif _decl_params is not None:
-            assert False, f"Parameters don't match declaration"
-
-        node.attrs['type'] = _func['type'][1:] # Get return type
+        node.attrs['type'] = _func['type'][1:] # get the return type (ignoring TYPE_FUNC)
         node.attrs['name'] = _name
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
