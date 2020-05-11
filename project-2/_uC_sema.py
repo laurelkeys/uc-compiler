@@ -155,7 +155,7 @@ class Visitor(NodeVisitor):
 
         self.visit(node.subscript)
         assert node.subscript.attrs['type'] == [TYPE_INT], f"Indexing with non-integer type: {node.subscript.attrs['type']}"
-        
+
         _name_type = self.symtab.lookup(_name)['type'] if isinstance(node.name, ID) else node.name.attrs['type']
         if _name_type[0] == TYPE_ARRAY:
             node.attrs['type'] = _name_type[1:]
@@ -264,6 +264,8 @@ class Visitor(NodeVisitor):
         assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported"
         node.attrs['type'] = _dst_type
 
+    # FIXME we may need to pass the parent in the node itself, e.g. use
+    # node.attrs['parent'] before calling self.visit on it (see https://stackoverflow.com/a/25053912)
     def visit_Compound(self, node: Compound, parent: Node = None): # [decls**, stmts**]
         if parent is None:
             _new_scope = True # block (local) scope
@@ -273,13 +275,13 @@ class Visitor(NodeVisitor):
             # TODO
             if isinstance(parent, FuncDef): # function scope
                 # NOTE FuncDecl should also push a scope
-                pass
+                print("*** in function scope")
             elif isinstance(parent, While): # while-loop scope
-                pass
+                print("*** in while-loop scope")
             elif isinstance(parent, For): # for-loop scope
-                pass
+                print("*** in for-loop scope")
             elif isinstance(parent, If): # if-statement scope
-                pass
+                print("*** in if-statement scope")
             else:
                 assert False, f"Unexpected type openning a compount statement: {type(parent)}"
 
@@ -351,7 +353,7 @@ class Visitor(NodeVisitor):
 
         _func = self.symtab.lookup(_name)
         _decl_params = _func.get('param_types', None)
-        
+
         # TODO check number and type or arguments match the params
         if node.args is not None:
             self.visit(node.args)
@@ -363,7 +365,7 @@ class Visitor(NodeVisitor):
 
                 for param_call, param_decl in zip(_decl_params, node.args.exprs):
                     assert param_call == param_decl.attrs['type'], f"Parameter types don't match: {param_call} and {param_decl.attrs['type']}"
-            
+
             else: # there's only one argument
                 assert len(_decl_params) == 1, f"Number of parameters don't match declaration: {len(_decl_params)} and 1"
                 assert _decl_params[0] == node.args.attrs['type'], f"Parameter types don't match: {_decl_params[0]} and {node.args.attrs['type']}"
@@ -409,7 +411,7 @@ class Visitor(NodeVisitor):
         # TODO assert return type
 
         assert isinstance(node.body, Compound)
-        self.visit(node.body) # TODO pass parent=node
+        self.visit(node.body, parent=node)
 
         self.symtab.end_scope()
 
@@ -426,10 +428,16 @@ class Visitor(NodeVisitor):
         self.visit(node.cond)
         assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}"
 
-        self.visit(node.ifthen)
+        if isinstance(node.ifthen, Compound):
+            self.visit(node.ifthen, parent=node)
+        else:
+            self.visit(node.ifthen) # FIXME single expression
 
         if node.ifelse is not None:
-            self.visit(node.ifelse)
+            if isinstance(node.ifelse, Compound):
+                self.visit(node.ifelse, parent=node)
+            else:
+                self.visit(node.ifelse) # FIXME single expression
 
         self.symtab.end_scope()
 
