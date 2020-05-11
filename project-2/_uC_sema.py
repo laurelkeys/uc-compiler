@@ -35,11 +35,13 @@ class SymbolTable:
     def __init__(self):
         self.symbol_table = ChainMap()
         self.scope_stack = []
+        self.loops = []
+        self.funcs = []
 
     @property
-    def in_loop(self): return not self.loops # return any(scope.kind == "loop" for scope in self.scope_stack)
+    def in_loop(self): return len(self.loops) > 0 # return any(scope.kind == "loop" for scope in self.scope_stack)
     @property
-    def in_func(self): return not self.funcs # return any(scope.kind == "func" for scope in self.scope_stack)
+    def in_func(self): return len(self.funcs) > 0 # return any(scope.kind == "func" for scope in self.scope_stack)
 
     # NOTE maybe use in_* to refer to the current scope (self.scope_stack[-1]) and wrapped_by_* to search all
 
@@ -173,7 +175,6 @@ class Visitor(NodeVisitor):
         self.visit(node.lvalue)
         if isinstance(node.lvalue, ID):
             _lname = node.lvalue.name
-            _ltype = self.symtab.lookup(_lname)['type']
         elif isinstance(node.lvalue, ArrayRef):
             _lname = node.lvalue.attrs['name']
             _ltype = node.lvalue.attrs['type']
@@ -181,6 +182,9 @@ class Visitor(NodeVisitor):
             assert False, f"Assignment to invalid lvalue `{type(node.lvalue)}`"
 
         assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`"
+        
+        if isinstance(node.lvalue, ID):
+            _ltype = self.symtab.lookup(_lname)['type']
 
         self.visit(node.rvalue)
         _rname = node.rvalue.attrs.get('name', None)
@@ -244,8 +248,7 @@ class Visitor(NodeVisitor):
         assert node.op in _type_ops, f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`"
 
     def visit_Break(self, node: Break): # []
-        # TODO assert we are in a "func" scope
-        pass
+        assert self.symtab.in_loop, f"Break outside a loop"
 
     def visit_Cast(self, node: Cast): # [type*, expr*]
         assert isinstance(node.type, Type)
@@ -347,11 +350,22 @@ class Visitor(NodeVisitor):
         node.attrs['type'] = node.exprs[-1].attrs['type']
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
-        self.symtab.begin_scope()
-        # TODO stuff
-        #if isinstance(node.body, Compound):
-        #    node.body.attrs['parent'] = node
-        self.symtab.end_scope()
+        self.symtab.begin_scope(loop=node)
+
+        if node.init is not None:
+            self.visit(node.init)
+        if node.cond is not None:
+            self.visit(node.cond)
+            assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}"
+
+        if node.next is not None:
+            self.visit(node.next)
+
+        if isinstance(node.body, Compound):
+            node.body.attrs['parent'] = node
+        self.visit(node.body)
+
+        self.symtab.end_scope(loop=True)
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         assert isinstance(node.name, ID)
@@ -383,7 +397,7 @@ class Visitor(NodeVisitor):
         node.attrs['name'] = _name
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
-        self.symtab.begin_scope() # NOTE we use this so parameter names don't go to the global scope
+        self.symtab.begin_scope(func=node) # NOTE we use this so parameter names don't go to the global scope
         # FIXME I think we may actually be able use the current scope
         # and only open one for FuncDef (since it has a Compound stmt)
 
@@ -396,16 +410,17 @@ class Visitor(NodeVisitor):
             self.visit(node.args)
             node.attrs['param_types'] = node.args.attrs['param_types']
 
-        self.symtab.end_scope()
+        self.symtab.end_scope(func=True)
 
     # FIXME
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
-        self.symtab.begin_scope()
+        self.symtab.begin_scope(func=node)
 
         sym_attrs = {}
         assert isinstance(node.spec, Type)
         self.visit(node.spec)
-        sym_attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type']
+        node.attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type']
+        sym_attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type'] # FIXME what's this?
 
         # FIXME we may need to pass param_names in FuncDecl attrs and (re-)add them to symtab here,
         # as they are popped on FuncDecl's symtab, and now we need them in the FuncDef's symtab
@@ -426,7 +441,7 @@ class Visitor(NodeVisitor):
         node.body.attrs['parent'] = node
         self.visit(node.body)
 
-        self.symtab.end_scope()
+        self.symtab.end_scope(func=True)
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         for decl in node.decls:
@@ -445,12 +460,16 @@ class Visitor(NodeVisitor):
 
         if isinstance(node.ifthen, Compound):
             node.ifthen.attrs['parent'] = node
+        self.symtab.begin_scope()
         self.visit(node.ifthen)
+        self.symtab.end_scope()
 
         if node.ifelse is not None:
             if isinstance(node.ifelse, Compound):
                 node.ifelse.attrs['parent'] = node
+            self.symtab.begin_scope()
             self.visit(node.ifelse)
+            self.symtab.end_scope()
 
         self.symtab.end_scope()
 
@@ -529,8 +548,14 @@ class Visitor(NodeVisitor):
 
 
     def visit_Return(self, node: Return): # [expr*]
-        # TODO assert we are in a "func" scope
-        pass
+        assert self.symtab.in_func, f"Return outside a function"
+
+        if node.expr is not None:
+            self.visit(node.expr)
+            assert node.expr.attrs['type'] == self.symtab.curr_func.attrs['type'][1:], f"Returning {node.expr.attrs['type']} on a {self.symtab.curr_func.attrs['type'][1:]} function"
+        else:
+            assert [TYPE_VOID] == self.symtab.curr_func.attrs['type'][1:], f"Returning {[TYPE_VOID]} on a {self.symtab.curr_func.attrs['type'][1:]} function"
+
 
     def visit_Type(self, node: Type): # [names]
         node.attrs['type'] = [uC_types.from_name(name) for name in node.names]
@@ -568,8 +593,13 @@ class Visitor(NodeVisitor):
         node.attrs['type'] = _type
 
     def visit_While(self, node: While): # [cond*, body*]
-        self.symtab.begin_scope()
-        # TODO stuff
-        #if isinstance(node.body, Compound):
-        #    node.body.attrs['parent'] = node
-        self.symtab.end_scope()
+        self.symtab.begin_scope(loop=node)
+        
+        self.visit(node.cond)
+        assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}"
+
+        if isinstance(node.body, Compound):
+           node.body.attrs['parent'] = node
+        self.visit(node.body)
+
+        self.symtab.end_scope(loop=True)
