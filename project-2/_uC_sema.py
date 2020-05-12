@@ -545,6 +545,10 @@ class Visitor(NodeVisitor):
             assert isinstance(gdecl, (GlobalDecl, FuncDef))
             self.visit(gdecl)
 
+        for _key, _item in self.symtab.local_scope.items():
+            if _item['type'][0] == TYPE_FUNC:
+                assert _item.get('defined?', False), f"Function declared but not defined"
+
         self.symtab.end_scope()
 
     def visit_PtrDecl(self, node: PtrDecl): # [type*]
