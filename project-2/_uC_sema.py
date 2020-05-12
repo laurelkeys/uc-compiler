@@ -306,7 +306,11 @@ class Visitor(NodeVisitor):
         assert isinstance(node.name, ID)
         self.visit(node.name)
         sym_name = node.name.name
-        assert sym_name not in self.symtab.local_scope, f"Redeclaration of `{sym_name}`"
+    
+        if not isinstance(node.type, FuncDecl):
+            assert sym_name not in self.symtab.local_scope, f"Redeclaration of `{sym_name}`"
+        elif sym_name in self.symtab.local_scope:
+            assert not self.symtab.lookup(sym_name).get('defined?', False), f"Redeclaration of already defined `{sym_name}`"
 
         sym_attrs = {}
         self.visit(node.type)
@@ -316,11 +320,22 @@ class Visitor(NodeVisitor):
         elif isinstance(node.type, ArrayDecl):
             sym_attrs['dim'] = node.type.attrs.get('dim', None)
         elif isinstance(node.type, FuncDecl):
-            # TODO since a FuncDef has a FuncDecl, we can have two declarations of the same
-            # function, thus, we have to check wheter or not it was already defined
-            #if self.symtab.lookup(sym_name) is not None:
-            #    assert not self.symtab.lookup(sym_name).get('defined?', False), f"Redefinition of `{sym_name}`"
-            sym_attrs['param_types'] = node.type.attrs.get('param_types', None)
+            
+            sym_attrs['param_types'] = node.type.attrs.get('param_types', [])
+            if sym_name in self.symtab.local_scope:
+
+                assert sym_attrs['type'] == self.symtab.lookup(sym_name)['type'], \
+                    f"Redeclaration of function {sym_name} with different return type: {sym_attrs['type']} and {self.symtab.lookup(sym_name)['type']}"
+
+                # checking parameter types
+                _declared_param_types = self.symtab.lookup(sym_name)['param_types']
+                assert len(sym_attrs['param_types']) == len(_declared_param_types), \
+                    f"Conflicting parameter count for `{sym_name}`: {len(sym_attrs['param_types'])} passed, {len(_declared_param_types)} expected"
+                for _new_type, _old_type in zip(sym_attrs['param_types'], _declared_param_types):
+                    assert _new_type == _old_type, (
+                        f"Conflicting types for `{sym_name}`: {_new_type} passed, {_old_type} expected"
+                    )
+
         else:
             assert False, f"Unexpected type {type(node.type)} for node.type"
 
@@ -414,8 +429,6 @@ class Visitor(NodeVisitor):
 
     # FIXME
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
-        self.symtab.begin_scope(func=node)
-
         sym_attrs = {}
         assert isinstance(node.spec, Type)
         self.visit(node.spec)
@@ -427,14 +440,15 @@ class Visitor(NodeVisitor):
         assert isinstance(node.decl, Decl)
         self.visit(node.decl)
         sym = self.symtab.lookup(node.decl.name.name)
-        sym['defined?'] = True
         _param_types = sym['param_types']
+        sym['defined?'] = True
         # TODO add param names to symtab
         if _param_types is not None:
             pass
             # TODO assert params types (NOTE this may have to be done in Decl, as it's where FuncDecl will return to first)
 
         # TODO assert return type
+        self.symtab.begin_scope(func=node)
 
         assert isinstance(node.body, Compound)
         node.attrs['name'] = node.decl.name.name # NOTE this is used for lookup on body
@@ -546,7 +560,6 @@ class Visitor(NodeVisitor):
                 # FIXME does it make sense to read into any other node type?
                 assert False, f"Unexpected node type in read: {type(_expr)}"
 
-
     def visit_Return(self, node: Return): # [expr*]
         assert self.symtab.in_func, f"Return outside a function"
 
@@ -555,7 +568,6 @@ class Visitor(NodeVisitor):
             assert node.expr.attrs['type'] == self.symtab.curr_func.attrs['type'][1:], f"Returning {node.expr.attrs['type']} on a {self.symtab.curr_func.attrs['type'][1:]} function"
         else:
             assert [TYPE_VOID] == self.symtab.curr_func.attrs['type'][1:], f"Returning {[TYPE_VOID]} on a {self.symtab.curr_func.attrs['type'][1:]} function"
-
 
     def visit_Type(self, node: Type): # [names]
         node.attrs['type'] = [uC_types.from_name(name) for name in node.names]
