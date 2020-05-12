@@ -3,17 +3,18 @@ import sys
 
 from collections import ChainMap
 
+import uC_ops
 import uC_types
 
 from uC_AST import *
-from uC_ops import *
-from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_FUNC,
-                      TYPE_INT, TYPE_STRING, TYPE_VOID)
+from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
+                      TYPE_ARRAY, TYPE_BOOL, TYPE_FUNC)
 
 ###########################################################
 ## uC Semantic Analysis ###################################
 ###########################################################
 
+# ref.: https://en.cppreference.com/w/c/language/scope
 class Scope:
     def __init__(self, kind: str, name: str, node: str):
         assert kind in ["global", "local", "func", "loop"]
@@ -21,20 +22,26 @@ class Scope:
         self.name = name
         self.node = node
 
+    # NOTE "global" is the whole (file) scope enclosed by a Program node
+    #      "local" is a (block) scope delimited by an if-statement or by {}'s
+    #      "func" is a function-local (block) scope delimited by a function declaration/definition
+    #      "loop" is a loop-local (block) scope delimited by a for- or while-loop
+
 class SymbolTable:
     ''' Class representing a symbol table.\n
         It should provide functionality for adding and looking up nodes associated with identifiers.
     '''
 
-    def __init__(self, global_scope=None):
-        self.symbol_table = ChainMap() if global_scope is None else ChainMap(global_scope)
-        self.loops = [] # list of loops that wrap the current scope
-        self.funcs = [] # list of funcs that wrap the current scope
+    def __init__(self):
+        self.symbol_table = ChainMap()
+        self.scope_stack = []
+        self.loops = []
+        self.funcs = []
 
     @property
-    def in_loop(self): return not self.loops # return any(scope.kind == "loop" for scope in self.scope_stack)
+    def in_loop(self): return len(self.loops) > 0 # return any(scope.kind == "loop" for scope in self.scope_stack)
     @property
-    def in_func(self): return not self.funcs # return any(scope.kind == "func" for scope in self.scope_stack)
+    def in_func(self): return len(self.funcs) > 0 # return any(scope.kind == "func" for scope in self.scope_stack)
 
     # NOTE maybe use in_* to refer to the current scope (self.scope_stack[-1]) and wrapped_by_* to search all
 
@@ -43,13 +50,13 @@ class SymbolTable:
     @property
     def curr_func(self): return self.funcs[-1]
 
-    def add(self, name: str, value: Node):
-        ''' Inserts a node with attributes (`value.attrs`) associated to `name` in the current scope. '''
+    def add(self, name: str, attributes):
+        ''' Inserts `attributes` associated to `name` in the current scope. '''
         assert isinstance(name, str), f"expected str, received type {type(name)}: {name}"
-        self.symbol_table[name] = value
+        self.symbol_table[name] = attributes
 
     def lookup(self, name: str):
-        ''' Returns the node with attributes associated to `name` if it exists, otherwise `None`. '''
+        ''' Returns the attributes associated to `name` if it exists, otherwise `None`. '''
         assert isinstance(name, str), f"expected str, received type {type(name)}: {name}"
         return self.symbol_table.get(name, None)
 
@@ -57,6 +64,7 @@ class SymbolTable:
         ''' Push a new symbol table, generating a new (current) scope.\n
             If `loop`/`func` is not `None`, it becomes the `curr_loop`/`curr_func`.
         '''
+        print(len(self.symbol_table.maps), "> push") # FIXME debug only
         self.symbol_table = self.symbol_table.new_child()
         if loop is not None: self.loops.append(loop)
         if func is not None: self.funcs.append(func)
@@ -65,6 +73,7 @@ class SymbolTable:
         ''' Pop the current scope's symbol table, effectively deleting it.\n
             If `loop`/`func` is `True`, the `curr_loop`/`curr_func` is also popped.
         '''
+        print(len(self.symbol_table.maps) - 1, "> pop", self.local_scope) # FIXME debug only
         self.symbol_table = self.symbol_table.parents
         if loop: self.loops.pop()
         if func: self.funcs.pop()
@@ -72,12 +81,17 @@ class SymbolTable:
     @property
     def current_scope(self): return self.symbol_table # contains everything that's currently visible
     @property
-    def global_scope(self): return self.symbol_table.maps[-1]
+    def global_scope(self): return self.symbol_table.maps[-2] # NOTE [-1] has the built-in functions
     @property
     def local_scope(self): return self.symbol_table.maps[0]
 
     def __str__(self):
-        return str(self.symbol_table)
+        #return str(self.symbol_table)
+        return (
+            f"{self.__class__.__name__}(\n  "
+            + ", \n  ".join([f"{k}={v}" for k, v in self.__dict__.items()])
+            + "\n)"
+        )
 
 
 class Visitor(NodeVisitor):
@@ -91,7 +105,9 @@ class Visitor(NodeVisitor):
     '''
 
     def __init__(self):
-        self.symtab = SymbolTable({
+        self.symtab = SymbolTable()
+
+        self.symtab.symbol_table.update({
             # built-in types
             "int": TYPE_INT,
             "float": TYPE_FLOAT,
@@ -105,87 +121,180 @@ class Visitor(NodeVisitor):
             #"ptr": TYPE_PTR,
         })
 
-    # TODO put UCType into the result of BinaryOp, UnaryOp, Assignment, ... (any other?)
-    # TODO add name to symtab on visit_.*Decl
-
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
+        assert isinstance(node.type, (VarDecl, ArrayDecl))
         self.visit(node.type)
-
-        _var_type = node.type # NOTE ArrayDecl is a type modifier
-        while not isinstance(_var_type, VarDecl):
-            _var_type = _var_type.type
-        _var_type.type.names.insert(0, TYPE_ARRAY)
+        if node.type.attrs['type'][0] == TYPE_CHAR:
+            assert len(node.type.attrs['type']) == 1
+            node.attrs['type'] = [TYPE_STRING] # represents a [TYPE_ARRAY, TYPE_CHAR]
+        else:
+            node.attrs['type'] = [TYPE_ARRAY] + node.type.attrs['type']
 
         if node.dim is not None:
             self.visit(node.dim)
-            assert node.dim._uctype == TYPE_INT, (
-                f"Array dimensions specified with non-integer type: {node.dim._uctype}"
+            if isinstance(node.dim, Constant):
+                node.attrs['dim'] = node.dim.value # FIXME
+                _dim_type = node.dim.attrs['type']
+            elif isinstance(node.dim, ID):
+                node.attrs['dim'] = node.dim.name # FIXME
+                # NOTE we may only have this value at run-time
+                assert node.dim.name in self.symtab.current_scope, (
+                    f"Undeclared identifier in array dimension: `{node.dim.name}`" + str(node.coord)
+                )
+                _dim_type = self.symtab.lookup(node.dim.name)['type']
+            else:
+                _dim_type = node.dim.attrs['type']
+            assert _dim_type == [TYPE_INT], (
+                f"Size of array has non-integer type {_dim_type}" + str(node.coord)
             )
 
-        node._uctype = TYPE_ARRAY
-
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
-        assert isinstance(node.name, ID)
-
         self.visit(node.name)
-        assert node.name.name in self.symtab.current_scope, (
-            f"Reference to undeclared array `{node.name.name}`"
-        )
+
+        _name = node.name.attrs['name']
+        assert _name in self.symtab.current_scope, f"Symbol not defined: {_name}" + str(node.coord)
+        node.attrs['name'] = _name
 
         self.visit(node.subscript)
-        # TODO if isinstance(node.subscript, ID) assert it's in scope
-        assert node.subscript._uctype == TYPE_INT, (
-            f"Array indexed with non-integer type: {node.subscript._uctype}"
-        )
+        if isinstance(node.subscript, ID):
+            assert node.subscript.attrs['name'] in self.symtab.current_scope, \
+                f"Variable {node.subscript.attrs['name']} not defined in array reference" + str(node.coord)
+            _type = self.symtab.lookup(node.subscript.attrs['name'])['type']
+        else:
+            _type = node.subscript.attrs['type']
+        assert _type == [TYPE_INT], f"Indexing with non-integer type: {_type}" + str(node.coord)
+
+        _name_type = self.symtab.lookup(_name)['type'] if isinstance(node.name, ID) else node.name.attrs['type']
+        if _name_type[0] == TYPE_ARRAY:
+            node.attrs['type'] = _name_type[1:]
+        elif _name_type[0] == TYPE_STRING:
+            node.attrs['type'] = [TYPE_CHAR] + _name_type[1:]
+        else:
+            assert False, f"Type {_name_type} doesn't support array-like indexing" + str(node.coord)
 
     def visit_Assert(self, node: Assert): # [expr*]
         self.visit(node.expr)
-        assert node.expr._uctype == TYPE_BOOL, f"No implementation for: `assert {node.expr.type}`"
+        _expr_type = node.expr.attrs['type']
+        assert _expr_type == [TYPE_BOOL], f"No implementation for: `assert {_expr_type}`" + str(node.coord)
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
-        # FIXME this might be dealt with by visit_ID
-        assert isinstance(node.lvalue, ID), (
-            f"Assignment to invalid lvalue `{node.lvalue}`"
-        )
-        assert node.lvalue in self.symtab.current_scope, (
-            f"Assignment to unknown lvalue `{node.lvalue}`"
-        )
-        if isinstance(node.rvalue, (ID, FuncCall)):
-            assert node.rvalue in self.symtab.current_scope, (
-                f"Assignment of unknown rvalue: `{node.lvalue}` = `{node.rvalue}`"
-            )
         self.visit(node.lvalue)
-        self.visit(node.rvalue)
+        if isinstance(node.lvalue, ID):
+            _lname = node.lvalue.name
+        elif isinstance(node.lvalue, ArrayRef):
+            _lname = node.lvalue.attrs['name']
+            _ltype = node.lvalue.attrs['type']
+        else:
+            assert False, f"Assignment to invalid lvalue `{type(node.lvalue)}`" + str(node.coord)
 
-        _str = _Assignment_str(node)
-        _ltype, _rtype = node.lvalue._uctype, node.rvalue._uctype # FIXME
-        assert _ltype == _rtype, f"Type mismatch: `{_str}`"
-        node.type = _ltype
+        assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`" + str(node.coord)
+        
+        if isinstance(node.lvalue, ID):
+            _ltype = self.symtab.lookup(_lname)['type']
+
+        self.visit(node.rvalue)
+        _rname = node.rvalue.attrs.get('name', None)
+        if isinstance(node.rvalue, ID):
+            _rtype = self.symtab.lookup(_rname)['type']
+        elif isinstance(node.rvalue, ArrayRef):
+            _rtype = node.rvalue.attrs['type']
+        elif isinstance(node.rvalue, FuncCall):
+            _rtype = self.symtab.lookup(_rname)['type'][1:] # ignore TYPE_FUNC
+        else:
+            _rtype = node.rvalue.attrs['type']
+
+        if _rname is not None:
+            assert _rname in self.symtab.current_scope, (
+                f"Assignment of unknown rvalue: `{_lname}` = `{_rname}`" + str(node.coord)
+            )
+
+        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
+
+        assert node.op in uC_ops.assign_ops.values(), f"Unexpected operator in adssignment operation: `{node.op}`" + str(node.coord)
+
+        assert node.op in _ltype[0].assign_ops, ( # use the "outermost" type
+            f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
+        )
+
+        node.attrs['type'] = _ltype
+
+        # FIXME do operators like +=, -=, etc. need a "special treatment"?
 
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         self.visit(node.left)
         self.visit(node.right)
 
-        # TODO add "bool" type for relational operators
-        _str = _BinaryOp_str(node)
-        _ltype, _rtype = node.left.type, node.right.type # FIXME we may need to compare .names[-1]
-        assert _ltype == _rtype, f"Type mismatch: `{_str}`"
-        node.type = _ltype
+        _operand_types = [None, None]
+        for i, _operand in enumerate([node.left, node.right]):
+            if isinstance(_operand, ID):
+                _operand_name = _operand.name
+                assert _operand_name in self.symtab.current_scope, f"Identifier `{_operand_name}` not defined" + str(node.coord)
+                _type = self.symtab.lookup(_operand_name)['type']
 
-        _type_ops = node.left.type.binary_ops
-        assert binary_ops[node.op] in _type_ops, f"Operation not supported by type {_ltype}: `{_str}`"
+            else:
+                _type = _operand.attrs['type']
+
+            assert TYPE_FUNC not in _type
+            _operand_types[i] = _type
+        _ltype, _rtype = _operand_types
+
+        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
+
+        if node.op in uC_ops.binary_ops.values():
+            _type_ops = _ltype[0].binary_ops # use the "outermost" type
+            node.attrs['type'] = _ltype
+
+        elif node.op in uC_ops.rel_ops.values():
+            _type_ops = _ltype[0].rel_ops # use the "outermost" type
+            node.attrs['type'] = [TYPE_BOOL]
+
+        else:
+            assert False, f"Unexpected operator in binary operation: `{node.op}`" + str(node.coord)
+
+        assert node.op in _type_ops, f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
 
     def visit_Break(self, node: Break): # []
-        # TODO check we're currently inside a loop and bind the node with it
-        assert self.symtab.in_loop, f"Invalid call of break outside of any loop"
+        assert self.symtab.in_loop, f"Break outside a loop" + str(node.coord)
 
     def visit_Cast(self, node: Cast): # [type*, expr*]
-        # TODO should we check if the conversion is valid ?
+        assert isinstance(node.type, Type)
         self.visit(node.type)
+        _dst_type = node.type.attrs['type']
+
         self.visit(node.expr)
-        node._uctype = from_typename(node.type.names[-1]) # FIXME check 23-04 topright
+        _src_type = node.expr.attrs['type']
+
+        _valid_cast = False
+        if (_src_type == _dst_type or
+            _src_type == [TYPE_INT] and _dst_type == [TYPE_FLOAT] or
+            _src_type == [TYPE_FLOAT] and _dst_type == [TYPE_INT]):
+            _valid_cast = True
+
+        assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported" + str(node.coord)
+        node.attrs['type'] = _dst_type
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
+        _parent = node.attrs.get('parent', None) # passed by the parent node on the AST
+        if _parent is None:
+            _new_scope = True # block (local) scope
+            self.symtab.begin_scope()
+        else:
+            _new_scope = False
+            # TODO
+            if isinstance(_parent, FuncDef): # function scope
+                # NOTE FuncDecl should also push a scope
+                print("*** in function scope")
+                print(f"*** parent '{_parent.attrs['name']}'",
+                      self.symtab.lookup(_parent.attrs['name'])) # (debug)
+            elif isinstance(_parent, While): # while-loop scope
+                print("*** in while-loop scope")
+            elif isinstance(_parent, For): # for-loop scope
+                print("*** in for-loop scope")
+            elif isinstance(_parent, If): # if-statement scope
+                print("*** in if-statement scope")
+            else:
+                assert False, f"Unexpected type openning a compount statement: {type(_parent)}" + str(node.coord)
+
         if node.decls is not None:
             for decl in node.decls:
                 self.visit(decl)
@@ -193,27 +302,67 @@ class Visitor(NodeVisitor):
             for stmt in node.stmts:
                 self.visit(stmt)
 
+        if _new_scope:
+            self.symtab.end_scope()
+
     def visit_Constant(self, node: Constant): # [type, value]
-        # TODO convert node.type from string name to UCType
-        #raise NotImplementedError
-        pass
+        node.attrs['type'] = [uC_types.from_name(node.type)]
 
     def visit_Decl(self, node: Decl): # [name, type*, init*]
-        assert isinstance(node.type, (VarDecl, ArrayDecl, PtrDecl, FuncDecl))
+        assert isinstance(node.name, ID)
+        self.visit(node.name)
+        sym_name = node.name.name
+    
+        if not isinstance(node.type, FuncDecl):
+            assert sym_name not in self.symtab.local_scope, f"Redeclaration of `{sym_name}`" + str(node.coord)
+        elif sym_name in self.symtab.local_scope:
+            assert not self.symtab.lookup(sym_name).get('defined?', False), f"Redeclaration of already defined `{sym_name}`" + str(node.coord)
 
-        # FIXME check if we need a special check for FuncDecl
-
-        assert node.name not in self.symtab.local_scope, f"Redeclaration of `{node.name}` in scope"
-
+        sym_attrs = {}
         self.visit(node.type)
+        sym_attrs['type'] = node.type.attrs['type']
+        if isinstance(node.type, VarDecl):
+            pass
+        elif isinstance(node.type, ArrayDecl):
+            sym_attrs['dim'] = node.type.attrs.get('dim', None)
+        elif isinstance(node.type, FuncDecl):
+            
+            sym_attrs['param_types'] = node.type.attrs.get('param_types', [])
+            sym_attrs['param_names'] = node.type.attrs.get('param_names', [])
+            if sym_name in self.symtab.local_scope:
+
+                assert sym_attrs['type'] == self.symtab.lookup(sym_name)['type'], \
+                    f"Redeclaration of function {sym_name} with different return type: {sym_attrs['type']} and {self.symtab.lookup(sym_name)['type']}" + str(node.coord)
+
+                # checking parameter types
+                _declared_param_types = self.symtab.lookup(sym_name)['param_types']
+                assert len(sym_attrs['param_types']) == len(_declared_param_types), \
+                    f"Conflicting parameter count for `{sym_name}`: {len(sym_attrs['param_types'])} passed, {len(_declared_param_types)} expected" + str(node.coord)
+                for _new_type, _old_type in zip(sym_attrs['param_types'], _declared_param_types):
+                    assert _new_type == _old_type, (
+                        f"Conflicting types for `{sym_name}`: {_new_type} passed, {_old_type} expected" + str(node.coord)
+                    )
+
+        else:
+            assert False, f"Unexpected type {type(node.type)} for node.type" + str(node.coord)
+
         if node.init is not None:
             self.visit(node.init)
-            assert node.type._uctype == node.init._uctype, (
-                f"Type mismatch for `{node.name}`: `{node.type._uctype}` = `{node.init._uctype}`"
-            )
+            print(f"%%%% type(node.init) == {type(node.init)}") # FIXME remove
+            if isinstance(node.init, ID):
+                init_type = self.symtab.lookup(node.init.attrs['name'])['type']
+            else:
+                init_type = node.init.attrs['type']
 
-        node._uctype = node.type._uctype
-        self.symtab.add(node.name, value=node)
+            assert init_type == sym_attrs['type'], (
+                f"Implicit conversions are not supported: {sym_attrs['type']} = {init_type}" + str(node.coord)
+            )
+            # NOTE here's where we'd treat ArrayDecl with init and check that dim is Constant
+
+        self.symtab.add(
+            name=sym_name,
+            attributes=sym_attrs # TODO add scope
+        )
 
     def visit_DeclList(self, node: DeclList): # [decls**]
         for decl in node.decls:
@@ -225,176 +374,287 @@ class Visitor(NodeVisitor):
     def visit_ExprList(self, node: ExprList): # [exprs**]
         for expr in node.exprs:
             self.visit(expr)
-            # TODO if expr is an ID, check if it's in scope
+        node.attrs['type'] = node.exprs[-1].attrs['type']
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
-        self.symtab.in_loop = True
-        self.symtab.begin_scope()
+        self.symtab.begin_scope(loop=node)
 
-        self.visit(node.init)
-        self.visit(node.cond)
-        self.visit(node.next)
+        if node.init is not None:
+            self.visit(node.init)
+        if node.cond is not None:
+            self.visit(node.cond)
+            assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}" + str(node.coord)
+
+        if node.next is not None:
+            self.visit(node.next)
+
+        if isinstance(node.body, Compound):
+            node.body.attrs['parent'] = node
         self.visit(node.body)
 
-        self.symtab.end_scope()
-        self.symtab.in_loop = False
+        self.symtab.end_scope(loop=True)
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         assert isinstance(node.name, ID)
+        self.visit(node.name)
+        _name = node.name.attrs['name']
+        assert _name in self.symtab.current_scope, f"Function `{_name}` not defined" + str(node.coord)
 
-        assert node.name.name in self.symtab.current_scope, (
-            f"Function `{node.name.name}` has been called, but not defined"
+        if node.args is not None:
+            self.visit(node.args)
+
+        _func = self.symtab.lookup(_name)
+        _param_types = _func.get('param_types', [])
+        # _param_names = _func.get('param_names', [])
+        _passed_args = (
+            [] if node.args is None
+            else node.args.exprs if isinstance(node.args, ExprList)
+            else [node.args] # there's only one argument
+        )
+        assert len(_param_types) == len(_passed_args), (
+            ("Too many" if len(_param_types) < len(_passed_args) else "Too few") +
+            f" arguments in call to `{_name}`: {len(_passed_args)} passed, {len(_param_types)} expected" + str(node.coord)
         )
 
-        # TODO check if name's type is actually a function
-        # TODO check for correct number and type of arguments
+        for _passed_arg, _param_type in zip(_passed_args, _param_types):
+            if isinstance(_passed_arg, ID):
+                passed_type = self.symtab.lookup(_passed_arg.attrs['name'])['type']
+            else:
+                passed_type = _passed_arg.attrs['type']
 
-        self.visit(node.name)
-        self.visit(node.args)
+            assert passed_type == _param_type, (
+                f"Wrong argument type in call to `{_name}`: {passed_type} passed, {_param_type} expected" + str(node.coord)
+            )
+
+        node.attrs['type'] = _func['type'][1:] # get the return type (ignoring TYPE_FUNC)
+        node.attrs['name'] = _name
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
-        self.symtab.begin_scope(node) # NOTE this is closed at FuncDef
+        self.symtab.begin_scope(func=node) # NOTE we use this so parameter names don't go to the global scope
+        # FIXME I think we may actually be able use the current scope
+        # and only open one for FuncDef (since it has a Compound stmt)
 
+        assert isinstance(node.type, VarDecl)
         self.visit(node.type)
-        node.attrs['base_type'] = node.type.attrs['base_type']
-        node.attrs['full_type'] = node.type.attrs['full_type']
+        node.attrs['type'] = [TYPE_FUNC] + node.type.attrs['type']
+
         if node.args is not None:
-            for arg in node.args:
-                self.visit(arg)
+            assert isinstance(node.args, ParamList)
+            self.visit(node.args)
+            node.attrs['param_types'] = node.args.attrs['param_types']
+            node.attrs['param_names'] = node.args.attrs['param_names']
 
-    def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, param_decls**, body*]
-        self.symtab.in_func = True
+        self.symtab.end_scope(func=True)
 
+    # FIXME
+    def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
+        sym_attrs = {}
+        assert isinstance(node.spec, Type)
         self.visit(node.spec)
+        node.attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type']
+        sym_attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type'] # FIXME what's this?
+
+        # FIXME we may need to pass param_names in FuncDecl attrs and (re-)add them to symtab here,
+        # as they are popped on FuncDecl's symtab, and now we need them in the FuncDef's symtab
+        assert isinstance(node.decl, Decl)
         self.visit(node.decl)
-        if node.param_decls is not None:
-            for param in node.param_decls:
-                self.visit(param)
+        sym = self.symtab.lookup(node.decl.name.name)
+        _param_types = sym['param_types']
+        _param_names = sym['param_names']
+        sym['defined?'] = True
+        # TODO add param names to symtab
+        if _param_types is not None:
+            pass
+            # TODO assert params types (NOTE this may have to be done in Decl, as it's where FuncDecl will return to first)
+
+        # TODO assert return type
+        self.symtab.begin_scope(func=node)
+
+        for name, _type in zip(_param_names, _param_types):
+            self.symtab.add(name, {'type': _type})
+
         assert isinstance(node.body, Compound)
+        node.attrs['name'] = node.decl.name.name # NOTE this is used for lookup on body
+        node.body.attrs['parent'] = node
         self.visit(node.body)
 
-        sym = self.symtab.lookup(node.decl.name.name)
-        sym['defined?'] = True
-        sym['declared?'] = False
+        # NOTE this a warning in C, not an error
+        # _has_return = False
+        # if node.body.stmts is not None:
+        #     for stmt in node.body.stmts:
+        #         if isinstance(stmt, Return):
+        #             _has_return = True
+        #         elif isinstance(stmt, If):
+        #             if stmt.ifelse is not None:
+        #                 pass
+        # assert _has_return or TYPE_VOID in node.attrs['type'], f"Function `{node.attrs['name']}` has no return" + str(node.coord)
 
-        self.symtab.in_func = False
-        self.symtab.end_scope() # NOTE this was opened at FuncDecl
+        self.symtab.end_scope(func=True)
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
-        assert self.symtab.lookup("_scope") == "global"
         for decl in node.decls:
             self.visit(decl)
 
     def visit_ID(self, node: ID): # [name]
-        #raise NotImplementedError
-        pass
+        node.attrs['name'] = node.name
+        if node.name in self.symtab.current_scope:
+            node.attrs['type'] = self.symtab.lookup(node.name)['type']
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         self.symtab.begin_scope()
 
         self.visit(node.cond)
-        # TODO check cond._uctype == TYPE_BOOL
+        assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}" + str(node.coord)
+
+        # FIXME ifthen/ifelse can be a single expression
+
+        if isinstance(node.ifthen, Compound):
+            node.ifthen.attrs['parent'] = node
+        self.symtab.begin_scope()
         self.visit(node.ifthen)
+        self.symtab.end_scope()
+
         if node.ifelse is not None:
+            if isinstance(node.ifelse, Compound):
+                node.ifelse.attrs['parent'] = node
+            self.symtab.begin_scope()
             self.visit(node.ifelse)
+            self.symtab.end_scope()
 
         self.symtab.end_scope()
 
     def visit_InitList(self, node: InitList): # [exprs**]
-        for expr in node.exprs:
+        self.visit(node.exprs[0])
+        _type = node.exprs[0].attrs['type']
+        for expr in node.exprs[1:]:
             self.visit(expr)
+            assert _type == expr.attrs['type'], f"Init list must have homogeneous types: {_type} and {expr.attrs['type']}" + str(node.coord)
+
+        if _type[0] == TYPE_CHAR:
+            assert len(_type) == 1
+            node.attrs['type'] = [TYPE_STRING]
+        else:
+            node.attrs['type'] = [TYPE_ARRAY] + _type
 
     def visit_ParamList(self, node: ParamList): # [params**]
+        param_types = []
+        param_names = []
         for param in node.params:
             self.visit(param)
+            # FIXME a type(param) == Decl, which means it's added
+            # to the current scope.. a special check in visit_Decl
+            # may be needed to avoid this (and simply use .attrs)
+            assert isinstance(param, Decl)
+            _param_type = self.symtab.lookup(param.name.name)['type']
+            param_types.append(_param_type)
+            param_names.append(param.name.name)
+        node.attrs['param_types'] = param_types
+        node.attrs['param_names'] = param_names
 
     def visit_Print(self, node: Print): # [expr*]
         if node.expr is not None:
-            assert isinstance(node.expr, ExprList)
-            for expr in node.expr:
-                self.visit(node.expr)
+            self.visit(node.expr)
+            _print_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
+            for _expr in _print_exprs:
+                if isinstance(_expr, ID):
+                    assert _expr.name in self.symtab.current_scope, (
+                        f"Attempt to print unknown identifier: `{_expr.name}`" + str(node.coord)
+                    )
+                elif isinstance(_expr, ArrayRef):
+                    assert _expr.attrs['name'] in self.symtab.current_scope, (
+                        f"Attempt to print unknown array: `{_expr.attrs['name']}`" + str(node.coord)
+                    )
+                elif isinstance(_expr, FuncCall):
+                    assert _expr.attrs['name'] in self.symtab.current_scope, (
+                        f"Attempt to print the return of an unknown function: `{_expr.attrs['name']}`" + str(node.coord)
+                    )
+                else:
+                    pass # FIXME I think it's okay to print pretty much anything (binops, unops, functions, etc.)
 
     def visit_Program(self, node: Program): # [gdecls**]
-        self.symtab.begin_scope(node)
+        self.symtab.begin_scope()
+
         for gdecl in node.gdecls:
             assert isinstance(gdecl, (GlobalDecl, FuncDef))
             self.visit(gdecl)
+
+        for _key, _item in self.symtab.local_scope.items():
+            if _item['type'][0] == TYPE_FUNC:
+                assert _item.get('defined?', False), f"Function declared but not defined" + str(node.coord)
+
         self.symtab.end_scope()
 
     def visit_PtrDecl(self, node: PtrDecl): # [type*]
-        # self.visit(node.type)
-        # basic_type = node.type
-        # while not isinstance(type, VarDecl):
-        #     basic_type = basic_type.type
-        # basic_type.type.names.insert(0, TYPE_PTR)
-        #raise NotImplementedError
-        pass
+        raise NotImplementedError
 
     def visit_Read(self, node: Read): # [expr*]
-        assert isinstance(node.expr, ExprList)
-        for expr in node.expr:
-            self.visit(node.expr)
+        self.visit(node.expr)
+        _read_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
+        for _expr in _read_exprs:
+            if isinstance(_expr, ID):
+                assert _expr.name in self.symtab.current_scope, (
+                    f"Attempt to read into unknown identifier: `{_expr.name}`" + str(node.coord)
+                )
+            elif isinstance(_expr, ArrayRef):
+                assert _expr.attrs['name'] in self.symtab.current_scope, (
+                    f"Attempt to read into unknown array: `{_expr.attrs['name']}`" + str(node.coord)
+                )
+            else:
+                # FIXME does it make sense to read into any other node type?
+                assert False, f"Unexpected node type in read: {type(_expr)}" + str(node.coord)
 
     def visit_Return(self, node: Return): # [expr*]
-        self.visit(node.expr)
+        assert self.symtab.in_func, f"Return outside a function" + str(node.coord)
+
+        if node.expr is not None:
+            self.visit(node.expr)
+            assert node.expr.attrs['type'] == self.symtab.curr_func.attrs['type'][1:], f"Returning {node.expr.attrs['type']} on a {self.symtab.curr_func.attrs['type'][1:]} function" + str(node.coord)
+        else:
+            assert [TYPE_VOID] == self.symtab.curr_func.attrs['type'][1:], f"Returning {[TYPE_VOID]} on a {self.symtab.curr_func.attrs['type'][1:]} function" + str(node.coord)
 
     def visit_Type(self, node: Type): # [names]
-        node.attrs['base_type'] = uC_types.from_name(node.names[-1])
-        if len(node.names) > 1:
-            node.attrs['full_type'] = [uC_types.from_name(name) for name in node.names]
+        node.attrs['type'] = [uC_types.from_name(name) for name in node.names]
 
     def visit_VarDecl(self, node: VarDecl): # [declname, type*]
-        assert isinstance(node.declname, ID)
-        node.attrs['name'] = node.declname.name
-
+        assert isinstance(node.type, Type)
         self.visit(node.type)
         node.attrs['type'] = node.type.attrs['type']
 
-        # TODO check if we should assert for some kind of type mismatch in here
-
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
+        assert node.op in uC_ops.unary_ops.values(), f"Unexpected operator in unary operation: `{node.op}`" + str(node.coord)
+
         self.visit(node.expr)
-        _source = node.expr.gen_location
 
-        #if node.op == '&': # get the reference
-        #    node.gen_location = node.expr.gen_location
-        #elif node.op == '*':
-        #    pass
-        #node.type = node.expr.type
-        # TODO check 23-04 bottomright
+        _operand_name = node.expr.attrs.get('name', None)
+        if isinstance(node.expr, ID):
+            assert _operand_name in self.symtab.current_scope, f"Identifier `{_operand_name}` not defined" + str(node.coord)
+            _type = self.symtab.lookup(_operand_name)['type']
 
-        # FIXME might need ._uctype below
-        _str = _UnaryOp_str(node)
-        _type = node.expr.type
-        _type_ops = node.expr.type.unary_ops
-        assert unary_ops[node.op] in _type_ops, f"Operation not supported by type {_type}: `{_str}`"
+        elif isinstance(node.expr, FuncCall):
+            assert _operand_name in self.symtab.current_scope, f"Function `{_operand_name}` not defined" + str(node.coord)
+            _type = self.symtab.lookup(_operand_name)['type'][1:] # ignore TYPE_FUNC
+
+        else:
+            _type = node.expr.attrs['type']
+
+        assert TYPE_FUNC not in _type
+
+        assert node.op in _type[0].unary_ops, ( # use the "outermost" type
+            f"Operation not supported by type {_type}: " + (
+                f"`{node.op}{_type}`" if node.op[0] != 'p' else f"`{_type}{node.op[1:]}`" + str(node.coord)
+            )
+        )
+
+        node.attrs['type'] = _type
 
     def visit_While(self, node: While): # [cond*, body*]
-        self.symtab.curr_loop = node
-        self.symtab.begin_scope()
-
+        self.symtab.begin_scope(loop=node)
+        
         self.visit(node.cond)
-        # TODO check if the type of cond is BOOL_TYPE
-        #      for this we first have to replace the .type
-        #      values with UCType singletons from uC_types
-        assert node.cond._uctype == TYPE_BOOL, (
-            f"While condition does not evaluate to boolean: while ({node.cond._uctype})"
-        )
-        if node.body is not None:
-            self.visit(node.body)
+        assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}" + str(node.coord)
 
-        self.symtab.end_scope()
-        self.symtab.curr_loop = None
+        if isinstance(node.body, Compound):
+           node.body.attrs['parent'] = node
+        self.visit(node.body)
 
-
-# Helper functions for error printing
-def _Assignment_str(node):
-    return f"{node.lvalue._uctype} {assign_ops[node.op]} {node.rvalue._uctype}"
-
-def _BinaryOp_str(node):
-    return f"{node.left._uctype} {binary_ops[node.op]} {node.right._uctype}"
-
-def _UnaryOp_str(node):
-    if node.op[0] == 'p': # suffix/postfix increment and decrement
-        return f"{node.expr._uctype}{unary_ops[node.op][1:]}"
-    return f"{unary_ops[node.op]}{node.expr._uctype}"
+        self.symtab.end_scope(loop=True)
