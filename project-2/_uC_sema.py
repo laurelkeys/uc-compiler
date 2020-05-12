@@ -156,7 +156,13 @@ class Visitor(NodeVisitor):
         node.attrs['name'] = _name
 
         self.visit(node.subscript)
-        assert node.subscript.attrs['type'] == [TYPE_INT], f"Indexing with non-integer type: {node.subscript.attrs['type']}"
+        if isinstance(node.subscript, ID):
+            assert node.subscript.attrs['name'] in self.symtab.current_scope, \
+                f"Variable {node.subscript.attrs['name']} not defined in array reference"
+            _type = self.symtab.lookup(node.subscript.attrs['name'])['type']
+        else:
+            _type = node.subscript.attrs['type']
+        assert _type == [TYPE_INT], f"Indexing with non-integer type: {_type}"
 
         _name_type = self.symtab.lookup(_name)['type'] if isinstance(node.name, ID) else node.name.attrs['type']
         if _name_type[0] == TYPE_ARRAY:
