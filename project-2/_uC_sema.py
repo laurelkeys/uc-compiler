@@ -328,6 +328,7 @@ class Visitor(NodeVisitor):
         elif isinstance(node.type, FuncDecl):
             
             sym_attrs['param_types'] = node.type.attrs.get('param_types', [])
+            sym_attrs['param_names'] = node.type.attrs.get('param_names', [])
             if sym_name in self.symtab.local_scope:
 
                 assert sym_attrs['type'] == self.symtab.lookup(sym_name)['type'], \
@@ -348,8 +349,13 @@ class Visitor(NodeVisitor):
         if node.init is not None:
             self.visit(node.init)
             print(f"%%%% type(node.init) == {type(node.init)}") # FIXME remove
-            assert node.init.attrs['type'] == sym_attrs['type'], (
-                f"Implicit conversions are not supported: {sym_attrs['type']} = {node.init.attrs['type']}"
+            if isinstance(node.init, ID):
+                init_type = self.symtab.lookup(node.init.attrs['name'])['type']
+            else:
+                init_type = node.init.attrs['type']
+
+            assert init_type == sym_attrs['type'], (
+                f"Implicit conversions are not supported: {sym_attrs['type']} = {init_type}"
             )
             # NOTE here's where we'd treat ArrayDecl with init and check that dim is Constant
 
@@ -399,6 +405,7 @@ class Visitor(NodeVisitor):
 
         _func = self.symtab.lookup(_name)
         _param_types = _func.get('param_types', [])
+        # _param_names = _func.get('param_names', [])
         _passed_args = (
             [] if node.args is None
             else node.args.exprs if isinstance(node.args, ExprList)
@@ -410,8 +417,13 @@ class Visitor(NodeVisitor):
         )
 
         for _passed_arg, _param_type in zip(_passed_args, _param_types):
-            assert _passed_arg.attrs['type'] == _param_type, (
-                f"Wrong argument type in call to `{_name}`: {_passed_arg.attrs['type']} passed, {_param_type} expected"
+            if isinstance(_passed_arg, ID):
+                passed_type = self.symtab.lookup(_passed_arg.attrs['name'])['type']
+            else:
+                passed_type = _passed_arg.attrs['type']
+
+            assert passed_type == _param_type, (
+                f"Wrong argument type in call to `{_name}`: {passed_type} passed, {_param_type} expected"
             )
 
         node.attrs['type'] = _func['type'][1:] # get the return type (ignoring TYPE_FUNC)
@@ -430,6 +442,7 @@ class Visitor(NodeVisitor):
             assert isinstance(node.args, ParamList)
             self.visit(node.args)
             node.attrs['param_types'] = node.args.attrs['param_types']
+            node.attrs['param_names'] = node.args.attrs['param_names']
 
         self.symtab.end_scope(func=True)
 
@@ -447,6 +460,7 @@ class Visitor(NodeVisitor):
         self.visit(node.decl)
         sym = self.symtab.lookup(node.decl.name.name)
         _param_types = sym['param_types']
+        _param_names = sym['param_names']
         sym['defined?'] = True
         # TODO add param names to symtab
         if _param_types is not None:
@@ -455,6 +469,9 @@ class Visitor(NodeVisitor):
 
         # TODO assert return type
         self.symtab.begin_scope(func=node)
+
+        for name, _type in zip(_param_names, _param_types):
+            self.symtab.add(name, {'type': _type})
 
         assert isinstance(node.body, Compound)
         node.attrs['name'] = node.decl.name.name # NOTE this is used for lookup on body
@@ -476,6 +493,8 @@ class Visitor(NodeVisitor):
 
     def visit_ID(self, node: ID): # [name]
         node.attrs['name'] = node.name
+        if node.name in self.symtab.current_scope:
+            node.attrs['type'] = self.symtab.lookup(node.name)['type']
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         self.symtab.begin_scope()
@@ -515,6 +534,7 @@ class Visitor(NodeVisitor):
 
     def visit_ParamList(self, node: ParamList): # [params**]
         param_types = []
+        param_names = []
         for param in node.params:
             self.visit(param)
             # FIXME a type(param) == Decl, which means it's added
@@ -523,7 +543,9 @@ class Visitor(NodeVisitor):
             assert isinstance(param, Decl)
             _param_type = self.symtab.lookup(param.name.name)['type']
             param_types.append(_param_type)
+            param_names.append(param.name.name)
         node.attrs['param_types'] = param_types
+        node.attrs['param_names'] = param_names
 
     def visit_Print(self, node: Print): # [expr*]
         if node.expr is not None:
