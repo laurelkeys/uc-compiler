@@ -461,6 +461,13 @@ class Visitor(NodeVisitor):
         node.body.attrs['parent'] = node
         self.visit(node.body)
 
+        _has_return = False
+        if node.body.stmts is not None:
+            for stmt in node.body.stmts:
+                if isinstance(stmt, Return):
+                    _has_return = True
+        assert _has_return or TYPE_VOID in node.attrs['type'], f"Function `{node.attrs['name']}` has no return"
+
         self.symtab.end_scope(func=True)
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
