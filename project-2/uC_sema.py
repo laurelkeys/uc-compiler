@@ -107,6 +107,7 @@ class Visitor(NodeVisitor):
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         assert isinstance(node.type, (VarDecl, ArrayDecl))
         self.visit(node.type)
+        print(node.type.attrs['type'])
         if node.type.attrs['type'][0] == TYPE_CHAR:
             assert len(node.type.attrs['type']) == 1
             node.attrs['type'] = [TYPE_STRING] # represents a [TYPE_ARRAY, TYPE_CHAR]
@@ -115,21 +116,32 @@ class Visitor(NodeVisitor):
 
         if node.dim is not None:
             self.visit(node.dim)
+
             if isinstance(node.dim, Constant):
-                node.attrs['dim'] = node.dim.value # FIXME
+                if isinstance(node.type, ArrayDecl):
+                    node.attrs['dim'] = [node.dim.value] + node.type.attrs['dim'] # current dim + deeper dims
+                else:
+                    node.attrs['dim'] = [node.dim.value]
                 _dim_type = node.dim.attrs['type']
+
             elif isinstance(node.dim, ID):
-                node.attrs['dim'] = node.dim.name # FIXME
+                if isinstance(node.type, ArrayDecl):
+                    node.attrs['dim'] = [node.dim.name] + node.type.attrs['dim'] # current dim + deeper dims
+                else:
+                    node.attrs['dim'] = [node.dim.name]
                 # NOTE we may only have this value at run-time
                 assert node.dim.name in self.symtab.current_scope, (
                     f"Undeclared identifier in array dimension: `{node.dim.name}`" + str(node.coord)
                 )
                 _dim_type = self.symtab.lookup(node.dim.name)['type']
+
             else:
                 _dim_type = node.dim.attrs['type']
+
             assert _dim_type == [TYPE_INT], (
                 f"Size of array has non-integer type {_dim_type}" + str(node.coord)
             )
+            # print(node.attrs['dim'])
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         self.visit(node.name)
@@ -334,6 +346,15 @@ class Visitor(NodeVisitor):
             print(f"%%%% type(node.init) == {type(node.init)}") # FIXME remove
             if isinstance(node.init, ID):
                 init_type = self.symtab.lookup(node.init.attrs['name'])['type']
+            elif isinstance(node.init, InitList):
+                init_type = node.init.attrs['type']
+
+                if not (node.type.attrs.get('dim', None) is None or node.init.attrs.get('dim', None) is None):
+                    assert node.type.attrs.get('dim', []) == node.init.attrs.get('dim', []), \
+                        f"Dims must be equal on declaration and definition: {node.type.attrs.get('dim', [])} and {node.init.attrs.get('dim', [])}" + str(node.coord)
+                else:
+                    sym_attrs['dim'] = node.type.attrs.get('dim', []) if node.type.attrs.get('dim', None) is not None else node.init.attrs.get('dim', [])
+
             else:
                 init_type = node.init.attrs['type']
 
@@ -518,6 +539,19 @@ class Visitor(NodeVisitor):
             node.attrs['type'] = [TYPE_STRING]
         else:
             node.attrs['type'] = [TYPE_ARRAY] + _type
+
+        # get dims
+        if isinstance(node.exprs[0], InitList):
+            dim = node.exprs[0].attrs['dim']
+            for expr in node.exprs[1:]:
+                assert dim == expr.attrs['dim'], f"Init list must have homogeneous dim sizes: {dim} and {expr.attrs['dim']}" + str(node.coord)
+            node.attrs['dim'] = [len(node.exprs)] + dim
+        else:
+            for expr in node.exprs:
+                assert not isinstance(expr, InitList)
+            node.attrs['dim'] = [len(node.exprs)]
+        
+        print("=============dims", node.attrs['dim'])
 
     def visit_ParamList(self, node: ParamList): # [params**]
         param_types = []
