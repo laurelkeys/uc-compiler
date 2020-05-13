@@ -14,19 +14,6 @@ from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
 ## uC Semantic Analysis ###################################
 ###########################################################
 
-# ref.: https://en.cppreference.com/w/c/language/scope
-class Scope:
-    def __init__(self, kind: str, name: str, node: str):
-        assert kind in ["global", "local", "func", "loop"]
-        self.kind = kind
-        self.name = name
-        self.node = node
-
-    # NOTE "global" is the whole (file) scope enclosed by a Program node
-    #      "local" is a (block) scope delimited by an if-statement or by {}'s
-    #      "func" is a function-local (block) scope delimited by a function declaration/definition
-    #      "loop" is a loop-local (block) scope delimited by a for- or while-loop
-
 class SymbolTable:
     ''' Class representing a symbol table.\n
         It should provide functionality for adding and looking up nodes associated with identifiers.
@@ -34,16 +21,13 @@ class SymbolTable:
 
     def __init__(self):
         self.symbol_table = ChainMap()
-        self.scope_stack = []
-        self.loops = []
-        self.funcs = []
+        self.loops = [] # list of loops that wrap the current scope
+        self.funcs = [] # list of funcs that wrap the current scope
 
     @property
-    def in_loop(self): return len(self.loops) > 0 # return any(scope.kind == "loop" for scope in self.scope_stack)
+    def in_loop(self): return len(self.loops) > 0
     @property
-    def in_func(self): return len(self.funcs) > 0 # return any(scope.kind == "func" for scope in self.scope_stack)
-
-    # NOTE maybe use in_* to refer to the current scope (self.scope_stack[-1]) and wrapped_by_* to search all
+    def in_func(self): return len(self.funcs) > 0
 
     @property
     def curr_loop(self): return self.loops[-1]
@@ -86,7 +70,6 @@ class SymbolTable:
     def local_scope(self): return self.symbol_table.maps[0]
 
     def __str__(self):
-        #return str(self.symbol_table)
         return (
             f"{self.__class__.__name__}(\n  "
             + ", \n  ".join([f"{k}={v}" for k, v in self.__dict__.items()])
@@ -188,7 +171,7 @@ class Visitor(NodeVisitor):
             assert False, f"Assignment to invalid lvalue `{type(node.lvalue)}`" + str(node.coord)
 
         assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`" + str(node.coord)
-        
+
         if isinstance(node.lvalue, ID):
             _ltype = self.symtab.lookup(_lname)['type']
 
@@ -312,7 +295,7 @@ class Visitor(NodeVisitor):
         assert isinstance(node.name, ID)
         self.visit(node.name)
         sym_name = node.name.name
-    
+
         if not isinstance(node.type, FuncDecl):
             assert sym_name not in self.symtab.local_scope, f"Redeclaration of `{sym_name}`" + str(node.coord)
         elif sym_name in self.symtab.local_scope:
@@ -326,7 +309,7 @@ class Visitor(NodeVisitor):
         elif isinstance(node.type, ArrayDecl):
             sym_attrs['dim'] = node.type.attrs.get('dim', None)
         elif isinstance(node.type, FuncDecl):
-            
+
             sym_attrs['param_types'] = node.type.attrs.get('param_types', [])
             sym_attrs['param_names'] = node.type.attrs.get('param_names', [])
             if sym_name in self.symtab.local_scope:
@@ -361,7 +344,7 @@ class Visitor(NodeVisitor):
 
         self.symtab.add(
             name=sym_name,
-            attributes=sym_attrs # TODO add scope
+            attributes=sym_attrs
         )
 
     def visit_DeclList(self, node: DeclList): # [decls**]
@@ -431,8 +414,6 @@ class Visitor(NodeVisitor):
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         self.symtab.begin_scope(func=node) # NOTE we use this so parameter names don't go to the global scope
-        # FIXME I think we may actually be able use the current scope
-        # and only open one for FuncDef (since it has a Compound stmt)
 
         assert isinstance(node.type, VarDecl)
         self.visit(node.type)
@@ -452,7 +433,7 @@ class Visitor(NodeVisitor):
         assert isinstance(node.spec, Type)
         self.visit(node.spec)
         node.attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type']
-        sym_attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type'] # FIXME what's this?
+        sym_attrs['type'] = [TYPE_FUNC] + node.spec.attrs['type']
 
         # FIXME we may need to pass param_names in FuncDecl attrs and (re-)add them to symtab here,
         # as they are popped on FuncDecl's symtab, and now we need them in the FuncDef's symtab
@@ -488,6 +469,8 @@ class Visitor(NodeVisitor):
         #             if stmt.ifelse is not None:
         #                 pass
         # assert _has_return or TYPE_VOID in node.attrs['type'], f"Function `{node.attrs['name']}` has no return" + str(node.coord)
+
+        # FIXME sym_attrs isn't being added to the scope's table
 
         self.symtab.end_scope(func=True)
 
@@ -541,9 +524,6 @@ class Visitor(NodeVisitor):
         param_names = []
         for param in node.params:
             self.visit(param)
-            # FIXME a type(param) == Decl, which means it's added
-            # to the current scope.. a special check in visit_Decl
-            # may be needed to avoid this (and simply use .attrs)
             assert isinstance(param, Decl)
             _param_type = self.symtab.lookup(param.name.name)['type']
             param_types.append(_param_type)
@@ -649,7 +629,7 @@ class Visitor(NodeVisitor):
 
     def visit_While(self, node: While): # [cond*, body*]
         self.symtab.begin_scope(loop=node)
-        
+
         self.visit(node.cond)
         assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}" + str(node.coord)
 

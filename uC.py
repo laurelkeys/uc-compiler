@@ -14,7 +14,9 @@ from uC_errors import error, errors_reported, clear_errors, \
                       subscribe_errors
 
 from uC_parser import UCParser
-from _uC_sema import Visitor
+from uC_sema import Visitor
+from uC_IR import GenerateCode
+from uC_interpreter import Interpreter
 
 ###########################################################
 ## uC Compiler ############################################
@@ -38,30 +40,47 @@ class Compiler:
         ''' Decorate the AST with semantic actions.\n
             If `ast_file` is not `None`, prints out the abstract syntax tree (AST). '''
         try:
-            if not parse_only:
+            if not parse_only: # FIXME remove
                 self.sema = Visitor()
                 self.sema.visit(self.ast)
             if susy:
                 self.ast.show(showcoord=True)
-                if not parse_only: print("----\n" + str(self.sema.symtab)) # FIXME remove
+                if not parse_only:
+                    print("----\n" + str(self.sema.symtab)) # FIXME remove
             elif ast_file is not None:
                 self.ast.show(buf=ast_file, showcoord=True)
         except AssertionError as e:
             error(None, e)
 
-    def _do_compile(self, susy, ast_file, debug, parse_only):
+    def _gencode(self, susy, ir_file):
+        ''' Generate uCIR Code for the decorated AST. '''
+        self.gen = GenerateCode()
+        self.gen.visit(self.ast)
+        self.gencode = self.gen.code
+        _str = ""
+        if not susy and ir_file is not None:
+            for _code in self.gencode:
+                _str += f"{_code}\n"
+            ir_file.write(_str)
+
+    def _do_compile(self, susy, ast_file, ir_file, debug, parse_only):
         ''' Compiles the code to the given file object. '''
         self._parse(susy, ast_file, debug)
         if not errors_reported():
             self._sema(susy, ast_file, parse_only)
+        if not errors_reported():
+            self._gencode(susy, ir_file)
 
-    def compile(self, code, susy, ast_file, debug, parse_only):
+    def compile(self, code, susy, ast_file, ir_file, run_ir, debug, parse_only):
         ''' Compiles the given code string. '''
         self.code = code
         with subscribe_errors(lambda msg: sys.stderr.write(msg + "\n")):
-            self._do_compile(susy, ast_file, debug, parse_only)
+            self._do_compile(susy, ast_file, debug, ir_file, parse_only)
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
+            elif run_ir:
+                self.vm = Interpreter()
+                self.vm.run(self.gencode)
         return 0
 
 
@@ -69,13 +88,15 @@ def run_compiler():
     ''' Runs the command-line compiler. '''
 
     if len(sys.argv) < 2:
-        print("Usage: python uC.py <source-file> [-at-susy] [-no-ast] [-debug]")
+        print("Usage: python uC.py <source-file> [-at-susy] [-no-ir] [-no-run] [-no-ast] [-debug]")
         sys.exit(1)
 
     emit_ast = True
+    emit_ir = True
+    run_ir = True
     susy = False
     debug = False
-    parse_only = False
+    parse_only = False # FIXME remove
 
     params = sys.argv[1:]
     files = sys.argv[1:]
@@ -84,11 +105,15 @@ def run_compiler():
         if param[0] == '-':
             if param == '-no-ast':
                 emit_ast = False
+            elif param == '-no-ir':
+                emit_ir = False
             elif param == '-at-susy':
                 susy = True
+            elif param == '-no-run':
+                run_ir = False
             elif param == '-debug':
                 debug = True
-            elif param == '-p':
+            elif param == '-p': # FIXME remove
                 parse_only = True
             else:
                 print("Unknown option: %s" % param)
@@ -102,6 +127,7 @@ def run_compiler():
             source_filename = file + '.uc'
 
         open_files = []
+
         ast_file = None
         if emit_ast and not susy:
             ast_filename = source_filename[:-3] + '.ast'
@@ -109,11 +135,18 @@ def run_compiler():
             ast_file = open(ast_filename, 'w')
             open_files.append(ast_file)
 
+        ir_file = None
+        if emit_ir and not susy:
+            ir_filename = source_filename[:-3] + '.ir'
+            print("Outputting the uCIR to %s." % ir_filename)
+            ir_file = open(ir_filename, 'w')
+            open_files.append(ir_file)
+
         source = open(source_filename, 'r')
         code = source.read()
         source.close()
 
-        retval = Compiler().compile(code, susy, ast_file, debug, parse_only)
+        retval = Compiler().compile(code, susy, ast_file, ir_file, run_ir, debug, parse_only)
         for f in open_files:
             f.close()
         if retval != 0:

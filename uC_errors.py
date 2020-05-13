@@ -11,9 +11,15 @@ def error(lineno, message, filename=None):
     ''' Report a compiler error to all subscribers. '''
     global _num_errors
     if not filename:
-        errmsg = "{}: {}".format(lineno, message)
+        if not lineno:
+            errmsg = "{}".format(message)
+        else:
+            errmsg = "{}: {}".format(lineno, message)
     else:
-        errmsg = "{}:{}: {}".format(filename, lineno, message)
+        if not lineno:
+            errmsg = "{}: {}".format(filename, message)
+        else:
+            errmsg = "{}:{}: {}".format(filename, lineno, message)
     for subscriber in _subscribers:
         subscriber(errmsg)
     _num_errors += 1
