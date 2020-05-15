@@ -74,7 +74,8 @@ class Compiler:
         if not errors_reported():
             self._sema(susy, ast_file, parse_only)
         if not errors_reported():
-            self._gencode(susy, ir_file)
+            if not parse_only: # FIXME remove
+                self._gencode(susy, ir_file)
 
     def compile(self, code, susy, ast_file, ir_file, run_ir, debug, parse_only):
         ''' Compiles the given code string. '''

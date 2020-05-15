@@ -66,19 +66,23 @@ class GenerateCode(NodeVisitor):
             self.visit(node.init)
         _type = node.attrs['type']
         _name = node.attrs['name']
-        if len(_type) == 1:
-            _type = _type[0]
-            if node.attrs.get('global?', False):
-                if node.init is None:
-                    inst = (f"global_{_type}", f"@{_name}", )
+        if _type[0] == TYPE_FUNC:
+            node.type.attrs['name'] = _name
+            self.visit(node.type)
+        else: # global variable declaration
+            if len(_type) == 1:
+                _type = _type[0]
+                if node.attrs.get('global?', False):
+                    if node.init is None:
+                        inst = (f"global_{_type}", f"@{_name}", )
+                    else:
+                        inst = (f"global_{_type}", f"@{_name}", node.init.attrs['loc'])
+                    node.attrs['loc'] = f"@{_name}"
                 else:
-                    inst = (f"global_{_type}", f"@{_name}", node.init.attrs['loc'])
-                node.attrs['loc'] = f"@{_name}"
+                    assert False, "1"
             else:
-                assert False, "1"
-        else:
-            assert False, "2"
-        self.code.append(inst)
+                assert False, "2"
+            self.code.append(inst)
 
     def visit_DeclList(self, node: DeclList): # [decls**]
         print(node.__class__.__name__, node.attrs)
@@ -95,11 +99,30 @@ class GenerateCode(NodeVisitor):
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         print(node.__class__.__name__, node.attrs)
+        # FIXME append code on FuncDef, maybe only "reserve" temps in here
+        self.code.append(("define", f"@{node.attrs['name']}"))
+
+        # NOTE we have to "lay aside" one temporary per param, plus
+        #      one for the return value, and another for the end label
+        _args_loc = (
+            [] if node.args is None
+            else [self.new_temp() for _ in node.args]
+        )
+        _ret_loc = self.new_temp()
+        _end_loc = self.new_temp()
+
+        # TODO visit
+        self.code.append((_end_loc, ))
         pass
+
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
         print(node.__class__.__name__, node.attrs)
+        # FIXME do we need to visit node.spec? it's an instance of Type
+        self.visit(node.decl)
+        # self.visit(node.body)
         pass
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]

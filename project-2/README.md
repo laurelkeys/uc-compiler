@@ -72,7 +72,7 @@ char c[] = "Susy";      // Ok
 In this case, the size of `c` must be inferred from the initialization.
 
 # SSA code instructions
-Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single_assignment_form)) code should only contain the following operators:
+Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single_assignment_form)) code should only contain the following operators, represented as tuples of the form `(operation, operands, ..., destination)`:
 
 ## Variables & Values:
 ```python

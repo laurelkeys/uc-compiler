@@ -18,8 +18,8 @@ class Node:
         result, indent, separator = '', '', ''
         len_class_name = len(self.__class__.__name__)
         # FIXME
-        for name in ['attrs'] + list(self.__slots__[:-3]):
-        #for name in self.__slots__[:-3]: # skip coord, attrs and __weakref__
+        # for name in ['attrs'] + list(self.__slots__[:-3]):
+        for name in self.__slots__[:-3]: # skip coord, attrs and __weakref__
             result += separator + indent + name + '=' + (
                 _repr(getattr(self, name)).replace('\n', '\n  ' + (' ' * (len(name) + len_class_name)))
             )
