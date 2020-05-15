@@ -248,11 +248,11 @@ class Visitor(NodeVisitor):
 
         assert node.op in _type_ops, f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
 
-        if 'value' in node.left.attrs and 'value' in node.right.attrs:
-            node.attrs['value'] = (
-                str(node.left.attrs['value'])
-                + node.op + str(node.right.attrs['value'])
-            )
+        try:
+            _lvalue = node.left.attrs['value']
+            _rvalue = node.right.attrs['value']
+            node.attrs['value'] = f"{_lvalue}{node.op}{_rvalue}"
+        except: pass
 
     def visit_Break(self, node: Break): # []
         assert self.symtab.in_loop, f"Break outside a loop" + str(node.coord)
@@ -273,6 +273,10 @@ class Visitor(NodeVisitor):
 
         assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported" + str(node.coord)
         node.attrs['type'] = _dst_type
+
+        try:
+            node.attrs['value'] = f"{_dst_type}({node.expr.attrs['value']})"
+        except: pass
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
         _parent = node.attrs.get('parent', None) # passed by the parent node on the AST
@@ -351,6 +355,7 @@ class Visitor(NodeVisitor):
         if node.init is not None:
             self.visit(node.init)
             print(f"%%%% type(node.init) == {type(node.init)}") # FIXME remove
+            print(f"%%%% node.init.attrs == {node.init.attrs}") # FIXME remove
             if isinstance(node.init, ID):
                 init_type = self.symtab.lookup(node.init.attrs['name'])['type']
             elif isinstance(node.init, InitList):
@@ -390,6 +395,9 @@ class Visitor(NodeVisitor):
         for expr in node.exprs:
             self.visit(expr)
         node.attrs['type'] = node.exprs[-1].attrs['type']
+        try:
+            node.attrs['value'] = node.exprs[-1].attrs['value']
+        except: pass
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
         self.symtab.begin_scope(loop=node)
@@ -561,7 +569,7 @@ class Visitor(NodeVisitor):
             for expr in node.exprs:
                 assert not isinstance(expr, InitList)
             node.attrs['dim'] = [len(node.exprs)]
-        
+
         print("=============dims", node.attrs['dim'])
 
     def visit_ParamList(self, node: ParamList): # [params**]
@@ -671,6 +679,10 @@ class Visitor(NodeVisitor):
         )
 
         node.attrs['type'] = _type
+
+        try:
+            node.attrs['value'] = f"{node.op}{node.expr.attrs['value']}"
+        except: pass
 
     def visit_While(self, node: While): # [cond*, body*]
         self.symtab.begin_scope(loop=node)
