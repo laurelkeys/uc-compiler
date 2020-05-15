@@ -102,27 +102,33 @@ class GenerateCode(NodeVisitor):
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         print(node.__class__.__name__, node.attrs)
-        # FIXME append code on FuncDef, maybe only "reserve" temps in here
-        self.code.append(("define", f"@{node.attrs['name']}"))
-
-        # NOTE we have to "lay aside" one temporary per param, plus
-        #      one for the return value, and another for the end label
-        _args_loc = (
-            [] if node.args is None
-            else [self.new_temp() for _ in node.args]
-        )
-        _ret_loc = self.new_temp()
-        _end_loc = self.new_temp()
-
-        # TODO visit
-        self.code.append((_end_loc, ))
+        if node.attrs.get('defined?', False):
+            _args_loc = (
+                [] if node.args is None
+                else [self.new_temp() for _ in node.args]
+            )
+            _ret_loc = self.new_temp()
+            # FIXME save these values
         pass
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
         print(node.__class__.__name__, node.attrs)
+        self.code.append(("define", f"@{node.attrs['name']}"))
+
         # FIXME do we need to visit node.spec? it's an instance of Type
+
+        # NOTE we "reserve" one temporary per param plus one for the
+        #      return value on FuncDecl, and another for the end label in here
+        node.decl.attrs['defined?'] = True
         self.visit(node.decl)
+        _end_loc = self.new_temp()
+
         # self.visit(node.body)
+
+        # TODO visit
+        self.code.append((_end_loc, ))
+
+
         pass
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]

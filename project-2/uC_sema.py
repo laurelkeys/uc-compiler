@@ -381,7 +381,9 @@ class Visitor(NodeVisitor):
         )
 
         node.attrs['name'] = sym_name
-        for k, v in sym_attrs.items():
+        for k, v in self.symtab.lookup(sym_name).items():
+            # FIXME I'm not sure sym_attrs has everything
+            # self.symtab.lookup(sym_name) has, that's why I'm using it
             node.attrs[k] = v
 
     def visit_DeclList(self, node: DeclList): # [decls**]
