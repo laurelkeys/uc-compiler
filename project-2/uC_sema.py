@@ -205,7 +205,7 @@ class Visitor(NodeVisitor):
 
         assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
 
-        assert node.op in uC_ops.assign_ops.values(), f"Unexpected operator in adssignment operation: `{node.op}`" + str(node.coord)
+        assert node.op in uC_ops.assign_ops, f"Unexpected operator in adssignment operation: `{node.op}`" + str(node.coord)
 
         assert node.op in _ltype[0].assign_ops, ( # use the "outermost" type
             f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
@@ -235,11 +235,11 @@ class Visitor(NodeVisitor):
 
         assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
 
-        if node.op in uC_ops.binary_ops.values():
+        if node.op in uC_ops.binary_ops:
             _type_ops = _ltype[0].binary_ops # use the "outermost" type
             node.attrs['type'] = _ltype
 
-        elif node.op in uC_ops.rel_ops.values():
+        elif node.op in uC_ops.rel_ops:
             _type_ops = _ltype[0].rel_ops # use the "outermost" type
             node.attrs['type'] = [TYPE_BOOL]
 
@@ -646,7 +646,7 @@ class Visitor(NodeVisitor):
         node.attrs['type'] = node.type.attrs['type']
 
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
-        assert node.op in uC_ops.unary_ops.values(), f"Unexpected operator in unary operation: `{node.op}`" + str(node.coord)
+        assert node.op in uC_ops.unary_ops, f"Unexpected operator in unary operation: `{node.op}`" + str(node.coord)
 
         self.visit(node.expr)
 

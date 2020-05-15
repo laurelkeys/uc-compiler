@@ -1,4 +1,8 @@
+*.c
+*.ll
+
 *.uc
+*.ir
 *.ast
 
 # PLY

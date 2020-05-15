@@ -47,6 +47,7 @@ class GenerateCode(NodeVisitor):
         pass
     def visit_Break(self, node: Break): # []
         print(node.__class__.__name__, node.attrs)
+        # TODO bind its 'parent' function, so we can call jump
         pass
     def visit_Cast(self, node: Cast): # [type*, expr*]
         print(node.__class__.__name__, node.attrs)
@@ -109,6 +110,8 @@ class GenerateCode(NodeVisitor):
 
     def visit_ID(self, node: ID): # [name]
         print(node.__class__.__name__, node.attrs)
+        # FIXME we might want to add 'parent' before calling
+        # this, so we can check it's 'loc', idk (?)
         node.attrs['loc'] = f"@{node.name}" # TODO maybe move @ to Global
         pass
 

@@ -18,10 +18,10 @@ class UCType:
         self.rel_ops = rel_ops or set()
         self.assign_ops = assign_ops or set()
 
-        assert all(op in uC_ops.unary_ops.values() for op in self.unary_ops)
-        assert all(op in uC_ops.binary_ops.values() for op in self.binary_ops)
-        assert all(op in uC_ops.rel_ops.values() for op in self.rel_ops)
-        assert all(op in uC_ops.assign_ops.values() for op in self.assign_ops)
+        assert all(op in uC_ops.unary_ops for op in self.unary_ops)
+        assert all(op in uC_ops.binary_ops for op in self.binary_ops)
+        assert all(op in uC_ops.rel_ops for op in self.rel_ops)
+        assert all(op in uC_ops.assign_ops for op in self.assign_ops)
 
     def __eq__(self, other):
         if isinstance(other, UCType):

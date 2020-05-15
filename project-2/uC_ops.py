@@ -5,67 +5,67 @@
 
 # unary operators: +, -, ++, --, &, *, !
 unary_ops = {
-    'PLUS': '+',
-    'MINUS': '-',
+    '+': 'PLUS',
+    '-': 'MINUS',
 
     # prefix increment and decrement
-    'PLUSPLUS': '++',
-    'MINUSMINUS': '--',
+    '++': 'PLUSPLUS',
+    '--': 'MINUSMINUS',
 
     # suffix/postfix increment and decrement
-    'pPLUSPLUS': 'p++',
-    'pMINUSMINUS': 'p--',
+    'p++': 'pPLUSPLUS',
+    'p--': 'pMINUSMINUS',
 
     # address-of and indirection
-    'ADDRESS': '&',
-    'TIMES': '*',
+    '&': 'ADDRESS',
+    '*': 'TIMES',
 
-    'NOT': '!',
+    '!': 'NOT',
 }
 
 # binary operators: +, -, *, /, %, &&, ||
 binary_ops = {
 
     # additive operators
-    'PLUS': '+',
-    'MINUS': '-',
+    '+': 'PLUS',
+    '-': 'MINUS',
 
     # multiplicative operators
-    'TIMES': '*',
-    'DIV': '/',
-    'MOD': '%',
+    '*': 'TIMES',
+    '/': 'DIV',
+    '%': 'MOD',
 
     # logical operators
-    'AND': '&&',
-    'OR': '||',
+    '&&': 'AND',
+    '||': 'OR',
 }
 
 # relational operators: ==, !=, <, >, <=, >=
 rel_ops = {
-    'EQ': '==',
-    'NEQ': '!=',
+    '==': 'EQ',
+    '!=': 'NEQ',
 
-    'LT': '<',
-    'GT': '>',
-    'LEQ': '<=',
-    'GEQ': '>=',
+    '<': 'LT',
+    '>': 'GT',
+    '<=': 'LEQ',
+    '>=': 'GEQ',
 }
 
 # assignment operators: =, +=, -=, *=, /=, %=
 assign_ops = {
-    'EQUALS': '=',
+    '=': 'EQUALS',
 
-    'PLUSEQUALS': '+=',
-    'MINUSEQUALS': '-=',
+    '+=': 'PLUSEQUALS',
+    '-=': 'MINUSEQUALS',
 
-    'TIMESEQUALS': '*=',
-    'DIVEQUALS': '/=',
-    'MODEQUALS': '%=',
+    '*=': 'TIMESEQUALS',
+    '/=': 'DIVEQUALS',
+    '%=': 'MODEQUALS',
 }
 
 
 if __name__ == "__main__":
-    print("unary operators:", ', '.join(unary_ops.values()))
-    print("binary operators:", ', '.join(binary_ops.values()))
-    print("relational operators:", ', '.join(rel_ops.values()))
-    print("assignment operators:", ', '.join(assign_ops.values()))
+    print("unary operators:", ', '.join(unary_ops.keys()))
+    print("binary operators:", ', '.join(binary_ops.keys()))
+    print("relational operators:", ', '.join(rel_ops.keys()))
+    print("assignment operators:", ', '.join(assign_ops.keys()))
