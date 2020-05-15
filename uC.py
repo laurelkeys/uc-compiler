@@ -46,7 +46,8 @@ class Compiler:
             if susy:
                 self.ast.show(showcoord=True)
                 if not parse_only:
-                    print("----\n" + str(self.sema.symtab)) # FIXME remove
+                    print("----")
+                    #print("----\n" + str(self.sema.symtab)) # FIXME remove
             elif ast_file is not None:
                 self.ast.show(buf=ast_file, showcoord=True)
         except AssertionError as e:
@@ -58,6 +59,10 @@ class Compiler:
         self.gen.visit(self.ast)
         self.gencode = self.gen.code
         _str = ""
+        # FIXME debug only
+        print("----")
+        for _code in self.gencode:
+            print(_code)
         if not susy and ir_file is not None:
             for _code in self.gencode:
                 _str += f"{_code}\n"

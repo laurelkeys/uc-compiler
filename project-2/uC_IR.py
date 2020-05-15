@@ -3,7 +3,11 @@ import sys
 from collections import defaultdict
 
 import uC_ops
-from uC_AST import NodeVisitor
+import uC_types
+
+from uC_AST import *
+from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
+                      TYPE_ARRAY, TYPE_BOOL, TYPE_FUNC)
 
 ###########################################################
 ## uC Intermediate Representation (IR) ####################
@@ -14,7 +18,7 @@ class GenerateCode(NodeVisitor):
 
     def __init__(self):
         super(GenerateCode, self).__init__()
-        self.fname = 'main'
+        self.fname = "main"
         self.versions = { self.fname: 0 } # version dictionary for temporaries
         self.code = [] # generated code as a list of tuples
 
@@ -26,72 +30,126 @@ class GenerateCode(NodeVisitor):
         self.versions[self.fname] += 1
         return name
 
-    # NOTE A few sample methods follow. You may have to adjust
-    #      depending on the names of the AST nodes you've defined
+    def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Assert(self, node: Assert): # [expr*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Break(self, node: Break): # []
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Cast(self, node: Cast): # [type*, expr*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Compound(self, node: Compound): # [decls**, stmts**]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Constant(self, node: Constant): # [type, value]
+        print(node.__class__.__name__, node.attrs)
+        node.attrs['loc'] = node.value
+        pass
 
-    def visit_Literal(self, node):
-        # Create a new temporary variable name
-        target = self.new_temp()
-
-        # Make the SSA opcode and append to list of generated instructions
-        inst = (f"literal_{node.type.name}", node.value, target)
+    def visit_Decl(self, node: Decl): # [name, type*, init*]
+        print(node.__class__.__name__, node.attrs)
+        if node.init is not None:
+            self.visit(node.init)
+        _type = node.attrs['type']
+        _name = node.attrs['name']
+        if len(_type) == 1:
+            _type = _type[0]
+            if node.attrs.get('global?', False):
+                if node.init is None:
+                    inst = (f"global_{_type}", f"@{_name}", )
+                else:
+                    inst = (f"global_{_type}", f"@{_name}", node.init.attrs['loc'])
+                node.attrs['loc'] = f"@{_name}"
+            else:
+                assert False, "1"
+        else:
+            assert False, "2"
         self.code.append(inst)
 
-        # Save the name of the temporary variable where the value was placed
-        node.gen_location = target
+    def visit_DeclList(self, node: DeclList): # [decls**]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_EmptyStatement(self, node: EmptyStatement): # []
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_ExprList(self, node: ExprList): # [exprs**]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_For(self, node: For): # [init*, cond*, next*, body*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_FuncCall(self, node: FuncCall): # [name*, args*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
+        print(node.__class__.__name__, node.attrs)
+        pass
 
-    def visit_BinaryOp(self, node):
-        # Visit the left and right expressions
-        self.visit(node.left)
-        self.visit(node.right)
+    def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
+        print(node.__class__.__name__, node.attrs)
+        for decl in node.decls:
+            decl.attrs['global?'] = True
+            self.visit(decl)
 
-        # Make a new temporary for storing the result
-        target = self.new_temp()
+    def visit_ID(self, node: ID): # [name]
+        print(node.__class__.__name__, node.attrs)
+        node.attrs['loc'] = f"@{node.name}" # TODO maybe move @ to Global
+        pass
 
-        # Create the opcode and append to list
-        opcode = f"{uC_ops.binary[node.op]}_{node.left.type.name}"
-        inst = (opcode, node.left.gen_location, node.right.gen_location, target)
-        self.code.append(inst)
+    def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_InitList(self, node: InitList): # [exprs**]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_ParamList(self, node: ParamList): # [params**]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Print(self, node: Print): # [expr*]
+        print(node.__class__.__name__, node.attrs)
+        pass
 
-        # Store location of the result on the node
-        node.gen_location = target
+    def visit_Program(self, node: Program): # [gdecls**]
+        print(node.__class__.__name__, node.attrs)
+        for gdecl in node.gdecls:
+            self.visit(gdecl)
 
-    def visit_PrintStatement(self, node):
-        # Visit the expression
-        self.visit(node.expr)
+    def visit_PtrDecl(self, node: PtrDecl): # [type*]
+        print(node.__class__.__name__, node.attrs)
+        raise NotImplementedError
 
-        # Create the opcode and append to list
-        inst = (f"print_{node.expr.type.name}", node.expr.gen_location)
-        self.code.append(inst)
-
-    def visit_VarDeclaration(self, node):
-        # allocate on stack memory
-        inst = (f"alloc_{node.type.name}", node.id)
-        self.code.append(inst)
-        # store optional init val
-        if node.value:
-            self.visit(node.value)
-            inst = (f"store_{node.type.name}", node.value.gen_location, node.id)
-            self.code.append(inst)
-
-    def visit_LoadLocation(self, node):
-        target = self.new_temp()
-        inst = (f"load_{node.type.name}", node.name, target)
-        self.code.append(inst)
-        node.gen_location = target
-
-    def visit_AssignmentStatement(self, node):
-        self.visit(node.value)
-        inst = (f"store_{node.value.type.name}", node.value.gen_location, node.location)
-        self.code.append(inst)
-
-    def visit_UnaryOp(self, node):
-        self.visit(node.left)
-        target = self.new_temp()
-        opcode = f"{uC_ops.unary[node.op]}_{node.left.type.name}"
-        inst = (opcode, node.left.gen_location)
-        self.code.append(inst)
-        node.gen_location = target
-
-    # TODO Implement `visit_<>` methods for all of the other AST nodes.
-    #      Make instructions and append them to the `self.code` list.
+    def visit_Read(self, node: Read): # [expr*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Return(self, node: Return): # [expr*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_Type(self, node: Type): # [names]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_VarDecl(self, node: VarDecl): # [declname, type*]
+        print(node.__class__.__name__, node.attrs)
+        self.visit(node.type)
+        pass
+    def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
+        print(node.__class__.__name__, node.attrs)
+        pass
+    def visit_While(self, node: While): # [cond*, body*]
+        print(node.__class__.__name__, node.attrs)
+        pass

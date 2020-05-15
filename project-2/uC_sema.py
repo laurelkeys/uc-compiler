@@ -48,7 +48,7 @@ class SymbolTable:
         ''' Push a new symbol table, generating a new (current) scope.\n
             If `loop`/`func` is not `None`, it becomes the `curr_loop`/`curr_func`.
         '''
-        print(len(self.symbol_table.maps), "> push") # FIXME debug only
+        # print(len(self.symbol_table.maps), "> push") # FIXME debug only
         self.symbol_table = self.symbol_table.new_child()
         if loop is not None: self.loops.append(loop)
         if func is not None: self.funcs.append(func)
@@ -57,7 +57,7 @@ class SymbolTable:
         ''' Pop the current scope's symbol table, effectively deleting it.\n
             If `loop`/`func` is `True`, the `curr_loop`/`curr_func` is also popped.
         '''
-        print(len(self.symbol_table.maps) - 1, "> pop", self.local_scope) # FIXME debug only
+        # print(len(self.symbol_table.maps) - 1, "> pop", self.local_scope) # FIXME debug only
         self.symbol_table = self.symbol_table.parents
         if loop: self.loops.pop()
         if func: self.funcs.pop()
@@ -248,6 +248,12 @@ class Visitor(NodeVisitor):
 
         assert node.op in _type_ops, f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
 
+        if 'value' in node.left.attrs and 'value' in node.right.attrs:
+            node.attrs['value'] = (
+                str(node.left.attrs['value'])
+                + node.op + str(node.right.attrs['value'])
+            )
+
     def visit_Break(self, node: Break): # []
         assert self.symtab.in_loop, f"Break outside a loop" + str(node.coord)
 
@@ -302,6 +308,7 @@ class Visitor(NodeVisitor):
 
     def visit_Constant(self, node: Constant): # [type, value]
         node.attrs['type'] = [uC_types.from_name(node.type)]
+        node.attrs['value'] = node.value
 
     def visit_Decl(self, node: Decl): # [name, type*, init*]
         assert isinstance(node.name, ID)
@@ -367,6 +374,10 @@ class Visitor(NodeVisitor):
             name=sym_name,
             attributes=sym_attrs
         )
+
+        node.attrs['name'] = sym_name
+        for k, v in sym_attrs.items():
+            node.attrs[k] = v
 
     def visit_DeclList(self, node: DeclList): # [decls**]
         for decl in node.decls:
