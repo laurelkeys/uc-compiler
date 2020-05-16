@@ -106,26 +106,34 @@ class GenerateCode(NodeVisitor):
 
     def visit_Decl(self, node: Decl): # [name*, type*, init*]
         print(node.__class__.__name__, node.attrs)
-        if node.init is not None:
-            self.visit(node.init)
+        # FIXME triple-check we're visiting init where necessary
         _type = node.attrs['type']
         _name = node.attrs['name']
         if _type[0] == TYPE_FUNC:
             node.type.attrs['name'] = _name
             self.visit(node.type)
-        else: # global variable declaration
+        else: # variable declaration
             _type = self.unwrap_type(_type)
-            self.visit(node.name)
+            #self.visit(node.name) #@remove
             if node.attrs.get('global?', False):
                 self.fregisters[_name] =  f"@{_name}"
                 if node.init is None:
                     inst = (f"global_{_type}", f"@{_name}", )
                 else:
+                    self.visit(node.init)
                     inst = (f"global_{_type}", f"@{_name}", node.init.attrs['reg'])
                 node.attrs['reg'] = f"@{_name}"
+                self.code.append(inst)
             else:
-                assert False, "!!global false"
-            self.code.append(inst)
+                _target = self.new_temp()
+                self.fregisters[_name] = _target
+                self.code.append((f"alloc_{_type}", _target))
+                if node.init is not None:
+                    self.visit(node.init)
+                    self.code.append(
+                        (f"store_{_type}", self.last_temp, _target)
+                    )
+                node.attrs['reg'] = f"@{_name}"
 
     def visit_DeclList(self, node: DeclList): # [decls**]
         print(node.__class__.__name__, node.attrs)
