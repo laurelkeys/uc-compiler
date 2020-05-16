@@ -170,7 +170,15 @@ class GenerateCode(NodeVisitor):
 
         self.visit(node.body)
 
-        self.code.append((self.fregisters['$end_label'][1:], ))
+        _type = self.unwrap_type(node.attrs['type'][1:]) # ignore func
+        _target = self.new_temp()
+        self.code.extend([
+            (self.fregisters['$end_label'][1:], ),
+            (f"load_{_type}", self.fregisters['$return'], _target),
+            (f"return_{_type}", _target),
+        ])
+
+        self.fname = "$global"
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         print(node.__class__.__name__, node.attrs)
