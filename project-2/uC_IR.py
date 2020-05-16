@@ -549,7 +549,21 @@ class GenerateCode(NodeVisitor):
             if node.op[0] == 'p':
                 pass
             else:
-                pass
+                _one_reg = self.new_temp()
+                self.emit_literal(_expr_type, value=1, target=_one_reg)
+                _unop_target = self.new_temp()
+                self.emit_op(
+                    _op='-',
+                    _type=_expr_type,
+                    left=_one_reg,
+                    right=node.expr.attrs['reg'],
+                    target=_unop_target
+                )
+                self.emit_store( # update value
+                    _type=_expr_type,
+                    source=_unop_target,
+                    target=_expr_reg
+                )
         elif node.op == '&':
             pass
         elif node.op == '*':
