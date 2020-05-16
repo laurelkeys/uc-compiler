@@ -178,7 +178,18 @@ class GenerateCode(NodeVisitor):
         pass
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        assert isinstance(node.lvalue, ID)
+        # self.visit(node.lvalue) # FIXME for ArrayRef
+        self.visit(node.rvalue)
+
+        _target = self.fregisters[node.lvalue.attrs['name']]
+        self.emit_store(
+            _type=self.unwrap_type(node.lvalue.attrs['type']),
+            source=node.rvalue.attrs['reg'],
+            target=_target
+        )
+
+        node.attrs['reg'] = _target
 
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         print(node.__class__.__name__, node.attrs)
@@ -276,9 +287,30 @@ class GenerateCode(NodeVisitor):
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        _passed_args = (
+            [] if node.args is None
+            else node.args.exprs if isinstance(node.args, ExprList)
+            else [node.args] # there's only one argument
+        )
+
+        for _arg in _passed_args:
+            self.visit(_arg) # emits load
+        for _arg in _passed_args:
+            self.emit_param(
+                _type=self.unwrap_type(_arg.attrs['type']),
+                source=_arg.attrs['reg']
+            )
+
+        _target = self.new_temp()
+        self.emit_call(
+            source=f"@{node.attrs['name']}",
+            opt_target=_target # FIXME
+        )
+
+        node.attrs['reg'] = _target
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         print(node.__class__.__name__, node.attrs)
@@ -328,23 +360,13 @@ class GenerateCode(NodeVisitor):
 
     def visit_ID(self, node: ID): # [name]
         print(node.__class__.__name__, node.attrs)
-
-        # FIXME move this code to Decl as it has both name and type in attrs
-
-        # FIXME we might want to add 'parent' before calling
-        # this, so we can check it's 'reg', idk (?)
-        if self.fname == "$global":
-            print("REMOVEME") #@remove this if
-            node.attrs['reg'] = f"@{node.name}"
-            self.fregisters[node.name] =  f"@{node.name}"
-        else:
-            _type = self.unwrap_type(node.attrs['type'])
-            _target = self.new_temp()
-            print("======== QUERIED", self.fregisters)
-            self.code.append(
-                (f"load_{_type}", self.fregisters[node.name], _target)
-            )
-            node.attrs['reg'] = _target
+        _target = self.new_temp()
+        self.emit_load(
+            _type=self.unwrap_type(node.attrs['type']),
+            varname=self.fregisters[node.name],
+            target=_target
+        )
+        node.attrs['reg'] = _target
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         print(node.__class__.__name__, node.attrs)
