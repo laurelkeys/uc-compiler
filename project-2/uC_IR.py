@@ -94,13 +94,13 @@ class GenerateCode(NodeVisitor):
         self.code.append((f"elem_{_type}", source, index, target))
 
     # Cast Operations
-    def emit_fptosi(self, fvalue):
+    def emit_fptosi(self, fvalue, target):
         ''' (int)fvalue == cast float to int. '''
-        self.code.append(("fptosi", fvalue))
+        self.code.append(("fptosi", fvalue, target))
 
-    def emit_sitofp(self, ivalue):
+    def emit_sitofp(self, ivalue, target):
         ''' (float)ivalue == cast int to float. '''
-        self.code.append(("sitofp", ivalue))
+        self.code.append(("sitofp", ivalue, target))
 
     # Binary & Relational/Equality/Logical Operations
     def emit_op(self, _op, _type, left, right, target):
@@ -163,6 +163,10 @@ class GenerateCode(NodeVisitor):
         ''' Print value of `source`. '''
         self.code.append((f"print_{_type}", source))
 
+    # def emit_get(self, _type, source, target):
+    #     ''' Load a pointer from `source` to `target`. '''
+    #     self.code.append((f"get_{_type}_*", source, target))
+
     def create_assert_message(self, coord):
         message = f"assertion_fail on {coord.line}:{coord.column}"
         var_name = f"@assert_message_{coord.line}_{coord.column}"
@@ -178,7 +182,17 @@ class GenerateCode(NodeVisitor):
         pass
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         print(node.__class__.__name__, node.attrs)
-        pass
+
+        self.visit(node.subscript) # emits load
+
+        _target = self.new_temp()
+        self.emit_elem(
+            _type=self.unwrap_type(node.attrs['type']), 
+            source=self.fregisters[node.attrs['name']],
+            index=node.subscript.attrs['reg'], 
+            target=_target)
+
+        node.attrs['reg'] = _target
 
     def visit_Assert(self, node: Assert): # [expr*]
         print(node.__class__.__name__, node.attrs)
@@ -201,16 +215,35 @@ class GenerateCode(NodeVisitor):
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
         print(node.__class__.__name__, node.attrs)
-        assert isinstance(node.lvalue, ID)
-        # self.visit(node.lvalue) # FIXME for ArrayRef
+        if not isinstance(node.lvalue, ID):
+            self.visit(node.lvalue)
         self.visit(node.rvalue)
 
-        _target = self.fregisters[node.lvalue.attrs['name']]
-        self.emit_store(
-            _type=self.unwrap_type(node.lvalue.attrs['type']),
-            source=node.rvalue.attrs['reg'],
-            target=_target
-        )
+        if isinstance(node.lvalue, ArrayRef):
+            _ltype = str(self.unwrap_type(node.lvalue.attrs['type']))+"_*"
+            _target = node.lvalue.attrs['reg']
+        else:
+            _ltype = self.unwrap_type(node.lvalue.attrs['type'])
+            _target = self.fregisters[node.lvalue.attrs['name']]
+
+        if isinstance(node.rvalue, ArrayRef):
+            temp = self.new_temp()
+            self.emit_load(
+                _type=_ltype,
+                varname=node.rvalue.attrs['reg'],
+                target=temp
+            )
+            self.emit_store(
+                _type=_ltype,
+                source=temp,
+                target=_target
+            )
+        else:
+            self.emit_store(
+                _type=_ltype,
+                source=node.rvalue.attrs['reg'],
+                target=_target
+            )
 
         node.attrs['reg'] = _target
 
@@ -235,7 +268,16 @@ class GenerateCode(NodeVisitor):
         pass
     def visit_Cast(self, node: Cast): # [type*, expr*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        self.visit(node.expr)
+
+        _target = self.new_temp()
+
+        if node.attrs['type'] == TYPE_FLOAT:
+            self.emit_sitofp(node.expr.attrs['reg'], _target)
+        else:
+            self.emit_fptosi(node.expr.attrs['reg'], _target)
+        
+        node.attrs['reg'] = _target
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
         print(node.__class__.__name__, node.attrs)
