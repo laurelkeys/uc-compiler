@@ -47,12 +47,18 @@ class GenerateCode(NodeVisitor):
         self.fname = "$global"
         self.fregisters = self.fregisters.parents
 
-    def unwrap_type(self, _type):
+    #@remove NOTE sometimes we're returning a UCType, and at others we are
+    # returning a string, we should choose one way and fix the tests we do
+    def unwrap_type(self, _type, _dim=None):
         if len(_type) == 1:
-            _type = _type[0]
+            return _type[0]
+        elif _type[0] == TYPE_ARRAY:
+            assert _dim is not None, f"!!mising dim for type: {_type}"
+            # FIXME (incomplete) fix this for multi dimensional arrays
+            _base_type = _type[-1]
+            return str(_base_type) + ''.join([f"_{d}" for d in _dim])
         else:
-            assert False, "!!long boy type"
-        return _type
+            assert False, f"!!fix this type: {_type}"
 
     ###########################################################
     ## SSA Code Instructions ##################################
@@ -206,13 +212,16 @@ class GenerateCode(NodeVisitor):
 
     def visit_Constant(self, node: Constant): # [type, value]
         print(node.__class__.__name__, node.attrs)
-        _target = self.new_temp()
-        _type = self.unwrap_type(node.attrs['type'])
-        self.code.append(
-            (f"literal_{_type}", node.value, _target)
-        )
-        node.attrs['reg'] = _target#node.value
-        pass
+        if self.fname == "$global":
+            # FIXME retest this (added for init lists)
+            node.attrs['reg'] = node.value
+        else:
+            _target = self.new_temp()
+            _type = self.unwrap_type(node.attrs['type'])
+            self.code.append(
+                (f"literal_{_type}", node.value, _target)
+            )
+            node.attrs['reg'] = _target
 
     def visit_Decl(self, node: Decl): # [name*, type*, init*]
         print(node.__class__.__name__, node.attrs)
@@ -223,7 +232,10 @@ class GenerateCode(NodeVisitor):
             node.type.attrs['name'] = _name
             self.visit(node.type)
         else: # variable declaration
-            _type = self.unwrap_type(_type)
+            _type = (
+                self.unwrap_type(_type) if _type[0] != TYPE_ARRAY
+                else self.unwrap_type(_type, node.attrs['dim'])
+            )
             #self.visit(node.name) #@remove
             if node.attrs.get('global?', False):
                 self.fregisters[_name] =  f"@{_name}"
@@ -341,9 +353,15 @@ class GenerateCode(NodeVisitor):
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_InitList(self, node: InitList): # [exprs**]
         print(node.__class__.__name__, node.attrs)
-        pass
+        _target = []
+        for expr in node.exprs:
+            self.visit(expr)
+            _target.append(expr.attrs['reg'])
+        node.attrs['reg'] = _target
+
     def visit_ParamList(self, node: ParamList): # [params**]
         print(node.__class__.__name__, node.attrs)
         pass
