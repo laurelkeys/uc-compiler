@@ -125,14 +125,16 @@ class Visitor(NodeVisitor):
                 node.attrs['dim'] = [node.dim.value]
 
             if isinstance(node.dim, ID):
-                assert node.dim.name in self.symtab.current_scope, \
+                assert node.dim.name in self.symtab.current_scope, (
                     f"Undeclared identifier in array dimension: `{node.dim.name}`" + str(node.coord)
+                )
                 _dim_type = self.symtab.lookup(node.dim.name)['type']
             else:
                 _dim_type = node.dim.attrs['type']
 
-            assert _dim_type == [TYPE_INT], \
+            assert _dim_type == [TYPE_INT], (
                 f"Size of array has non-integer type {_dim_type}" + str(node.coord)
+            )
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         self.visit(node.name)
@@ -143,8 +145,9 @@ class Visitor(NodeVisitor):
 
         self.visit(node.subscript)
         if isinstance(node.subscript, ID):
-            assert node.subscript.attrs['name'] in self.symtab.current_scope, \
+            assert node.subscript.attrs['name'] in self.symtab.current_scope, (
                 f"Variable {node.subscript.attrs['name']} not defined in array reference" + str(node.coord)
+            )
             _type = self.symtab.lookup(node.subscript.attrs['name'])['type']
         else:
             _type = node.subscript.attrs['type']
@@ -320,21 +323,22 @@ class Visitor(NodeVisitor):
         sym_attrs['type'] = node.type.attrs['type']
         if isinstance(node.type, VarDecl):
             pass
+
         elif isinstance(node.type, ArrayDecl):
             sym_attrs['dim'] = node.type.attrs.get('dim', None)
-        elif isinstance(node.type, FuncDecl):
 
+        elif isinstance(node.type, FuncDecl):
             sym_attrs['param_types'] = node.type.attrs.get('param_types', [])
             sym_attrs['param_names'] = node.type.attrs.get('param_names', [])
             if sym_name in self.symtab.local_scope:
-
                 assert sym_attrs['type'] == self.symtab.lookup(sym_name)['type'], \
                     f"Redeclaration of function {sym_name} with different return type: {sym_attrs['type']} and {self.symtab.lookup(sym_name)['type']}" + str(node.coord)
 
                 # checking parameter types
                 _declared_param_types = self.symtab.lookup(sym_name)['param_types']
-                assert len(sym_attrs['param_types']) == len(_declared_param_types), \
+                assert len(sym_attrs['param_types']) == len(_declared_param_types), (
                     f"Conflicting parameter count for `{sym_name}`: {len(sym_attrs['param_types'])} passed, {len(_declared_param_types)} expected" + str(node.coord)
+                )
                 for _new_type, _old_type in zip(sym_attrs['param_types'], _declared_param_types):
                     assert _new_type == _old_type, (
                         f"Conflicting types for `{sym_name}`: {_new_type} passed, {_old_type} expected" + str(node.coord)
@@ -343,7 +347,13 @@ class Visitor(NodeVisitor):
         else:
             assert False, f"Unexpected type {type(node.type)} for node.type" + str(node.coord)
 
-        if node.init is not None:
+        if node.init is None:
+            if isinstance(node.type, ArrayDecl):
+                assert sym_attrs['dim'] is not None, ( # NOTE this must be True for the uC language
+                    f"Array dimensions for `{sym_name}` can't be infered at compile time" + str(node.coord)
+                )
+
+        else:
             self.visit(node.init)
             print(f"%%%% type(node.init) == {type(node.init)}") # FIXME remove
             print(f"%%%% node.init.attrs == {node.init.attrs}") # FIXME remove

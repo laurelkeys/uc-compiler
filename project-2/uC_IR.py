@@ -27,6 +27,7 @@ class GenerateCode(NodeVisitor):
 
     @property
     def last_temp(self):
+        print("WARNING: using last_temp is really error-prone, we should remove it (try using 'reg')")
         return "%" + "%d" % (self.versions[self.fname] - 1)
 
     def new_temp(self, var_name=None):
@@ -69,9 +70,12 @@ class GenerateCode(NodeVisitor):
         ''' Allocate on stack (ref by register) a variable of a given type. '''
         self.code.append((f"alloc_{_type}", varname))
 
-    def emit_global(self, _type, varname, value):
+    def emit_global(self, _type, varname, opt_value=None):
         ''' Allocate on heap a global var of a given type. value is optional. '''
-        self.code.append((f"global_{_type}", varname, value))
+        self.code.append(
+           (f"global_{_type}", varname, ) if opt_value is None else
+           (f"global_{_type}", varname, opt_value)
+        )
 
     def emit_load(self, _type, varname, target):
         ''' Load the value of a variable (stack/heap) into target (register). '''
@@ -182,7 +186,6 @@ class GenerateCode(NodeVisitor):
         self.visit(node.right)
 
         _target = self.new_temp()
-
         self.emit_op(
             _op=node.op,
             _type=self.unwrap_type(node.left.attrs['type']),
@@ -190,7 +193,6 @@ class GenerateCode(NodeVisitor):
             right=node.right.attrs['reg'],
             target=_target
         )
-
         node.attrs['reg'] = _target
 
     def visit_Break(self, node: Break): # []
@@ -213,14 +215,12 @@ class GenerateCode(NodeVisitor):
     def visit_Constant(self, node: Constant): # [type, value]
         print(node.__class__.__name__, node.attrs)
         if self.fname == "$global":
-            # FIXME retest this (added for init lists)
+            # FIXME retest this (added the `if` for init lists)
             node.attrs['reg'] = node.value
         else:
             _target = self.new_temp()
             _type = self.unwrap_type(node.attrs['type'])
-            self.code.append(
-                (f"literal_{_type}", node.value, _target)
-            )
+            self.emit_literal(_type, value=node.value, target=_target)
             node.attrs['reg'] = _target
 
     def visit_Decl(self, node: Decl): # [name*, type*, init*]
@@ -228,35 +228,41 @@ class GenerateCode(NodeVisitor):
         # FIXME triple-check we're visiting init where necessary
         _type = node.attrs['type']
         _name = node.attrs['name']
+
         if _type[0] == TYPE_FUNC:
             node.type.attrs['name'] = _name
             self.visit(node.type)
+
         else: # variable declaration
             _type = (
                 self.unwrap_type(_type) if _type[0] != TYPE_ARRAY
                 else self.unwrap_type(_type, node.attrs['dim'])
             )
             #self.visit(node.name) #@remove
+
             if node.attrs.get('global?', False):
-                self.fregisters[_name] =  f"@{_name}"
-                if node.init is None:
-                    inst = (f"global_{_type}", f"@{_name}", )
-                else:
+                self.fregisters[_name] = f"@{_name}"
+                if node.init is not None:
                     self.visit(node.init)
-                    inst = (f"global_{_type}", f"@{_name}", node.init.attrs['reg'])
+                self.emit_global(
+                    _type,
+                    varname=f"@{_name}",
+                    opt_value=None if node.init is None else node.init.attrs['reg']
+                )
                 node.attrs['reg'] = f"@{_name}"
-                self.code.append(inst)
+
             else:
                 _target = self.new_temp()
                 self.fregisters[_name] = _target
-                self.code.append((f"alloc_{_type}", _target))
+                self.emit_alloc(_type, varname=_target)
                 if node.init is not None:
                     self.visit(node.init)
-                    self.code.append(
-                        # (f"store_{_type}", self.last_temp, _target)
-                        (f"store_{_type}", node.init.attrs['reg'], _target)
+                    self.emit_store(
+                        _type,
+                        source=node.init.attrs['reg'], # self.last_temp
+                        target=_target
                     )
-                node.attrs['reg'] = f"@{_name}"
+                node.attrs['reg'] = f"@{_name}" # FIXME shouldn't this be _target? (need to test..)
 
     def visit_DeclList(self, node: DeclList): # [decls**]
         print(node.__class__.__name__, node.attrs)
@@ -277,50 +283,40 @@ class GenerateCode(NodeVisitor):
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         print(node.__class__.__name__, node.attrs)
         if node.attrs.get('defined?', False):
-            # "reserve" registers for args, return value and an end label
-            node.attrs['args_reg'] = (
-                [] if node.args is None
-                else [self.new_temp() for _ in node.args]
-            )
+            # reserve registers for args and the return value
+            node.attrs['args_reg'] = []
+            if node.args is not None:
+                node.attrs['args_reg'].extend([self.new_temp() for _ in node.args])
             node.attrs['ret_reg'] = self.new_temp('$return')
-            # FIXME moving the 'end_label' here might be better #@remove
 
-            # alloc a variable for each arg
+            # alloc a variable for each argument
             if node.args is not None:
                 for _arg, _arg_reg in zip(node.args, node.attrs['args_reg']):
-                    _actual_reg = self.new_temp(_arg.name.name)
                     _type = self.unwrap_type(_arg.attrs['type'])
-                    self.code.append(
-                        (f"alloc_{_type}", _actual_reg)
-                    )
-                    self.code.append(
-                        (f"store_{_type}", _arg_reg, _actual_reg)
-                    )
+                    _actual_reg = self.new_temp(_arg.name.name)
+                    self.emit_alloc(_type, varname=_actual_reg)
+                    self.emit_store(_type, source=_arg_reg, target=_actual_reg)
 
-            self.new_temp('$end_label')
+            self.new_temp('$end_label') # reserve and end label
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
         print(node.__class__.__name__, node.attrs)
         self.begin_function(node.attrs['name'])
-
-        self.code.append(("define", f"@{self.fname}"))
-
+        self.emit_define(source=f"@{self.fname}")
         node.decl.type.attrs['defined?'] = True
-        self.visit(node.decl)
 
+        self.visit(node.decl)
         self.visit(node.body)
 
-        self.code.append((self.fregisters['$end_label'][1:], ))
+        self.emit_label(label=self.fregisters['$end_label'][1:]) # ignore the %
 
         _type = self.unwrap_type(node.attrs['type'][1:]) # ignore TYPE_FUNC
         if _type == TYPE_VOID:
-            self.code.append((f"return_{_type}", ))
+            self.emit_return(_type)
         else:
             _target = self.new_temp()
-            self.code.extend([
-                (f"load_{_type}", self.fregisters['$return'], _target),
-                (f"return_{_type}", _target),
-            ])
+            self.emit_load(_type, varname=self.fregisters['$return'], target=_target)
+            self.emit_return(_type, opt_target=_target)
 
         self.end_function()
 
@@ -386,15 +382,12 @@ class GenerateCode(NodeVisitor):
         print(node.__class__.__name__, node.attrs)
         if node.expr is not None:
             self.visit(node.expr)
-            # _source = self.last_temp # return value of node.expr
-            _source = node.expr.attrs['reg'] # return value of node.expr
-            _ftype = self.unwrap_type(node.expr.attrs['type'])
-            self.code.append(
-                (f"store_{_ftype}", _source, self.fregisters['$return'])
+            self.emit_store(
+                _type=self.unwrap_type(node.expr.attrs['type']),
+                source=node.expr.attrs['reg'], # return value of node.expr
+                target=self.fregisters['$return']
             )
-        self.code.append(
-            ("jump", self.fregisters['$end_label'])
-        )
+        self.emit_jump(target=self.fregisters['$end_label'])
 
     def visit_Type(self, node: Type): # [names]
         print(node.__class__.__name__, node.attrs)
@@ -417,10 +410,14 @@ class GenerateCode(NodeVisitor):
         elif node.op == '-':
             _zero_reg = self.new_temp()
             _unop_target = self.new_temp()
-            self.code.extend([
-                (f"literal_{_expr_type}", _expr_type.default, _zero_reg),
-                (f"sub_{_expr_type}", _zero_reg, _expr_reg, _unop_target)
-            ])
+            self.emit_literal(_expr_type, value=0, target=_zero_reg)
+            self.emit_op(
+                _op='-',
+                _type=_expr_type,
+                left=_zero_reg,
+                right=_expr_reg,
+                target=_unop_target
+            )
         elif node.op[-2:] == '++':
             if node.op[0] == 'p':
                 pass
