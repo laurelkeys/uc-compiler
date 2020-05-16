@@ -163,6 +163,12 @@ class GenerateCode(NodeVisitor):
         ''' Print value of `source`. '''
         self.code.append((f"print_{_type}", source))
 
+    def create_assert_message(self, coord):
+        message = f"assertion_fail on {coord.line}:{coord.column}"
+        var_name = f"@assert_message_{coord.line}_{coord.column}"
+        self.code.insert(0, ('global_string', var_name, message)) # add to the beginning of the code
+        return var_name
+
     ###########################################################
     ## Code Generation for AST Nodes ##########################
     ###########################################################
@@ -173,9 +179,26 @@ class GenerateCode(NodeVisitor):
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_Assert(self, node: Assert): # [expr*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        self.visit(node.expr)
+
+        _true_target = self.new_temp()
+        _false_target = self.new_temp()
+        _end_target = self.new_temp()
+
+        self.emit_cbranch(node.expr.attrs['reg'], _true_target, _false_target)
+        self.emit_label(_true_target[1:]) # FIXME is this really correct? the result is equal to exemple
+        self.emit_jump(_end_target[1:])
+
+        self.emit_label(_false_target[1:])
+        assert_message = self.create_assert_message(node.coord)
+        self.emit_print("string", assert_message)
+        self.emit_jump(self.fregisters['$end_label'])
+
+        self.emit_label(_end_target[1:])
+
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
         print(node.__class__.__name__, node.attrs)
         assert isinstance(node.lvalue, ID)
