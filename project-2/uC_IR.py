@@ -57,7 +57,13 @@ class GenerateCode(NodeVisitor):
             assert _dim is not None, f"!!mising dim for type: {_type}"
             # FIXME (incomplete) fix this for multi dimensional arrays
             _base_type = _type[-1]
-            return str(_base_type) + ''.join([f"_{d}" for d in _dim])
+            
+            product = 1
+            type_tail = ""
+            for d in reversed(_dim):
+                product *= d
+                type_tail = f"_{product}{type_tail}"
+            return str(_base_type) + type_tail
         else:
             assert False, f"!!fix this type: {_type}"
 
@@ -171,6 +177,11 @@ class GenerateCode(NodeVisitor):
         message = f"assertion_fail on {coord.line}:{coord.column}"
         var_name = f"@assert_message_{coord.line}_{coord.column}"
         self.code.insert(0, ('global_string', var_name, message)) # add to the beginning of the code
+        return var_name
+
+    def create_array_initlist(self, _type, coord, array):
+        var_name = f"@array_{coord.line}_{coord.column}"
+        self.code.insert(0, (f'global_{_type}', var_name, array)) # add to the beginning of the code
         return var_name
 
     ###########################################################
@@ -439,11 +450,21 @@ class GenerateCode(NodeVisitor):
 
     def visit_InitList(self, node: InitList): # [exprs**]
         print(node.__class__.__name__, node.attrs)
+        _fname = self.fname
+        self.fname = '$global'
+
         _target = []
         for expr in node.exprs:
             self.visit(expr)
             _target.append(expr.attrs['reg'])
-        node.attrs['reg'] = _target
+
+        node.attrs['reg'] = self.create_array_initlist(
+                                    _type=self.unwrap_type(node.attrs['type'], node.attrs['dim']), 
+                                    coord=node.coord, 
+                                    array=_target
+                                )
+
+        self.fname = _fname
 
     def visit_ParamList(self, node: ParamList): # [params**]
         print(node.__class__.__name__, node.attrs)
