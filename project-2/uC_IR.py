@@ -21,13 +21,16 @@ class GenerateCode(NodeVisitor):
         self.fname = "main"
         self.versions = { self.fname: 0 } # version dictionary for temporaries
         self.code = [] # generated code as a list of tuples
+        self.fregisters = {}
 
-    def new_temp(self):
+    def new_temp(self, var_name=None):
         ''' Create a new temporary variable of a given scope (function name). '''
         if self.fname not in self.versions:
             self.versions[self.fname] = 0
         name = "%" + "%d" % (self.versions[self.fname])
         self.versions[self.fname] += 1
+        if var_name is not None:
+            self.fregisters[var_name] = name # bind the param name to the temp created
         return name
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
@@ -57,7 +60,7 @@ class GenerateCode(NodeVisitor):
         pass
     def visit_Constant(self, node: Constant): # [type, value]
         print(node.__class__.__name__, node.attrs)
-        node.attrs['loc'] = node.value
+        node.attrs['reg'] = node.value
         pass
 
     def visit_Decl(self, node: Decl): # [name, type*, init*]
@@ -76,8 +79,8 @@ class GenerateCode(NodeVisitor):
                     if node.init is None:
                         inst = (f"global_{_type}", f"@{_name}", )
                     else:
-                        inst = (f"global_{_type}", f"@{_name}", node.init.attrs['loc'])
-                    node.attrs['loc'] = f"@{_name}"
+                        inst = (f"global_{_type}", f"@{_name}", node.init.attrs['reg'])
+                    node.attrs['reg'] = f"@{_name}"
                 else:
                     assert False, "1"
             else:
@@ -103,33 +106,45 @@ class GenerateCode(NodeVisitor):
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
         print(node.__class__.__name__, node.attrs)
         if node.attrs.get('defined?', False):
-            _args_loc = (
+            # "reserve" registers for args, return value and an end label
+            node.attrs['args_reg'] = (
                 [] if node.args is None
                 else [self.new_temp() for _ in node.args]
             )
-            _ret_loc = self.new_temp()
-            # FIXME save these values
-        pass
+            node.attrs['ret_reg'] = self.new_temp()
+            # FIXME moving the 'end_label' here might be better #@remove
+
+            # alloc a variable for each arg
+            if node.args is not None:
+                for _arg, _arg_reg in zip(node.args, node.attrs['args_reg']):
+                    _actual_reg = self.new_temp(_arg.name.name)
+                    _type = _arg.attrs['type']
+                    if len(_type) == 1:
+                        _type = _type[0]
+                    else:
+                        assert False, "3"
+                    self.code.append(
+                        (f"alloc_{_type}", _actual_reg)
+                    )
+                    self.code.append(
+                        (f"store_{_type}", _arg_reg, _actual_reg)
+                    )
+
+            node.attrs['end_label'] = self.new_temp()
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
         print(node.__class__.__name__, node.attrs)
-        self.code.append(("define", f"@{node.attrs['name']}"))
+        self.fname = node.attrs['name']
+        self.fregisters = {}
 
-        # FIXME do we need to visit node.spec? it's an instance of Type
+        self.code.append(("define", f"@{self.fname}"))
 
-        # NOTE we "reserve" one temporary per param plus one for the
-        #      return value on FuncDecl, and another for the end label in here
-        node.decl.attrs['defined?'] = True
+        node.decl.type.attrs['defined?'] = True
         self.visit(node.decl)
-        _end_loc = self.new_temp()
 
         # self.visit(node.body)
 
-        # TODO visit
-        self.code.append((_end_loc, ))
-
-
-        pass
+        self.code.append((node.decl.type.attrs['end_label'], ))
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         print(node.__class__.__name__, node.attrs)
@@ -140,8 +155,8 @@ class GenerateCode(NodeVisitor):
     def visit_ID(self, node: ID): # [name]
         print(node.__class__.__name__, node.attrs)
         # FIXME we might want to add 'parent' before calling
-        # this, so we can check it's 'loc', idk (?)
-        node.attrs['loc'] = f"@{node.name}" # TODO maybe move @ to Global
+        # this, so we can check it's 'reg', idk (?)
+        node.attrs['reg'] = f"@{node.name}" # TODO maybe move @ to Global
         pass
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]

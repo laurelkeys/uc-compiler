@@ -7,8 +7,8 @@ import uC_ops
 import uC_types
 
 from uC_AST import *
-from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
-                      TYPE_ARRAY, TYPE_BOOL, TYPE_FUNC)
+from uC_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_FUNC,
+                      TYPE_INT, TYPE_STRING, TYPE_VOID)
 
 ###########################################################
 ## uC Semantic Analysis ###################################
@@ -36,19 +36,19 @@ class SymbolTable:
 
     def add(self, name: str, attributes):
         ''' Inserts `attributes` associated to `name` in the current scope. '''
-        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}"
+        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}" #@remove
         self.symbol_table[name] = attributes
 
     def lookup(self, name: str):
         ''' Returns the attributes associated to `name` if it exists, otherwise `None`. '''
-        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}"
+        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}" #@remove
         return self.symbol_table.get(name, None)
 
     def begin_scope(self, loop: Node = None, func: Node = None):
         ''' Push a new symbol table, generating a new (current) scope.\n
             If `loop`/`func` is not `None`, it becomes the `curr_loop`/`curr_func`.
         '''
-        # print(len(self.symbol_table.maps), "> push") # FIXME debug only
+        # print(len(self.symbol_table.maps), "> push") #@remove
         self.symbol_table = self.symbol_table.new_child()
         if loop is not None: self.loops.append(loop)
         if func is not None: self.funcs.append(func)
@@ -57,7 +57,7 @@ class SymbolTable:
         ''' Pop the current scope's symbol table, effectively deleting it.\n
             If `loop`/`func` is `True`, the `curr_loop`/`curr_func` is also popped.
         '''
-        # print(len(self.symbol_table.maps) - 1, "> pop", self.local_scope) # FIXME debug only
+        # print(len(self.symbol_table.maps) - 1, "> pop", self.local_scope) #@remove
         self.symbol_table = self.symbol_table.parents
         if loop: self.loops.pop()
         if func: self.funcs.pop()
@@ -107,7 +107,9 @@ class Visitor(NodeVisitor):
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         assert isinstance(node.type, (VarDecl, ArrayDecl))
         self.visit(node.type)
-        print(node.type.attrs['type'])
+
+        print(node.type.attrs['type']) #@remove
+
         if node.type.attrs['type'][0] == TYPE_CHAR:
             assert len(node.type.attrs['type']) == 1
             node.attrs['type'] = [TYPE_STRING] # represents a [TYPE_ARRAY, TYPE_CHAR]
@@ -117,31 +119,20 @@ class Visitor(NodeVisitor):
         if node.dim is not None:
             self.visit(node.dim)
 
-            if isinstance(node.dim, Constant):
-                if isinstance(node.type, ArrayDecl):
-                    node.attrs['dim'] = [node.dim.value] + node.type.attrs['dim'] # current dim + deeper dims
-                else:
-                    node.attrs['dim'] = [node.dim.value]
-                _dim_type = node.dim.attrs['type']
+            if isinstance(node.type, ArrayDecl):
+                node.attrs['dim'] = [node.dim.value] + node.type.attrs['dim'] # current dim + deeper dims
+            else:
+                node.attrs['dim'] = [node.dim.value]
 
-            elif isinstance(node.dim, ID):
-                if isinstance(node.type, ArrayDecl):
-                    node.attrs['dim'] = [node.dim.name] + node.type.attrs['dim'] # current dim + deeper dims
-                else:
-                    node.attrs['dim'] = [node.dim.name]
-                # NOTE we may only have this value at run-time
-                assert node.dim.name in self.symtab.current_scope, (
+            if isinstance(node.dim, ID):
+                assert node.dim.name in self.symtab.current_scope, \
                     f"Undeclared identifier in array dimension: `{node.dim.name}`" + str(node.coord)
-                )
                 _dim_type = self.symtab.lookup(node.dim.name)['type']
-
             else:
                 _dim_type = node.dim.attrs['type']
 
-            assert _dim_type == [TYPE_INT], (
+            assert _dim_type == [TYPE_INT], \
                 f"Size of array has non-integer type {_dim_type}" + str(node.coord)
-            )
-            # print(node.attrs['dim'])
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         self.visit(node.name)
