@@ -101,7 +101,12 @@ class GenerateCode(NodeVisitor):
 
     def visit_Constant(self, node: Constant): # [type, value]
         print(node.__class__.__name__, node.attrs)
-        node.attrs['reg'] = node.value
+        _target = self.new_temp()
+        _type = self.unwrap_type(node.attrs['type'])
+        self.code.append(
+            (f"literal_{_type}", node.value, _target)
+        )
+        node.attrs['reg'] = _target#node.value
         pass
 
     def visit_Decl(self, node: Decl): # [name*, type*, init*]
@@ -131,7 +136,8 @@ class GenerateCode(NodeVisitor):
                 if node.init is not None:
                     self.visit(node.init)
                     self.code.append(
-                        (f"store_{_type}", self.last_temp, _target)
+                        # (f"store_{_type}", self.last_temp, _target)
+                        (f"store_{_type}", node.init.attrs['reg'], _target)
                     )
                 node.attrs['reg'] = f"@{_name}"
 
@@ -257,8 +263,9 @@ class GenerateCode(NodeVisitor):
         print(node.__class__.__name__, node.attrs)
         if node.expr is not None:
             self.visit(node.expr)
-            _source = self.last_temp # return value of node.expr
-            _ftype = "foo"
+            # _source = self.last_temp # return value of node.expr
+            _source = node.expr.attrs['reg'] # return value of node.expr
+            _ftype = self.unwrap_type(node.expr.attrs['type'])
             self.code.append(
                 (f"store_{_ftype}", _source, self.fregisters['$return'])
             )
@@ -273,9 +280,45 @@ class GenerateCode(NodeVisitor):
         print(node.__class__.__name__, node.attrs)
         self.visit(node.type)
         pass
+
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        # _unop_target = self.new_temp()
+
+        self.visit(node.expr)
+        _expr_reg = node.expr.attrs['reg']
+        _expr_type = self.unwrap_type(node.expr.attrs['type'])
+
+        if node.op == '+':
+            pass
+        elif node.op == '-':
+            _zero_reg = self.new_temp()
+            _unop_target = self.new_temp()
+            self.code.extend([
+                (f"literal_{_expr_type}", _expr_type.default, _zero_reg),
+                (f"sub_{_expr_type}", _zero_reg, _expr_reg, _unop_target)
+            ])
+        elif node.op[-2:] == '++':
+            if node.op[0] == 'p':
+                pass
+            else:
+                pass
+        elif node.op[-2:] == '--':
+            if node.op[0] == 'p':
+                pass
+            else:
+                pass
+        elif node.op == '&':
+            pass
+        elif node.op == '*':
+            pass
+        elif node.op == '!':
+            pass
+        else:
+            assert False, f"Unexpected unary operator on code generation: `{node.op}`"
+
+        node.attrs['reg'] = _unop_target
+
     def visit_While(self, node: While): # [cond*, body*]
         print(node.__class__.__name__, node.attrs)
         pass
