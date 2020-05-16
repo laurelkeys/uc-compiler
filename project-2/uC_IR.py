@@ -39,13 +39,6 @@ class GenerateCode(NodeVisitor):
             self.fregisters[var_name] = name # bind the param name to the temp created
         return name
 
-    def unwrap_type(self, _type):
-        if len(_type) == 1:
-            _type = _type[0]
-        else:
-            assert False, "!!long boy type"
-        return _type
-
     def begin_function(self, fname):
         self.fname = fname
         self.fregisters = self.fregisters.new_child()
@@ -53,6 +46,116 @@ class GenerateCode(NodeVisitor):
     def end_function(self):
         self.fname = "$global"
         self.fregisters = self.fregisters.parents
+
+    def unwrap_type(self, _type):
+        if len(_type) == 1:
+            _type = _type[0]
+        else:
+            assert False, "!!long boy type"
+        return _type
+
+    ###########################################################
+    ## SSA Code Instructions ##################################
+    ###########################################################
+
+    # Variables & Values
+    def emit_alloc(self, _type, varname):
+        ''' Allocate on stack (ref by register) a variable of a given type. '''
+        self.code.append((f"alloc_{_type}", varname))
+
+    def emit_global(self, _type, varname, value):
+        ''' Allocate on heap a global var of a given type. value is optional. '''
+        self.code.append((f"global_{_type}", varname, value))
+
+    def emit_load(self, _type, varname, target):
+        ''' Load the value of a variable (stack/heap) into target (register). '''
+        self.code.append((f"load_{_type}", varname, target))
+
+    def emit_store(self, _type, source, target):
+        ''' Store the source/register into target/varname. '''
+        self.code.append((f"store_{_type}", source, target))
+
+    def emit_literal(self, _type, value, target):
+        ''' Load a literal value into target. '''
+        self.code.append((f"literal_{_type}", value, target))
+
+    def emit_elem(self, _type, source, index, target):
+        ''' Load into target the address of source (array) indexed by index. '''
+        self.code.append((f"elem_{_type}", source, index, target))
+
+    # Cast Operations
+    def emit_fptosi(self, fvalue):
+        ''' (int)fvalue == cast float to int. '''
+        self.code.append(("fptosi", fvalue))
+
+    def emit_sitofp(self, ivalue):
+        ''' (float)ivalue == cast int to float. '''
+        self.code.append(("sitofp", ivalue))
+
+    # Binary & Relational/Equality/Logical Operations
+    def emit_op(self, _op, _type, left, right, target):
+        ''' target = left `_op` right. '''
+        opcode = {
+            '+':  'add', '-':  'sub',
+            '*':  'mul', '/':  'div', '%': 'mod',
+
+            '&&': 'and', '||': 'or',
+
+            '==': 'eq',  '!=': 'ne',
+            '<':  'lt',  '<=': 'le',
+            '>':  'gt',  '>=': 'ge',
+        }
+        self.code.append((f"{opcode[_op]}_{_type}", left, right, target))
+
+    # Labels & Branches
+    def emit_label(self, label):
+        ''' Label definition. '''
+        # NOTE we also use this to emit the
+        #      end of a function definition
+        self.code.append((label, ))
+
+    def emit_jump(self, target):
+        ''' Jump to a target label. '''
+        self.code.append(("jump", target))
+
+    def emit_cbranch(self, expr_test, true_target, false_target):
+        ''' Conditional branch. '''
+        self.code.append(("cbranch", expr_test, true_target, false_target))
+
+    # Functions & Built-ins
+    def emit_define(self, source):
+        ''' Function definition. `source` is a function label . '''
+        self.code.append(("define", source))
+
+    def emit_call(self, source, opt_target=None):
+        ''' Call a function. `target` is an optional return value. '''
+        self.code.append(
+           ("call", source, ) if opt_target is None else
+           ("call", source, opt_target)
+        )
+
+    def emit_return(self, _type, opt_target=None):
+        ''' Return from function. `target` is an optional return value. '''
+        self.code.append(
+            (f"return_{_type}", ) if opt_target is None else
+            (f"return_{_type}", opt_target)
+        )
+
+    def emit_param(self, _type, source):
+        ''' `source` is an actual parameter. '''
+        self.code.append((f"param_{_type}", source))
+
+    def emit_read(self, _type, source):
+        ''' Read value to `source`. '''
+        self.code.append((f"read_{_type}", source))
+
+    def emit_print(self, _type, source):
+        ''' Print value of `source`. '''
+        self.code.append((f"print_{_type}", source))
+
+    ###########################################################
+    ## Code Generation for AST Nodes ##########################
+    ###########################################################
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         print(node.__class__.__name__, node.attrs)
@@ -72,15 +175,17 @@ class GenerateCode(NodeVisitor):
         self.visit(node.left)
         self.visit(node.right)
 
-        target = self.new_temp()
+        _target = self.new_temp()
 
-        _type = self.unwrap_type(node.left.attrs['type'])
-        opcode = f"{uC_ops.binary[node.op]}_{_type}"
-        self.code.append(
-            (opcode, node.left.attrs['reg'], node.right.attrs['reg'], target)
+        self.emit_op(
+            _op=node.op,
+            _type=self.unwrap_type(node.left.attrs['type']),
+            left=node.left.attrs['reg'],
+            right=node.right.attrs['reg'],
+            target=_target
         )
 
-        node.attrs['reg'] = target
+        node.attrs['reg'] = _target
 
     def visit_Break(self, node: Break): # []
         print(node.__class__.__name__, node.attrs)

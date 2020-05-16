@@ -64,17 +64,8 @@ assign_ops = {
 }
 
 
-binary = {
-    '+': 'add',
-    '-': 'sub',
-    '*': 'mul',
-    '/': 'div',
-    '%': 'mod',
-}
-
-
 if __name__ == "__main__":
-    print("unary operators:", ', '.join(unary_ops.keys()))
-    print("binary operators:", ', '.join(binary_ops.keys()))
-    print("relational operators:", ', '.join(rel_ops.keys()))
-    print("assignment operators:", ', '.join(assign_ops.keys()))
+    print("unary operators:", ', '.join(unary_ops))
+    print("binary operators:", ', '.join(binary_ops))
+    print("relational operators:", ', '.join(rel_ops))
+    print("assignment operators:", ', '.join(assign_ops))
