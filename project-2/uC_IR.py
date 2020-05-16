@@ -1,6 +1,7 @@
 import os
 import sys
-from collections import defaultdict
+
+from collections import ChainMap
 
 import uC_ops
 import uC_types
@@ -21,7 +22,7 @@ class GenerateCode(NodeVisitor):
         self.fname = "$global"
         self.versions = { self.fname: 0 } # version dictionary for temporaries
         self.code = [] # generated code as a list of tuples
-        self.fregisters = {}
+        self.fregisters = ChainMap()
         self.fend_label = None
 
     @property
@@ -45,6 +46,13 @@ class GenerateCode(NodeVisitor):
             assert False, "!!long boy type"
         return _type
 
+    def begin_function(self, fname):
+        self.fname = fname
+        self.fregisters = self.fregisters.new_child()
+
+    def end_function(self):
+        self.fname = "$global"
+        self.fregisters = self.fregisters.parents
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         print(node.__class__.__name__, node.attrs)
@@ -96,7 +104,7 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = node.value
         pass
 
-    def visit_Decl(self, node: Decl): # [name, type*, init*]
+    def visit_Decl(self, node: Decl): # [name*, type*, init*]
         print(node.__class__.__name__, node.attrs)
         if node.init is not None:
             self.visit(node.init)
@@ -107,7 +115,9 @@ class GenerateCode(NodeVisitor):
             self.visit(node.type)
         else: # global variable declaration
             _type = self.unwrap_type(_type)
+            self.visit(node.name)
             if node.attrs.get('global?', False):
+                self.fregisters[_name] =  f"@{_name}"
                 if node.init is None:
                     inst = (f"global_{_type}", f"@{_name}", )
                 else:
@@ -160,8 +170,7 @@ class GenerateCode(NodeVisitor):
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
         print(node.__class__.__name__, node.attrs)
-        self.fname = node.attrs['name']
-        self.fregisters = {}
+        self.begin_function(node.attrs['name'])
 
         self.code.append(("define", f"@{self.fname}"))
 
@@ -170,15 +179,19 @@ class GenerateCode(NodeVisitor):
 
         self.visit(node.body)
 
-        _type = self.unwrap_type(node.attrs['type'][1:]) # ignore func
-        _target = self.new_temp()
-        self.code.extend([
-            (self.fregisters['$end_label'][1:], ),
-            (f"load_{_type}", self.fregisters['$return'], _target),
-            (f"return_{_type}", _target),
-        ])
+        self.code.append((self.fregisters['$end_label'][1:], ))
 
-        self.fname = "$global"
+        _type = self.unwrap_type(node.attrs['type'][1:]) # ignore TYPE_FUNC
+        if _type == TYPE_VOID:
+            self.code.append((f"return_{_type}", ))
+        else:
+            _target = self.new_temp()
+            self.code.extend([
+                (f"load_{_type}", self.fregisters['$return'], _target),
+                (f"return_{_type}", _target),
+            ])
+
+        self.end_function()
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
         print(node.__class__.__name__, node.attrs)
@@ -188,13 +201,19 @@ class GenerateCode(NodeVisitor):
 
     def visit_ID(self, node: ID): # [name]
         print(node.__class__.__name__, node.attrs)
+
+        # FIXME move this code to Decl as it has both name and type in attrs
+
         # FIXME we might want to add 'parent' before calling
         # this, so we can check it's 'reg', idk (?)
         if self.fname == "$global":
+            print("REMOVEME") #@remove this if
             node.attrs['reg'] = f"@{node.name}"
+            self.fregisters[node.name] =  f"@{node.name}"
         else:
             _type = self.unwrap_type(node.attrs['type'])
             _target = self.new_temp()
+            print("======== QUERIED", self.fregisters)
             self.code.append(
                 (f"load_{_type}", self.fregisters[node.name], _target)
             )
@@ -228,16 +247,16 @@ class GenerateCode(NodeVisitor):
 
     def visit_Return(self, node: Return): # [expr*]
         print(node.__class__.__name__, node.attrs)
-        self.visit(node.expr)
-        _source = self.last_temp # return value of node.expr
-        _ftype = "foo"
-        self.code.append(
-            (f"store_{_ftype}", _source, self.fregisters['$return'])
-        )
+        if node.expr is not None:
+            self.visit(node.expr)
+            _source = self.last_temp # return value of node.expr
+            _ftype = "foo"
+            self.code.append(
+                (f"store_{_ftype}", _source, self.fregisters['$return'])
+            )
         self.code.append(
             ("jump", self.fregisters['$end_label'])
         )
-        pass
 
     def visit_Type(self, node: Type): # [names]
         print(node.__class__.__name__, node.attrs)
