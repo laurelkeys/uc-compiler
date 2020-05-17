@@ -336,9 +336,7 @@ class GenerateCode(NodeVisitor):
 
     def visit_Break(self, node: Break): # []
         print(node.__class__.__name__, node.attrs)
-        # TODO bind its 'parent' function, so we can call jump
-        # FIXME!!!!!!!!!!!!!!!!!!!
-        pass
+        self.emit_jump(self.fregisters['$break'])
 
     def visit_Cast(self, node: Cast): # [type*, expr*]
         print(node.__class__.__name__, node.attrs)
@@ -456,6 +454,7 @@ class GenerateCode(NodeVisitor):
         loop_body = self.new_temp()
         loop_end = self.new_temp()
 
+        self.fregisters['$break'] = loop_end
         if node.cond is not None:
             self.visit(node.cond)
             self.emit_cbranch(
@@ -783,6 +782,7 @@ class GenerateCode(NodeVisitor):
         loop_body = self.new_temp()
         loop_end = self.new_temp()
 
+        self.fregisters['$break'] = loop_end
         if node.cond is not None:
             self.visit(node.cond)
             self.emit_cbranch(
