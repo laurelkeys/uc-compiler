@@ -19,12 +19,6 @@ class GenerateCode(NodeVisitor):
         self.code = [] # generated code as a list of tuples
         self.fregisters = ChainMap()
         self.farray_dim = ChainMap()
-        self.fend_label = None #@remove idk why it's here
-
-    @property
-    def last_temp(self):
-        print("WARNING: using last_temp is really error-prone, we should remove it (try using 'reg')")
-        return "%" + "%d" % (self.versions[self.fname] - 1)
 
     def new_temp(self, var_name=None):
         ''' Create a new temporary variable of a given scope (function name). '''
@@ -195,11 +189,9 @@ class GenerateCode(NodeVisitor):
     ###########################################################
 
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
-        print(node.__class__.__name__, node.attrs)
         pass
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
-        print(node.__class__.__name__, node.attrs)
         if isinstance(node.name, ArrayRef):
             node.name.attrs['child?'] = True
             self.visit(node.name)
@@ -257,7 +249,6 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _target
 
     def visit_Assert(self, node: Assert): # [expr*]
-        print(node.__class__.__name__, node.attrs)
         self.visit(node.expr)
 
         _true_target = self.new_temp()
@@ -276,7 +267,6 @@ class GenerateCode(NodeVisitor):
         self.emit_label(_end_target[1:])
 
     def visit_Assignment(self, node: Assignment): # [op, lvalue*, rvalue*]
-        print(node.__class__.__name__, node.attrs)
         if not isinstance(node.lvalue, ID):
             self.visit(node.lvalue)
 
@@ -330,11 +320,9 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _target
 
     def visit_Break(self, node: Break): # []
-        print(node.__class__.__name__, node.attrs)
         self.emit_jump(self.fregisters['$break'])
 
     def visit_Cast(self, node: Cast): # [type*, expr*]
-        print(node.__class__.__name__, node.attrs)
         node.expr.attrs['load_ptr?'] = True
         self.visit(node.expr)
 
@@ -355,7 +343,6 @@ class GenerateCode(NodeVisitor):
                 self.visit(stmt)
 
     def visit_Constant(self, node: Constant): # [type, value]
-        print(node.__class__.__name__, node.attrs)
         if self.fname == "$global":
             # FIXME retest this (added the `if` for init lists)
             node.attrs['reg'] = node.value
@@ -366,7 +353,6 @@ class GenerateCode(NodeVisitor):
             node.attrs['reg'] = _target
 
     def visit_Decl(self, node: Decl): # [name*, type*, init*]
-        print(node.__class__.__name__, node.attrs)
         # FIXME triple-check we're visiting init where necessary
         _type = node.attrs['type']
         _name = node.attrs['name']
@@ -414,30 +400,26 @@ class GenerateCode(NodeVisitor):
                         self.visit(node.init)
                     self.emit_store(
                         _type,
-                        source=node.init.attrs['reg'], # self.last_temp
+                        source=node.init.attrs['reg'],
                         target=_target
                     )
                 node.attrs['reg'] = f"@{_name}" # FIXME shouldn't this be _target? (need to test..)
 
     def visit_DeclList(self, node: DeclList): # [decls**]
-        print(node.__class__.__name__, node.attrs)
         if node.decls is not None:
             for decl in node.decls:
                 self.visit(decl)
         # FIXME check if there's more
 
     def visit_EmptyStatement(self, node: EmptyStatement): # []
-        print(node.__class__.__name__, node.attrs)
         pass
 
     def visit_ExprList(self, node: ExprList): # [exprs**]
-        print(node.__class__.__name__, node.attrs)
         for expr in node.exprs:
             self.visit(expr)
         node.attrs['reg'] = node.exprs[-1].attrs['reg']
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
-        print(node.__class__.__name__, node.attrs)
 
         if node.init is not None:
             node.init.attrs['load_ptr?'] = True
@@ -469,7 +451,6 @@ class GenerateCode(NodeVisitor):
         self.emit_label(loop_end[1:])
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
-        print(node.__class__.__name__, node.attrs)
         _passed_args = (
             [] if node.args is None
             else node.args.exprs if isinstance(node.args, ExprList)
@@ -494,7 +475,6 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _target
 
     def visit_FuncDecl(self, node: FuncDecl): # [args*, type*]
-        print(node.__class__.__name__, node.attrs)
         if node.attrs.get('defined?', False):
             # reserve registers for args and the return value
             node.attrs['args_reg'] = []
@@ -513,7 +493,6 @@ class GenerateCode(NodeVisitor):
             self.new_temp('$end_label') # reserve and end label
 
     def visit_FuncDef(self, node: FuncDef): # [spec*, decl*, body*]
-        print(node.__class__.__name__, node.attrs)
         self.begin_function(node.attrs['name'])
         self.emit_define(source=f"@{self.fname}")
         node.decl.type.attrs['defined?'] = True
@@ -534,13 +513,11 @@ class GenerateCode(NodeVisitor):
         self.end_function()
 
     def visit_GlobalDecl(self, node: GlobalDecl): # [decls**]
-        print(node.__class__.__name__, node.attrs)
         for decl in node.decls:
             decl.attrs['global?'] = True
             self.visit(decl)
 
     def visit_ID(self, node: ID): # [name]
-        print(node.__class__.__name__, node.attrs)
         _target = self.new_temp()
         self.emit_load(
             _type=self.unwrap_type(node.attrs['type']),
@@ -550,7 +527,6 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _target
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
-        print(node.__class__.__name__, node.attrs)
         # FIXME test if
         _then = self.new_temp()
         _else = self.new_temp()
@@ -580,7 +556,6 @@ class GenerateCode(NodeVisitor):
         self.emit_label(_end[1:])
 
     def visit_InitList(self, node: InitList): # [exprs**]
-        print(node.__class__.__name__, node.attrs)
         _fname = self.fname
         self.fname = '$global'
 
@@ -602,11 +577,9 @@ class GenerateCode(NodeVisitor):
         self.fname = _fname
 
     def visit_ParamList(self, node: ParamList): # [params**]
-        print(node.__class__.__name__, node.attrs)
         pass
 
     def visit_Print(self, node: Print): # [expr*]
-        print(node.__class__.__name__, node.attrs)
         if node.expr is None:
             self.emit_print(TYPE_VOID)
         else:
@@ -638,16 +611,13 @@ class GenerateCode(NodeVisitor):
 
 
     def visit_Program(self, node: Program): # [gdecls**]
-        print(node.__class__.__name__, node.attrs)
         for gdecl in node.gdecls:
             self.visit(gdecl)
 
     def visit_PtrDecl(self, node: PtrDecl): # [type*]
-        print(node.__class__.__name__, node.attrs)
         raise NotImplementedError
 
     def visit_Read(self, node: Read): # [expr*]
-        print(node.__class__.__name__, node.attrs)
         if node.expr is not None:
             _read_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
             for expr in _read_exprs:
@@ -667,7 +637,6 @@ class GenerateCode(NodeVisitor):
                 self.emit_store(_type, source=_read_reg, target=_expr_reg)
 
     def visit_Return(self, node: Return): # [expr*]
-        print(node.__class__.__name__, node.attrs)
         if node.expr is not None:
             self.visit(node.expr)
             self.emit_store(
@@ -678,16 +647,13 @@ class GenerateCode(NodeVisitor):
         self.emit_jump(target=self.fregisters['$end_label'])
 
     def visit_Type(self, node: Type): # [names]
-        print(node.__class__.__name__, node.attrs)
         pass
 
     def visit_VarDecl(self, node: VarDecl): # [declname, type*]
-        print(node.__class__.__name__, node.attrs)
         self.visit(node.type)
         pass
 
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
-        print(node.__class__.__name__, node.attrs)
         # _unop_target = self.new_temp()
 
         node.expr.attrs['load_ptr?'] = True
@@ -769,7 +735,6 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _unop_target
 
     def visit_While(self, node: While): # [cond*, body*]
-        print(node.__class__.__name__, node.attrs)
 
         loop_top = self.new_temp()
         self.emit_label(loop_top[1:])
