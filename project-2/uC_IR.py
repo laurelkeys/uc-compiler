@@ -491,14 +491,18 @@ class GenerateCode(NodeVisitor):
 
         _target = []
         for expr in node.exprs:
+            expr.attrs['child?'] = True
             self.visit(expr)
             _target.append(expr.attrs['reg'])
 
-        node.attrs['reg'] = self.create_array_initlist(
-                                    _type=self.unwrap_type(node.attrs['type'], node.attrs['dim']), 
-                                    coord=node.coord, 
-                                    array=_target
-                                )
+        if node.attrs.get('child?', False):
+            node.attrs['reg'] = _target
+        else:
+            node.attrs['reg'] = self.create_array_initlist(
+                                        _type=self.unwrap_type(node.attrs['type'], node.attrs['dim']), 
+                                        coord=node.coord, 
+                                        array=_target
+                                    )
 
         self.fname = _fname
 
