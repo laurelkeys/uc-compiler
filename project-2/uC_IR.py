@@ -168,9 +168,12 @@ class GenerateCode(NodeVisitor):
         ''' Read value to `source`. '''
         self.code.append((f"read_{_type}", source))
 
-    def emit_print(self, _type, source):
+    def emit_print(self, _type, source=None):
         ''' Print value of `source`. '''
-        self.code.append((f"print_{_type}", source))
+        self.code.append(
+            (f"print_{_type}", ) if source is None else
+            (f"print_{_type}", source)
+        )
 
     # def emit_get(self, _type, source, target):
     #     ''' Load a pointer from `source` to `target`. '''
@@ -574,9 +577,9 @@ class GenerateCode(NodeVisitor):
         self.emit_label(_then[1:])
         if node.ifthen is not None: # FIXME this should always exist?
             self.visit(node.ifthen)
-            self.emit_jump(_end)
 
         if node.ifelse is not None:
+            self.emit_jump(_end)
             self.emit_label(_else[1:])
             self.visit(node.ifelse)
 
@@ -610,7 +613,9 @@ class GenerateCode(NodeVisitor):
 
     def visit_Print(self, node: Print): # [expr*]
         print(node.__class__.__name__, node.attrs)
-        if node.expr is not None:
+        if node.expr is None:
+            self.emit_print(TYPE_VOID)
+        else:
             _print_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
             for expr in _print_exprs:
                 _type = expr.attrs['type']
