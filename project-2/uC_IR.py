@@ -350,6 +350,12 @@ class GenerateCode(NodeVisitor):
                 self.fregisters[_name] = _target
                 self.emit_alloc(_type, varname=_target)
                 if node.init is not None:
+                    if isinstance(node.init, Constant) and node.init.attrs['type'] == [TYPE_STRING]:
+                        self.create_array_initlist(
+                            _type=_type,
+                            coord=node.coord,
+                            array=node.init.attrs['value']
+                        )
                     self.visit(node.init)
                     self.emit_store(
                         _type,
