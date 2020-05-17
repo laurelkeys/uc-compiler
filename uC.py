@@ -85,6 +85,7 @@ class Compiler:
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
             elif run_ir:
+                print("----")
                 self.vm = Interpreter()
                 self.vm.run(self.gencode)
         return 0

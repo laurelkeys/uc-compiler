@@ -271,7 +271,7 @@ class GenerateCode(NodeVisitor):
 
         self.emit_cbranch(node.expr.attrs['reg'], _true_target, _false_target)
         self.emit_label(_true_target[1:]) # FIXME is this really correct? the result is equal to example
-        self.emit_jump(_end_target[1:]) # FIXME some examples seem not to ignore the %
+        self.emit_jump(_end_target)
 
         self.emit_label(_false_target[1:])
         assert_message = self.create_assert_message(node.coord)
