@@ -270,7 +270,7 @@ class GenerateCode(NodeVisitor):
         _end_target = self.new_temp()
 
         self.emit_cbranch(node.expr.attrs['reg'], _true_target, _false_target)
-        self.emit_label(_true_target[1:]) # FIXME is this really correct? the result is equal to exemple
+        self.emit_label(_true_target[1:]) # FIXME is this really correct? the result is equal to example
         self.emit_jump(_end_target[1:]) # FIXME some examples seem not to ignore the %
 
         self.emit_label(_false_target[1:])
@@ -337,6 +337,7 @@ class GenerateCode(NodeVisitor):
     def visit_Break(self, node: Break): # []
         print(node.__class__.__name__, node.attrs)
         # TODO bind its 'parent' function, so we can call jump
+        # FIXME!!!!!!!!!!!!!!!!!!!
         pass
 
     def visit_Cast(self, node: Cast): # [type*, expr*]
@@ -345,12 +346,10 @@ class GenerateCode(NodeVisitor):
         self.visit(node.expr)
 
         _target = self.new_temp()
-
         if node.attrs['type'] == TYPE_FLOAT:
             self.emit_sitofp(node.expr.attrs['reg'], _target)
         else:
             self.emit_fptosi(node.expr.attrs['reg'], _target)
-
         node.attrs['reg'] = _target
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
@@ -440,8 +439,9 @@ class GenerateCode(NodeVisitor):
 
     def visit_ExprList(self, node: ExprList): # [exprs**]
         print(node.__class__.__name__, node.attrs)
-        # FIXME do it.. remember to add 'load_ptr?' before visiting each expr
-        pass
+        for expr in node.exprs:
+            self.visit(expr)
+        node.attrs['reg'] = node.exprs[-1].attrs['reg']
 
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
         print(node.__class__.__name__, node.attrs)
@@ -686,6 +686,7 @@ class GenerateCode(NodeVisitor):
     def visit_Type(self, node: Type): # [names]
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_VarDecl(self, node: VarDecl): # [declname, type*]
         print(node.__class__.__name__, node.attrs)
         self.visit(node.type)
