@@ -221,7 +221,7 @@ class GenerateCode(NodeVisitor):
 
         self.emit_cbranch(node.expr.attrs['reg'], _true_target, _false_target)
         self.emit_label(_true_target[1:]) # FIXME is this really correct? the result is equal to exemple
-        self.emit_jump(_end_target[1:])
+        self.emit_jump(_end_target[1:]) # FIXME some examples seem not to ignore the %
 
         self.emit_label(_false_target[1:])
         assert_message = self.create_assert_message(node.coord)
@@ -591,6 +591,7 @@ class GenerateCode(NodeVisitor):
 
         if node.op == '+':
             pass
+
         elif node.op == '-':
             _zero_reg = self.new_temp()
             _unop_target = self.new_temp()
@@ -602,42 +603,35 @@ class GenerateCode(NodeVisitor):
                 right=_expr_reg,
                 target=_unop_target
             )
+
         elif node.op[-2:] == '++':
-            if node.op[0] == 'p': # postfix/suffix
-                pass
-            else:
-                _one_reg = self.new_temp()
-                self.emit_literal(_expr_type, value=1, target=_one_reg)
-                _unop_target = self.new_temp()
-                self.emit_op(
-                    _op='+',
-                    _type=_expr_type,
-                    left=node.expr.attrs['reg'],
-                    right=_one_reg,
-                    target=_unop_target
-                )
-                if isinstance(node.expr, ID):
-                    self.emit_store( # update value
-                        _type=_expr_type,
-                        source=_unop_target,
-                        target=self.fregisters[node.expr.name]
-                    )
-                else:
-                    print("====FIXME=====")
-                    # FIXME this probably not saving correctly for ArrayRef, fixing
-                    # it should be as simple as adding it to the `if`, I guess, but haven't tested
-                    self.emit_store( # update value
-                        _type=_expr_type,
-                        source=_unop_target,
-                        target=_expr_reg
-                    )
+            _one_reg = self.new_temp()
+            _unop_target = self.new_temp()
+            self.emit_literal(_expr_type, value=1, target=_one_reg)
+            self.emit_op(
+                _op='+',
+                _type=_expr_type,
+                left=node.expr.attrs['reg'],
+                right=_one_reg,
+                target=_unop_target
+            )
+            assert isinstance(node.expr, (ID, ArrayRef))
+            self.emit_store( # update value
+                _type=_expr_type,
+                source=_unop_target,
+                target=self.fregisters[node.expr.name] # FIXME changed target from _expr_reg,
+                                                       # but still have to test for ArrayRef
+            )
+            if node.op[0] == 'p': # NOTE suffix/postfix increment
+                _unop_target = node.expr.attrs['reg']
+
         elif node.op[-2:] == '--':
             if node.op[0] == 'p':
                 pass
             else:
                 _one_reg = self.new_temp()
-                self.emit_literal(_expr_type, value=1, target=_one_reg)
                 _unop_target = self.new_temp()
+                self.emit_literal(_expr_type, value=1, target=_one_reg)
                 self.emit_op(
                     _op='-',
                     _type=_expr_type,
@@ -645,11 +639,15 @@ class GenerateCode(NodeVisitor):
                     right=_one_reg,
                     target=_unop_target
                 )
+                assert isinstance(node.expr, (ID, ArrayRef))
                 self.emit_store( # update value
                     _type=_expr_type,
                     source=_unop_target,
-                    target=_expr_reg
+                    target=self.fregisters[node.expr.name] # FIXME see above ++
                 )
+                if node.op[0] == 'p': # NOTE suffix/postfix decrement
+                    _unop_target = node.expr.attrs['reg']
+
         elif node.op == '&':
             pass
         elif node.op == '*':

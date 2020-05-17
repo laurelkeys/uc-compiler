@@ -681,6 +681,9 @@ class Visitor(NodeVisitor):
             )
         )
 
+        if "++" in node.op or "--" in node.op:
+            assert isinstance(node.expr, (ID, ArrayRef)), f"Expression is not assignable" + str(node.coord)
+
         node.attrs['type'] = _type
 
         try:
