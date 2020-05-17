@@ -238,23 +238,30 @@ class GenerateCode(NodeVisitor):
             _target = self.fregisters[node.lvalue.attrs['name']]
 
         if isinstance(node.rvalue, ArrayRef):
-            temp = self.new_temp()
+            _source = self.new_temp()
             self.emit_load(
                 _type=_ltype,
                 varname=node.rvalue.attrs['reg'],
-                target=temp
-            )
-            self.emit_store(
-                _type=_ltype,
-                source=temp,
-                target=_target
+                target=_source
             )
         else:
-            self.emit_store(
-                _type=_ltype,
-                source=node.rvalue.attrs['reg'],
+            _source = node.rvalue.attrs['reg']
+
+        if len(node.op) > 1: # +=, -=, /=, *=
+            _op = node.op[0]
+            self.emit_op(
+                _op, 
+                _ltype, 
+                left=_target,
+                right=_source,
                 target=_target
             )
+
+        self.emit_store(
+            _type=_ltype,
+            source=_source,
+            target=_target
+        )
 
         node.attrs['reg'] = _target
 
