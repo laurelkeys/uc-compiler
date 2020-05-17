@@ -23,7 +23,8 @@ class GenerateCode(NodeVisitor):
         self.versions = { self.fname: 0 } # version dictionary for temporaries
         self.code = [] # generated code as a list of tuples
         self.fregisters = ChainMap()
-        self.fend_label = None
+        self.farray_dim = ChainMap()
+        self.fend_label = None #@remove idk why it's here
 
     @property
     def last_temp(self):
@@ -43,10 +44,12 @@ class GenerateCode(NodeVisitor):
     def begin_function(self, fname):
         self.fname = fname
         self.fregisters = self.fregisters.new_child()
+        self.farray_dim = self.farray_dim.new_child()
 
     def end_function(self):
         self.fname = "$global"
         self.fregisters = self.fregisters.parents
+        self.farray_dim = self.farray_dim.parents
 
     #@remove NOTE sometimes we're returning a UCType, and at others we are
     # returning a string, we should choose one way and fix the tests we do
@@ -199,15 +202,39 @@ class GenerateCode(NodeVisitor):
 
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         print(node.__class__.__name__, node.attrs)
+        if isinstance(node.name, ArrayRef):
+            node.name.attrs['child?'] = True
+            self.visit(node.name)
 
         self.visit(node.subscript) # emits load
 
-        _target = self.new_temp()
-        self.emit_elem(
-            _type=self.unwrap_type(node.attrs['type']),
-            source=self.fregisters[node.attrs['name']],
-            index=node.subscript.attrs['reg'],
-            target=_target)
+        if node.attrs.get('child?', False):
+            _dim = self.farray_dim[node.attrs['name']]
+            _type = self.unwrap_type(node.attrs['type'], _dim)
+            # NOTE ugly hack
+            _prod = int(_type.split('_')[-node.attrs['type'].count(TYPE_ARRAY)])
+            _prod_target = self.new_temp()
+            self.emit_literal(TYPE_INT, value=_prod, target=_prod_target)
+            _target = self.new_temp()
+            self.emit_op('*', TYPE_INT, left=_prod_target, right=node.subscript.attrs['reg'], target=_target)
+        else:
+            _subs_reg = node.subscript.attrs['reg']
+            if isinstance(node.name, ArrayRef):
+                _fixed_subs = self.new_temp() # multiply dimensions in matrices
+                self.emit_op(
+                    '+', TYPE_INT,
+                    left=node.name.attrs['reg'], # FIXME think: may be name
+                    right=node.subscript.attrs['reg'],
+                    target=_fixed_subs
+                )
+                _subs_reg = _fixed_subs
+            _target = self.new_temp()
+            self.emit_elem(
+                _type=self.unwrap_type(node.attrs['type']),
+                source=self.fregisters[node.attrs['name']],
+                index=_subs_reg,
+                target=_target
+            )
 
         node.attrs['reg'] = _target
 
@@ -338,9 +365,11 @@ class GenerateCode(NodeVisitor):
         else: # variable declaration
             if _type[0] == TYPE_ARRAY:
                 _type = self.unwrap_type(_type, node.attrs['dim'])
+                self.farray_dim[node.attrs['name']] = node.attrs['dim']
             elif _type[0] == TYPE_STRING:
                 assert len(_type) == 1
                 _type = self.unwrap_type([TYPE_ARRAY, TYPE_CHAR], node.attrs['dim'])
+                self.farray_dim[node.attrs['name']] = node.attrs['dim']
             else:
                 _type = self.unwrap_type(_type)
             #self.visit(node.name) #@remove
