@@ -184,6 +184,11 @@ class GenerateCode(NodeVisitor):
         self.code.insert(0, (f'global_{_type}', var_name, array)) # add to the beginning of the code
         return var_name
 
+    def create_string(self, coord, string):
+        var_name = f"@str_{coord.line}_{coord.column}"
+        self.code.insert(0, (f'global_string', var_name, string)) # add to the beginning of the code
+        return var_name
+
     ###########################################################
     ## Code Generation for AST Nodes ##########################
     ###########################################################
@@ -351,10 +356,9 @@ class GenerateCode(NodeVisitor):
                 self.emit_alloc(_type, varname=_target)
                 if node.init is not None:
                     if isinstance(node.init, Constant) and node.init.attrs['type'] == [TYPE_STRING]:
-                        self.create_array_initlist(
-                            _type=_type,
+                        self.create_string(
                             coord=node.coord,
-                            array=node.init.attrs['value']
+                            string=node.init.attrs['value']
                         )
                     self.visit(node.init)
                     self.emit_store(
@@ -515,9 +519,34 @@ class GenerateCode(NodeVisitor):
     def visit_ParamList(self, node: ParamList): # [params**]
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_Print(self, node: Print): # [expr*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        if node.expr is not None:
+            _print_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
+            for expr in _print_exprs:
+                _type = expr.attrs['type']
+                if _type == [TYPE_STRING]:
+                    source = self.create_string(
+                        coord=expr.coord,
+                        string=expr.attrs['value']
+                    )
+                else:
+                    self.visit(expr)
+                    source = expr.attrs['reg']
+                    if isinstance(expr, ArrayRef):
+                        source = self.new_temp()
+                        self.emit_load(
+                            _type=str(self.unwrap_type(_type))+"_*",
+                            varname=expr.attrs['reg'],
+                            target=source
+                        )
+
+                self.emit_print(
+                    _type=self.unwrap_type(_type),
+                    source=source
+                )
+
 
     def visit_Program(self, node: Program): # [gdecls**]
         print(node.__class__.__name__, node.attrs)
