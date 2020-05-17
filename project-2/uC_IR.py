@@ -353,7 +353,11 @@ class GenerateCode(NodeVisitor):
 
     def visit_DeclList(self, node: DeclList): # [decls**]
         print(node.__class__.__name__, node.attrs)
-        pass
+        if node.decls is not None:
+            for decl in node.decls:
+                self.visit(decl)
+        # FIXME check if there's more
+
     def visit_EmptyStatement(self, node: EmptyStatement): # []
         print(node.__class__.__name__, node.attrs)
         pass
@@ -362,7 +366,34 @@ class GenerateCode(NodeVisitor):
         pass
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
         print(node.__class__.__name__, node.attrs)
-        pass
+
+        if node.init is not None:
+            self.visit(node.init)
+
+        loop_top = self.new_temp()
+        self.emit_label(loop_top[1:])
+
+        if node.cond is not None:
+            self.visit(node.cond)
+            loop_body = self.new_temp()
+            loop_end = self.new_temp()
+
+            self.emit_cbranch(
+                expr_test=node.cond.attrs['reg'],
+                true_target=loop_body,
+                false_target=loop_end,
+            )
+
+        self.emit_label(loop_body[1:])
+
+        if node.next is not None:
+            self.visit(node.next)
+
+        self.visit(node.body)
+
+        self.emit_jump(loop_top)
+
+        self.emit_label(loop_end[1:])
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
         print(node.__class__.__name__, node.attrs)
