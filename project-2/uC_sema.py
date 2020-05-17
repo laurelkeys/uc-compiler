@@ -31,19 +31,16 @@ class SymbolTable:
 
     def add(self, name: str, attributes):
         ''' Inserts `attributes` associated to `name` in the current scope. '''
-        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}" #@remove
         self.symbol_table[name] = attributes
 
     def lookup(self, name: str):
         ''' Returns the attributes associated to `name` if it exists, otherwise `None`. '''
-        assert isinstance(name, str), f"expected str, received type {type(name)}: {name}" #@remove
         return self.symbol_table.get(name, None)
 
     def begin_scope(self, loop: Node = None, func: Node = None):
         ''' Push a new symbol table, generating a new (current) scope.\n
             If `loop`/`func` is not `None`, it becomes the `curr_loop`/`curr_func`.
         '''
-        # print(len(self.symbol_table.maps), "> push") #@remove
         self.symbol_table = self.symbol_table.new_child()
         if loop is not None: self.loops.append(loop)
         if func is not None: self.funcs.append(func)
@@ -52,7 +49,6 @@ class SymbolTable:
         ''' Pop the current scope's symbol table, effectively deleting it.\n
             If `loop`/`func` is `True`, the `curr_loop`/`curr_func` is also popped.
         '''
-        # print(len(self.symbol_table.maps) - 1, "> pop", self.local_scope) #@remove
         self.symbol_table = self.symbol_table.parents
         if loop: self.loops.pop()
         if func: self.funcs.pop()
@@ -102,8 +98,6 @@ class Visitor(NodeVisitor):
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         assert isinstance(node.type, (VarDecl, ArrayDecl))
         self.visit(node.type)
-
-        print(node.type.attrs['type']) #@remove
 
         if node.type.attrs['type'][0] == TYPE_CHAR:
             assert len(node.type.attrs['type']) == 1
@@ -202,8 +196,6 @@ class Visitor(NodeVisitor):
 
         node.attrs['type'] = _ltype
 
-        # FIXME do operators like +=, -=, etc. need a "special treatment"?
-
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         self.visit(node.left)
         self.visit(node.right)
@@ -274,18 +266,20 @@ class Visitor(NodeVisitor):
             self.symtab.begin_scope()
         else:
             _new_scope = False
-            # TODO
             if isinstance(_parent, FuncDef): # function scope
-                # NOTE FuncDecl should also push a scope
-                print("*** in function scope")
-                print(f"*** parent '{_parent.attrs['name']}'",
-                      self.symtab.lookup(_parent.attrs['name'])) # (debug)
+                # print("*** in function scope")
+                # print(f"*** parent '{_parent.attrs['name']}'",
+                #       self.symtab.lookup(_parent.attrs['name'])) # (debug)
+                pass
             elif isinstance(_parent, While): # while-loop scope
-                print("*** in while-loop scope")
+                # print("*** in while-loop scope")
+                pass
             elif isinstance(_parent, For): # for-loop scope
-                print("*** in for-loop scope")
+                # print("*** in for-loop scope")
+                pass
             elif isinstance(_parent, If): # if-statement scope
-                print("*** in if-statement scope")
+                # print("*** in if-statement scope")
+                pass
             else:
                 assert False, f"Unexpected type openning a compount statement: {type(_parent)}" + str(node.coord)
 
@@ -354,8 +348,6 @@ class Visitor(NodeVisitor):
 
         else:
             self.visit(node.init)
-            print(f"%%%% type(node.init) == {type(node.init)}") # FIXME remove
-            print(f"%%%% node.init.attrs == {node.init.attrs}") # FIXME remove
             if isinstance(node.init, ID):
                 init_type = self.symtab.lookup(node.init.attrs['name'])['type']
 
@@ -432,7 +424,6 @@ class Visitor(NodeVisitor):
 
         _func = self.symtab.lookup(_name)
         _param_types = _func.get('param_types', [])
-        # _param_names = _func.get('param_names', [])
         _passed_args = (
             [] if node.args is None
             else node.args.exprs if isinstance(node.args, ExprList)
@@ -533,8 +524,6 @@ class Visitor(NodeVisitor):
         self.visit(node.cond)
         assert node.cond.attrs['type'] == [TYPE_BOOL], f"Condition should be a bool instead of {node.cond.attrs['type']}" + str(node.coord)
 
-        # FIXME ifthen/ifelse can be a single expression
-
         if isinstance(node.ifthen, Compound):
             node.ifthen.attrs['parent'] = node
         self.symtab.begin_scope()
@@ -574,8 +563,6 @@ class Visitor(NodeVisitor):
                 assert not isinstance(expr, InitList)
             node.attrs['dim'] = [len(node.exprs)]
 
-        print("=============dims", node.attrs['dim'])
-
     def visit_ParamList(self, node: ParamList): # [params**]
         param_types = []
         param_names = []
@@ -606,7 +593,7 @@ class Visitor(NodeVisitor):
                         f"Attempt to print the return of an unknown function: `{_expr.attrs['name']}`" + str(node.coord)
                     )
                 else:
-                    pass # FIXME I think it's okay to print pretty much anything (binops, unops, functions, etc.)
+                    pass # NOTE I think it's okay to print pretty much anything (binops, unops, functions, etc.)
 
     def visit_Program(self, node: Program): # [gdecls**]
         self.symtab.begin_scope()
@@ -637,7 +624,7 @@ class Visitor(NodeVisitor):
                     f"Attempt to read into unknown array: `{_expr.attrs['name']}`" + str(node.coord)
                 )
             else:
-                # FIXME does it make sense to read into any other node type?
+                # NOTE it does not make sense to read into any other node type
                 assert False, f"Unexpected node type in read: {type(_expr)}" + str(node.coord)
 
     def visit_Return(self, node: Return): # [expr*]
