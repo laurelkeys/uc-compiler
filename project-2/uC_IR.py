@@ -238,13 +238,23 @@ class GenerateCode(NodeVisitor):
                     target=_fixed_subs
                 )
                 _subs_reg = _fixed_subs
-            _target = self.new_temp()
+
+            _elem_target = self.new_temp()
             self.emit_elem(
                 _type=self.unwrap_type(node.attrs['type']),
                 source=self.fregisters[node.attrs['name']],
                 index=_subs_reg,
-                target=_target
+                target=_elem_target
             )
+            if node.attrs.get('load_ptr?', False):
+                _target = self.new_temp()
+                self.emit_load(
+                    _type=str(self.unwrap_type(node.attrs['type']))+"_*",
+                    varname=_elem_target,
+                    target=_target
+                )
+            else:
+                _target = _elem_target
 
         node.attrs['reg'] = _target
 
@@ -271,24 +281,18 @@ class GenerateCode(NodeVisitor):
         print(node.__class__.__name__, node.attrs)
         if not isinstance(node.lvalue, ID):
             self.visit(node.lvalue)
+
+        node.rvalue.attrs['load_ptr?'] = True
         self.visit(node.rvalue)
 
         if isinstance(node.lvalue, ArrayRef):
-            _ltype = str(self.unwrap_type(node.lvalue.attrs['type']))+"_*"
+            _ltype = str(self.unwrap_type(node.lvalue.attrs['type'])) + "_*"
             _target = node.lvalue.attrs['reg']
         else:
             _ltype = self.unwrap_type(node.lvalue.attrs['type'])
             _target = self.fregisters[node.lvalue.attrs['name']]
 
-        if isinstance(node.rvalue, ArrayRef):
-            _source = self.new_temp()
-            self.emit_load(
-                _type=_ltype,
-                varname=node.rvalue.attrs['reg'],
-                target=_source
-            )
-        else:
-            _source = node.rvalue.attrs['reg']
+        _source = node.rvalue.attrs['reg']
 
         if len(node.op) > 1: # +=, -=, /=, *=
             _op = node.op[0]
@@ -312,6 +316,8 @@ class GenerateCode(NodeVisitor):
 
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
         print(node.__class__.__name__, node.attrs)
+        node.left.attrs['load_ptr?'] = True
+        node.right.attrs['load_ptr?'] = True
         self.visit(node.left)
         self.visit(node.right)
 
@@ -329,8 +335,10 @@ class GenerateCode(NodeVisitor):
         print(node.__class__.__name__, node.attrs)
         # TODO bind its 'parent' function, so we can call jump
         pass
+
     def visit_Cast(self, node: Cast): # [type*, expr*]
         print(node.__class__.__name__, node.attrs)
+        node.expr.attrs['load_ptr?'] = True
         self.visit(node.expr)
 
         _target = self.new_temp()
@@ -387,6 +395,7 @@ class GenerateCode(NodeVisitor):
             if node.attrs.get('global?', False):
                 self.fregisters[_name] = f"@{_name}"
                 if node.init is not None:
+                    node.init.attrs['load_ptr?'] = True
                     self.visit(node.init)
                 self.emit_global(
                     _type,
@@ -406,6 +415,7 @@ class GenerateCode(NodeVisitor):
                             string=node.init.attrs['value']
                         )
                     else:
+                        node.init.attrs['load_ptr?'] = True
                         self.visit(node.init)
                     self.emit_store(
                         _type,
@@ -424,13 +434,17 @@ class GenerateCode(NodeVisitor):
     def visit_EmptyStatement(self, node: EmptyStatement): # []
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_ExprList(self, node: ExprList): # [exprs**]
         print(node.__class__.__name__, node.attrs)
+        # FIXME do it.. remember to add 'load_ptr?' before visiting each expr
         pass
+
     def visit_For(self, node: For): # [init*, cond*, next*, body*]
         print(node.__class__.__name__, node.attrs)
 
         if node.init is not None:
+            node.init.attrs['load_ptr?'] = True
             self.visit(node.init)
 
         loop_top = self.new_temp()
@@ -451,6 +465,7 @@ class GenerateCode(NodeVisitor):
         self.visit(node.body)
 
         if node.next is not None:
+            node.next.attrs['load_ptr?'] = True
             self.visit(node.next)
 
         self.emit_jump(loop_top)
@@ -465,6 +480,7 @@ class GenerateCode(NodeVisitor):
         )
 
         for _arg in _passed_args:
+            _arg.attrs['load_ptr?'] = True
             self.visit(_arg) # emits load
         for _arg in _passed_args:
             self.emit_param(
@@ -604,15 +620,17 @@ class GenerateCode(NodeVisitor):
                         string=expr.attrs['value']
                     )
                 else:
+                    expr.attrs['load_ptr?'] = True
                     self.visit(expr)
                     source = expr.attrs['reg']
-                    if isinstance(expr, ArrayRef):
-                        source = self.new_temp()
-                        self.emit_load(
-                            _type=str(self.unwrap_type(_type))+"_*",
-                            varname=expr.attrs['reg'],
-                            target=source
-                        )
+                    #@remove
+                    # if expr.attrs['load_ptr?']:
+                    #     source = self.new_temp()
+                    #     self.emit_load(
+                    #         _type=str(self.unwrap_type(_type))+"_*",
+                    #         varname=expr.attrs['reg'],
+                    #         target=source
+                    #     )
 
                 self.emit_print(
                     _type=self.unwrap_type(_type),
@@ -672,6 +690,7 @@ class GenerateCode(NodeVisitor):
         print(node.__class__.__name__, node.attrs)
         # _unop_target = self.new_temp()
 
+        node.expr.attrs['load_ptr?'] = True
         self.visit(node.expr) # if ID emits load
         _expr_reg = node.expr.attrs['reg']
         _expr_type = self.unwrap_type(node.expr.attrs['type'])
