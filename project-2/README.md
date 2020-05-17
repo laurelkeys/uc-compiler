@@ -76,12 +76,12 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
 
 ## Variables & Values:
 ```python
-       ('alloc_type', varname)                   # Allocate on stack (ref by register) a variable of a given type
-       ('global_type', varname, value)           # Allocate on heap a global var of a given type. value is optional
-       ('load_type', varname, target)            # Load the value of a variable (stack/heap) into target (register)
-       ('store_type', source, target)            # Store the source/register into target/varname
-       ('literal_type', value, target)           # Load a literal value into target
-       ('elem_type', source, index, target)      # Load into target the address of source (array) indexed by index
+       ('alloc_type', varname)                  # Allocate on stack (ref by register) a variable of a given type
+       ('global_type', varname, value)          # Allocate on heap a global var of a given type. value is optional
+       ('load_type', varname, target)           # Load the value of a variable (stack/heap) into target (register)
+       ('store_type', source, target)           # Store the source/register into target/varname
+       ('literal_type', value, target)          # Load a literal value into target
+       ('elem_type', source, index, target)     # Load into target the address of source (array) indexed by index
 ```
 ## Binary Operations:
 ```python
@@ -93,13 +93,13 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
 ```
 ## Cast Operations:
 ```python
-       ('fptosi', fvalue)                   # (int)fvalue == cast float to int 
-       ('sitofp', ivalue)                   # (float)ivalue == cast int to float
+       ('fptosi', fvalue, target)           # target = (int)fvalue == cast float to int
+       ('sitofp', ivalue, target)           # target = (float)ivalue == cast int to float
 ```
 ## Relational/Equality/Logical:
 ```python
-       (`oper`_type, left, right, target)        # target = left `oper` right, where `oper` is:
-                                                 #          lt, le, ge, gt, eq, ne, and, or
+       (`oper`_type, left, right, target)   # target = left `oper` right, where `oper` is:
+                                            #          lt, le, ge, gt, eq, ne, and, or
 ```
 ## Labels & Branches:
 ```python

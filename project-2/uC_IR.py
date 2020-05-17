@@ -57,7 +57,7 @@ class GenerateCode(NodeVisitor):
             assert _dim is not None, f"!!mising dim for type: {_type}"
             # FIXME (incomplete) fix this for multi dimensional arrays
             _base_type = _type[-1]
-            
+
             product = 1
             type_tail = ""
             for d in reversed(_dim):
@@ -196,6 +196,7 @@ class GenerateCode(NodeVisitor):
     def visit_ArrayDecl(self, node: ArrayDecl): # [type*, dim*]
         print(node.__class__.__name__, node.attrs)
         pass
+
     def visit_ArrayRef(self, node: ArrayRef): # [name*, subscript*]
         print(node.__class__.__name__, node.attrs)
 
@@ -203,9 +204,9 @@ class GenerateCode(NodeVisitor):
 
         _target = self.new_temp()
         self.emit_elem(
-            _type=self.unwrap_type(node.attrs['type']), 
+            _type=self.unwrap_type(node.attrs['type']),
             source=self.fregisters[node.attrs['name']],
-            index=node.subscript.attrs['reg'], 
+            index=node.subscript.attrs['reg'],
             target=_target)
 
         node.attrs['reg'] = _target
@@ -255,8 +256,8 @@ class GenerateCode(NodeVisitor):
         if len(node.op) > 1: # +=, -=, /=, *=
             _op = node.op[0]
             self.emit_op(
-                _op, 
-                _ltype, 
+                _op,
+                _ltype,
                 left=_target,
                 right=_source,
                 target=_target
@@ -299,7 +300,7 @@ class GenerateCode(NodeVisitor):
             self.emit_sitofp(node.expr.attrs['reg'], _target)
         else:
             self.emit_fptosi(node.expr.attrs['reg'], _target)
-        
+
         node.attrs['reg'] = _target
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
@@ -428,7 +429,7 @@ class GenerateCode(NodeVisitor):
 
         _target = self.new_temp()
         self.emit_call(
-            source=f"@{node.attrs['name']}",
+            source=f"@{node.attrs['name']}", # FIXME some examples don't have the @
             opt_target=_target # FIXME
         )
 
@@ -509,8 +510,8 @@ class GenerateCode(NodeVisitor):
             node.attrs['reg'] = _target
         else:
             node.attrs['reg'] = self.create_array_initlist(
-                                        _type=self.unwrap_type(node.attrs['type'], node.attrs['dim']), 
-                                        coord=node.coord, 
+                                        _type=self.unwrap_type(node.attrs['type'], node.attrs['dim']),
+                                        coord=node.coord,
                                         array=_target
                                     )
 
@@ -611,15 +612,25 @@ class GenerateCode(NodeVisitor):
                 self.emit_op(
                     _op='+',
                     _type=_expr_type,
-                    left=_one_reg,
-                    right=node.expr.attrs['reg'],
+                    left=node.expr.attrs['reg'],
+                    right=_one_reg,
                     target=_unop_target
                 )
-                self.emit_store( # update value
-                    _type=_expr_type,
-                    source=_unop_target,
-                    target=_expr_reg
-                )
+                if isinstance(node.expr, ID):
+                    self.emit_store( # update value
+                        _type=_expr_type,
+                        source=_unop_target,
+                        target=self.fregisters[node.expr.name]
+                    )
+                else:
+                    print("====FIXME=====")
+                    # FIXME this probably not saving correctly for ArrayRef, fixing
+                    # it should be as simple as adding it to the `if`, I guess, but haven't tested
+                    self.emit_store( # update value
+                        _type=_expr_type,
+                        source=_unop_target,
+                        target=_expr_reg
+                    )
         elif node.op[-2:] == '--':
             if node.op[0] == 'p':
                 pass
@@ -630,8 +641,8 @@ class GenerateCode(NodeVisitor):
                 self.emit_op(
                     _op='-',
                     _type=_expr_type,
-                    left=_one_reg,
-                    right=node.expr.attrs['reg'],
+                    left=node.expr.attrs['reg'],
+                    right=_one_reg,
                     target=_unop_target
                 )
                 self.emit_store( # update value
