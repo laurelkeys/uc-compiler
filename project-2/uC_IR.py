@@ -336,10 +336,13 @@ class GenerateCode(NodeVisitor):
             self.visit(node.type)
 
         else: # variable declaration
-            _type = (
-                self.unwrap_type(_type) if _type[0] != TYPE_ARRAY
-                else self.unwrap_type(_type, node.attrs['dim'])
-            )
+            if _type[0] == TYPE_ARRAY:
+                _type = self.unwrap_type(_type, node.attrs['dim'])
+            elif _type[0] == TYPE_STRING:
+                assert len(_type) == 1
+                _type = self.unwrap_type([TYPE_ARRAY, TYPE_CHAR], node.attrs['dim'])
+            else:
+                _type = self.unwrap_type(_type)
             #self.visit(node.name) #@remove
 
             if node.attrs.get('global?', False):
@@ -359,11 +362,12 @@ class GenerateCode(NodeVisitor):
                 self.emit_alloc(_type, varname=_target)
                 if node.init is not None:
                     if isinstance(node.init, Constant) and node.init.attrs['type'] == [TYPE_STRING]:
-                        self.create_string(
+                        node.init.attrs['reg'] = self.create_string(
                             coord=node.coord,
                             string=node.init.attrs['value']
                         )
-                    self.visit(node.init)
+                    else:
+                        self.visit(node.init)
                     self.emit_store(
                         _type,
                         source=node.init.attrs['reg'], # self.last_temp

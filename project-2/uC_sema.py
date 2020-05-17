@@ -307,6 +307,10 @@ class Visitor(NodeVisitor):
     def visit_Constant(self, node: Constant): # [type, value]
         node.attrs['type'] = [uC_types.from_name(node.type)]
         node.attrs['value'] = node.value
+        if node.attrs['type'] == [TYPE_STRING]:
+            # NOTE ignore quotes
+            node.attrs['value'] = node.value[1:-1]
+            node.attrs['dim'] = [len(node.value[1:-1])]
 
     def visit_Decl(self, node: Decl): # [name, type*, init*]
         assert isinstance(node.name, ID)
@@ -359,9 +363,9 @@ class Visitor(NodeVisitor):
             print(f"%%%% node.init.attrs == {node.init.attrs}") # FIXME remove
             if isinstance(node.init, ID):
                 init_type = self.symtab.lookup(node.init.attrs['name'])['type']
+
             elif isinstance(node.init, InitList):
                 init_type = node.init.attrs['type']
-
                 if not (node.type.attrs.get('dim', None) is None or node.init.attrs.get('dim', None) is None):
                     assert node.type.attrs.get('dim', []) == node.init.attrs.get('dim', []), \
                         f"Dims must be equal on declaration and definition: {node.type.attrs.get('dim', [])} and {node.init.attrs.get('dim', [])}" + str(node.coord)
@@ -370,6 +374,8 @@ class Visitor(NodeVisitor):
 
             else:
                 init_type = node.init.attrs['type']
+                if 'dim' in node.init.attrs:
+                    sym_attrs['dim'] = node.init.attrs['dim'] # NOTE hack for strings
 
             assert init_type == sym_attrs['type'], (
                 f"Implicit conversions are not supported: {sym_attrs['type']} = {init_type}" + str(node.coord)
