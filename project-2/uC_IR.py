@@ -255,13 +255,15 @@ class GenerateCode(NodeVisitor):
 
         if len(node.op) > 1: # +=, -=, /=, *=
             _op = node.op[0]
+            _temp_target = self.new_temp()
             self.emit_op(
                 _op,
                 _ltype,
                 left=_target,
                 right=_source,
-                target=_target
+                target=_temp_target
             )
+            _source = _temp_target
 
         self.emit_store(
             _type=_ltype,
@@ -403,11 +405,11 @@ class GenerateCode(NodeVisitor):
             )
 
         self.emit_label(loop_body[1:])
+        self.visit(node.body)
 
         if node.next is not None:
             self.visit(node.next)
 
-        self.visit(node.body)
         self.emit_jump(loop_top)
         self.emit_label(loop_end[1:])
 
