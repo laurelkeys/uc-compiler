@@ -373,11 +373,11 @@ class GenerateCode(NodeVisitor):
         loop_top = self.new_temp()
         self.emit_label(loop_top[1:])
 
+        loop_body = self.new_temp()
+        loop_end = self.new_temp()
+
         if node.cond is not None:
             self.visit(node.cond)
-            loop_body = self.new_temp()
-            loop_end = self.new_temp()
-
             self.emit_cbranch(
                 expr_test=node.cond.attrs['reg'],
                 true_target=loop_body,
@@ -390,9 +390,7 @@ class GenerateCode(NodeVisitor):
             self.visit(node.next)
 
         self.visit(node.body)
-
         self.emit_jump(loop_top)
-
         self.emit_label(loop_end[1:])
 
     def visit_FuncCall(self, node: FuncCall): # [name*, args*]
@@ -608,4 +606,25 @@ class GenerateCode(NodeVisitor):
 
     def visit_While(self, node: While): # [cond*, body*]
         print(node.__class__.__name__, node.attrs)
-        pass
+
+        # FIXME double check as there were no exemples
+
+        loop_top = self.new_temp()
+        self.emit_label(loop_top[1:])
+
+        loop_body = self.new_temp()
+        loop_end = self.new_temp()
+
+        if node.cond is not None:
+            self.visit(node.cond)
+            self.emit_cbranch(
+                expr_test=node.cond.attrs['reg'],
+                true_target=loop_body,
+                false_target=loop_end,
+            )
+
+        self.emit_label(loop_body[1:])
+
+        self.visit(node.body)
+        self.emit_jump(loop_top)
+        self.emit_label(loop_end[1:])
