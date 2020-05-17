@@ -605,7 +605,23 @@ class GenerateCode(NodeVisitor):
 
     def visit_Read(self, node: Read): # [expr*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        if node.expr is not None:
+            _read_exprs = node.expr.exprs if isinstance(node.expr, ExprList) else [node.expr]
+            for expr in _read_exprs:
+                # NOTE expr is either an ID or an ArrayRef
+                _type = self.unwrap_type(expr.attrs['type'])
+                _read_reg = self.new_temp()
+                self.emit_read(_type, source=_read_reg)
+
+                if isinstance(node.expr, ID):
+                    _expr_reg = self.fregisters[expr.attrs['name']]
+                else: # ArrayRef
+                    _type = str(_type) + '_*'
+                    self.visit(expr)
+                    _expr_reg = expr.attrs['reg']
+                    # FIXME there may be more to do.. check Print
+
+                self.emit_store(_type, source=_read_reg, target=_expr_reg)
 
     def visit_Return(self, node: Return): # [expr*]
         print(node.__class__.__name__, node.attrs)
