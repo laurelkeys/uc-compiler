@@ -538,7 +538,33 @@ class GenerateCode(NodeVisitor):
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
         print(node.__class__.__name__, node.attrs)
-        pass
+        # FIXME test if
+        _then = self.new_temp()
+        _else = self.new_temp()
+        if node.ifelse is None:
+            _end = _else
+        else:
+            _end = self.new_temp()
+
+        # if node.cond is not None: # this must always exist
+
+        self.visit(node.cond)
+        self.emit_cbranch(
+            expr_test=node.cond.attrs['reg'],
+            true_target=_then,
+            false_target=_else,
+        )
+
+        self.emit_label(_then[1:])
+        if node.ifthen is not None: # FIXME this should always exist?
+            self.visit(node.ifthen)
+            self.emit_jump(_end)
+
+        if node.ifelse is not None:
+            self.emit_label(_else[1:])
+            self.visit(node.ifelse)
+
+        self.emit_label(_end[1:])
 
     def visit_InitList(self, node: InitList): # [exprs**]
         print(node.__class__.__name__, node.attrs)
