@@ -701,7 +701,7 @@ class GenerateCode(NodeVisitor):
         _expr_type = self.unwrap_type(node.expr.attrs['type'])
 
         if node.op == '+':
-            pass
+            _unop_target = _expr_reg # pass
 
         elif node.op == '-':
             _zero_reg = self.new_temp()
@@ -760,11 +760,14 @@ class GenerateCode(NodeVisitor):
                     _unop_target = node.expr.attrs['reg']
 
         elif node.op == '&':
-            pass
+            raise NotImplementedError
         elif node.op == '*':
-            pass
+            raise NotImplementedError
+
         elif node.op == '!':
-            pass
+            _unop_target = self.new_temp()
+            self.code.append(("not_bool", _expr_reg, _unop_target))
+
         else:
             assert False, f"Unexpected unary operator on code generation: `{node.op}`"
 
@@ -772,8 +775,6 @@ class GenerateCode(NodeVisitor):
 
     def visit_While(self, node: While): # [cond*, body*]
         print(node.__class__.__name__, node.attrs)
-
-        # FIXME double check as there were no exemples
 
         loop_top = self.new_temp()
         self.emit_label(loop_top[1:])
