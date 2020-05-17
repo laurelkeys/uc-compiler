@@ -217,6 +217,16 @@ class GenerateCode(NodeVisitor):
             self.emit_literal(TYPE_INT, value=_prod, target=_prod_target)
             _target = self.new_temp()
             self.emit_op('*', TYPE_INT, left=_prod_target, right=node.subscript.attrs['reg'], target=_target)
+            # NOTE necessary for arrays with more than 2 dimensions
+            if isinstance(node.name, ArrayRef):
+                _fixed_subs = self.new_temp() # multiply dimensions in matrices
+                self.emit_op(
+                    '+', TYPE_INT,
+                    left=node.name.attrs['reg'], # FIXME think: may be name
+                    right=_target,
+                    target=_fixed_subs
+                )
+                _target = _fixed_subs
         else:
             _subs_reg = node.subscript.attrs['reg']
             if isinstance(node.name, ArrayRef):
