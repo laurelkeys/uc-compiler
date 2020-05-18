@@ -17,8 +17,8 @@ class GenerateCode(NodeVisitor):
         self.fname = "$global"
         self.versions = { self.fname: 0 } # version dictionary for temporaries
         self.code = [] # generated code as a list of tuples
-        self.fregisters = ChainMap()
-        self.farray_dim = ChainMap()
+        self.fregisters = ChainMap() # map of registers
+        self.farray_dim = ChainMap() # map of array dims
 
     def new_temp(self, var_name=None):
         ''' Create a new temporary variable of a given scope (function name). '''
@@ -164,10 +164,6 @@ class GenerateCode(NodeVisitor):
             (f"print_{_type}", source)
         )
 
-    # def emit_get(self, _type, source, target):
-    #     ''' Load a pointer from `source` to `target`. '''
-    #     self.code.append((f"get_{_type}_*", source, target))
-
     def create_assert_message(self, coord):
         message = f"assertion_fail on {coord.line}:{coord.column}"
         var_name = f"@assert_message_{coord.line}_{coord.column}"
@@ -256,7 +252,7 @@ class GenerateCode(NodeVisitor):
         _end_target = self.new_temp()
 
         self.emit_cbranch(node.expr.attrs['reg'], _true_target, _false_target)
-        self.emit_label(_true_target[1:]) # FIXME is this really correct? the result is equal to example
+        self.emit_label(_true_target[1:])
         self.emit_jump(_end_target)
 
         self.emit_label(_false_target[1:])
@@ -303,7 +299,6 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _target
 
     def visit_BinaryOp(self, node: BinaryOp): # [op, left*, right*]
-        print(node.__class__.__name__, node.attrs)
         node.left.attrs['load_ptr?'] = True
         node.right.attrs['load_ptr?'] = True
         self.visit(node.left)
@@ -334,7 +329,6 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _target
 
     def visit_Compound(self, node: Compound): # [decls**, stmts**]
-        print(node.__class__.__name__, node.attrs)
         if node.decls is not None:
             for decl in node.decls:
                 self.visit(decl)
@@ -371,7 +365,6 @@ class GenerateCode(NodeVisitor):
                 self.farray_dim[node.attrs['name']] = node.attrs['dim']
             else:
                 _type = self.unwrap_type(_type)
-            #self.visit(node.name) #@remove
 
             if node.attrs.get('global?', False):
                 self.fregisters[_name] = f"@{_name}"
@@ -409,7 +402,6 @@ class GenerateCode(NodeVisitor):
         if node.decls is not None:
             for decl in node.decls:
                 self.visit(decl)
-        # FIXME check if there's more
 
     def visit_EmptyStatement(self, node: EmptyStatement): # []
         pass
@@ -468,8 +460,8 @@ class GenerateCode(NodeVisitor):
 
         _target = self.new_temp()
         self.emit_call(
-            source=f"@{node.attrs['name']}", # FIXME some examples don't have the @
-            opt_target=_target # FIXME
+            source=f"@{node.attrs['name']}",
+            opt_target=_target
         )
 
         node.attrs['reg'] = _target
@@ -527,15 +519,12 @@ class GenerateCode(NodeVisitor):
         node.attrs['reg'] = _target
 
     def visit_If(self, node: If): # [cond*, ifthen*, ifelse*]
-        # FIXME test if
         _then = self.new_temp()
         _else = self.new_temp()
         if node.ifelse is None:
             _end = _else
         else:
             _end = self.new_temp()
-
-        # if node.cond is not None: # this must always exist
 
         self.visit(node.cond)
         self.emit_cbranch(
@@ -545,7 +534,7 @@ class GenerateCode(NodeVisitor):
         )
 
         self.emit_label(_then[1:])
-        if node.ifthen is not None: # FIXME this should always exist?
+        if node.ifthen is not None: # NOTE this should always exist
             self.visit(node.ifthen)
 
         if node.ifelse is not None:
@@ -595,20 +584,10 @@ class GenerateCode(NodeVisitor):
                     expr.attrs['load_ptr?'] = True
                     self.visit(expr)
                     source = expr.attrs['reg']
-                    #@remove
-                    # if expr.attrs['load_ptr?']:
-                    #     source = self.new_temp()
-                    #     self.emit_load(
-                    #         _type=str(self.unwrap_type(_type))+"_*",
-                    #         varname=expr.attrs['reg'],
-                    #         target=source
-                    #     )
-
                 self.emit_print(
                     _type=self.unwrap_type(_type),
                     source=source
                 )
-
 
     def visit_Program(self, node: Program): # [gdecls**]
         for gdecl in node.gdecls:
@@ -632,7 +611,6 @@ class GenerateCode(NodeVisitor):
                     _type = str(_type) + '_*'
                     self.visit(expr)
                     _expr_reg = expr.attrs['reg']
-                    # FIXME there may be more to do.. check Print
 
                 self.emit_store(_type, source=_read_reg, target=_expr_reg)
 
@@ -654,8 +632,6 @@ class GenerateCode(NodeVisitor):
         pass
 
     def visit_UnaryOp(self, node: UnaryOp): # [op, expr*]
-        # _unop_target = self.new_temp()
-
         node.expr.attrs['load_ptr?'] = True
         self.visit(node.expr) # if ID emits load
         _expr_reg = node.expr.attrs['reg']
@@ -698,27 +674,24 @@ class GenerateCode(NodeVisitor):
                 _unop_target = node.expr.attrs['reg']
 
         elif node.op[-2:] == '--':
-            if node.op[0] == 'p':
-                pass
-            else:
-                _one_reg = self.new_temp()
-                _unop_target = self.new_temp()
-                self.emit_literal(_expr_type, value=1, target=_one_reg)
-                self.emit_op(
-                    _op='-',
-                    _type=_expr_type,
-                    left=node.expr.attrs['reg'],
-                    right=_one_reg,
-                    target=_unop_target
-                )
-                assert isinstance(node.expr, (ID, ArrayRef))
-                self.emit_store( # update value
-                    _type=_expr_type,
-                    source=_unop_target,
-                    target=self.fregisters[node.expr.name] # FIXME see above ++
-                )
-                if node.op[0] == 'p': # NOTE suffix/postfix decrement
-                    _unop_target = node.expr.attrs['reg']
+            _one_reg = self.new_temp()
+            _unop_target = self.new_temp()
+            self.emit_literal(_expr_type, value=1, target=_one_reg)
+            self.emit_op(
+                _op='-',
+                _type=_expr_type,
+                left=node.expr.attrs['reg'],
+                right=_one_reg,
+                target=_unop_target
+            )
+            assert isinstance(node.expr, (ID, ArrayRef))
+            self.emit_store( # update value
+                _type=_expr_type,
+                source=_unop_target,
+                target=self.fregisters[node.expr.name] # FIXME see above ++
+            )
+            if node.op[0] == 'p': # NOTE suffix/postfix decrement
+                _unop_target = node.expr.attrs['reg']
 
         elif node.op == '&':
             raise NotImplementedError
