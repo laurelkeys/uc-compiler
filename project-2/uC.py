@@ -10,10 +10,10 @@ import sys
 
 from contextlib import contextmanager
 
-from uC_parser import UCParser
-from uC_sema import Visitor
-from uC_IR import GenerateCode
-from uC_interpreter import Interpreter
+from uc_parser import UCParser
+from uc_sema import Visitor
+from uc_ir import GenerateCode
+from uc_interpreter import Interpreter
 
 ###########################################################
 ## uC Error Handling Helper ###############################

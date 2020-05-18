@@ -3,7 +3,7 @@ import sys
 
 from collections import ChainMap
 
-from uC_AST import *
+from uc_ast import *
 
 ###########################################################
 ## uC Semantic Analysis ###################################
