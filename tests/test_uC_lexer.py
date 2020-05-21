@@ -1,3 +1,5 @@
+import __context_tests__
+
 import re
 
 from ply.lex import LexToken

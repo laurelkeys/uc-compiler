@@ -16,7 +16,7 @@ from uC_errors import error, errors_reported, clear_errors, \
 from uC_parser import UCParser
 from uC_sema import Visitor
 from uC_IR import GenerateCode
-from uC_interpreter import Interpreter
+from uc_interpreter import Interpreter
 
 ###########################################################
 ## uC Compiler ############################################
