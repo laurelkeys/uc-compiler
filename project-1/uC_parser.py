@@ -65,7 +65,6 @@ class UCParser:
 
 
     def __init__(self):
-        # TODO pass a Coord to the error_func
         self.lexer = UCLexer(
             error_func=lambda msg, x, y: print("Lexical error: %s at%d:%d" % (msg, x, y))
         )
@@ -263,7 +262,7 @@ class UCParser:
         p[0] = self._build_function_definition(
             spec,
             decl=p[2],
-            param_decls=p[3], # NOTE this seems to always be None, so simply ignore it
+            param_decls=p[3], # FIXME this seems to always be None, so simply ignore it
             body=p[4]
         )
 

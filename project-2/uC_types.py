@@ -71,20 +71,20 @@ TYPE_STRING = UCType(
     assign_ops  =   { '=', '+=' },
 )
 
-TYPE_BOOL = UCType(
-    'bool',
-    default     =   False,
-    unary_ops   =   { '!', '&', '*' },
-    binary_ops  =   { '&&', '||' },
-    rel_ops     =   { '==', '!=' },
-    assign_ops  =   { '=' },
-)
-
 TYPE_VOID = UCType(
     'void',
     default     =   None,
     unary_ops   =   { '&', '*' },
     binary_ops  =   None,
+    rel_ops     =   { '==', '!=' },
+    assign_ops  =   { '=' },
+)
+
+TYPE_BOOL = UCType(
+    'bool',
+    default     =   False,
+    unary_ops   =   { '!', '&', '*' },
+    binary_ops  =   { '&&', '||' },
     rel_ops     =   { '==', '!=' },
     assign_ops  =   { '=' },
 )
@@ -126,8 +126,8 @@ def from_name(typename: str) -> UCType:
     elif typename == "string":  return TYPE_STRING
     elif typename == "void":    return TYPE_VOID
 
-    elif typename == "array":   return TYPE_ARRAY
     elif typename == "bool":    return TYPE_BOOL
+    elif typename == "array":   return TYPE_ARRAY
     elif typename == "func":    return TYPE_FUNC
     #elif typename == "ptr":     return TYPE_PTR
 

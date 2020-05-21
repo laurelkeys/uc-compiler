@@ -6,10 +6,12 @@ import sys
 
 class Node:
     ''' Abstract base class for the AST nodes. '''
+
     __slots__ = ()
 
     def __repr__(self):
         ''' Generates a representation of the current node. '''
+
         def _repr(obj):
             if not isinstance(obj, list):
                 return repr(obj)
@@ -17,11 +19,17 @@ class Node:
 
         result, indent, separator = '', '', ''
         len_class_name = len(self.__class__.__name__)
-        # FIXME
-        # for name in ['attrs'] + list(self.__slots__[:-3]):
-        for name in self.__slots__[:-3]: # skip coord, attrs and __weakref__
-            result += separator + indent + name + '=' + (
-                _repr(getattr(self, name)).replace('\n', '\n  ' + (' ' * (len(name) + len_class_name)))
+        for name in self.__slots__[:-3]:  # skip coord, attrs and __weakref__
+            result += (
+                separator
+                + indent
+                + name
+                + '='
+                + (
+                    _repr(getattr(self, name)).replace(
+                        '\n', '\n  ' + (' ' * (len(name) + len_class_name))
+                    )
+                )
             )
             indent = ' ' * len_class_name
             separator = ','
@@ -31,7 +39,15 @@ class Node:
         ''' A sequence of all children that are `Node`s. '''
         pass
 
-    def show(self, buf=sys.stdout, offset=0, attrnames=False, nodenames=False, showcoord=False, _my_node_name=None):
+    def show(
+        self,
+        buf=sys.stdout,
+        offset=0,
+        attrnames=False,
+        nodenames=False,
+        showcoord=False,
+        _my_node_name=None,
+    ):
         ''' Pretty print the Node and all its attributes and children (recursively) to a buffer, where:
             - `buf`: Open IO buffer into which the Node is printed.
             - `offset`: Initial offset (amount of leading spaces).
@@ -41,13 +57,15 @@ class Node:
         '''
         lead = ' ' * offset
         if nodenames and _my_node_name is not None:
-            buf.write(lead + self.__class__.__name__+ ' <' + _my_node_name + '>: ')
+            buf.write(lead + self.__class__.__name__ + ' <' + _my_node_name + '>: ')
         else:
-            buf.write(lead + self.__class__.__name__+ ': ')
+            buf.write(lead + self.__class__.__name__ + ': ')
 
         if self.attr_names:
             if attrnames:
-                nvlist = [(n, getattr(self, n)) for n in self.attr_names if getattr(self, n) is not None]
+                nvlist = [
+                    (n, getattr(self, n)) for n in self.attr_names if getattr(self, n) is not None
+                ]
                 attrstr = ', '.join('%s=%s' % nv for nv in nvlist)
             else:
                 vlist = [getattr(self, n) for n in self.attr_names]
@@ -61,6 +79,7 @@ class Node:
 
         for (child_name, child) in self.children():
             child.show(buf, offset + 4, attrnames, nodenames, showcoord, child_name)
+
 
 class NodeVisitor:
     ''' Abstract base class for visiting the AST nodes.\n
@@ -78,8 +97,6 @@ class NodeVisitor:
 
         if self._method_cache is None:
             self._method_cache = {}
-
-        # print(f"v.. {node.__class__.__name__}") # FIXME remove
 
         visitor = self._method_cache.get(node.__class__.__name__, None)
         if visitor is None:
@@ -638,7 +655,7 @@ class Print(Node):
 
 class Program(Node):
     ''' This is the top of the AST, representing a uC program.\n
-        It contains a list of <global_declaration>'s, which are either 
+        It contains a list of <global_declaration>'s, which are either
         declarations (`Decl` wrapped by `GlobalDecl`), or function definitions (`FuncDef`).
     '''
     __slots__ = ('gdecls', 'coord', 'attrs', '__weakref__')
