@@ -98,7 +98,7 @@ class Visitor(NodeVisitor):
         `(operation, operands, ..., destination)`\n
 
         Note: This class uses the visitor pattern.
-        You need to define `visit_<>` methods for each kind of AST node that you want to process, where `<>` is the node name.
+        You need to define `visit_<>` methods for each AST node that you want to process, where `<>` is the node name.
     '''
 
     def __init__(self):
@@ -142,29 +142,29 @@ class Visitor(NodeVisitor):
 
             if isinstance(node.dim, ID):
                 assert node.dim.name in self.symtab.current_scope, (
-                    f"Undeclared identifier in array dimension: `{node.dim.name}`{node.coord}")
+                    f"Undeclared identifier in array dimension: `{node.dim.name}`" + str(node.coord))
                 _dim_type = self.symtab.lookup(node.dim.name)['type']
             else:
                 _dim_type = node.dim.attrs['type']
 
             assert _dim_type == [TYPE_INT], (
-                f"Size of array has non-integer type {_dim_type}{node.coord}")
+                f"Size of array has non-integer type {_dim_type}" + str(node.coord))
 
     def visit_ArrayRef(self, node: ArrayRef):  # [name*, subscript*]
         self.visit(node.name)
 
         _name = node.name.attrs['name']
-        assert _name in self.symtab.current_scope, f"Symbol not defined: {_name}{node.coord}"
+        assert _name in self.symtab.current_scope, f"Symbol not defined: `{_name}`" + str(node.coord)
         node.attrs['name'] = _name
 
         self.visit(node.subscript)
         if isinstance(node.subscript, ID):
             assert node.subscript.attrs['name'] in self.symtab.current_scope, (
-                f"Variable {node.subscript.attrs['name']} not defined in array reference{node.coord}")
+                f"Variable `{node.subscript.attrs['name']}` not defined in array reference" + str(node.coord))
             _type = self.symtab.lookup(node.subscript.attrs['name'])['type']
         else:
             _type = node.subscript.attrs['type']
-        assert _type == [TYPE_INT], f"Indexing with non-integer type: {_type}{node.coord}"
+        assert _type == [TYPE_INT], f"Indexing with non-integer type: {_type}" + str(node.coord)
 
         _name_type = (
             self.symtab.lookup(_name)['type']
@@ -176,12 +176,12 @@ class Visitor(NodeVisitor):
         elif _name_type[0] == TYPE_STRING:
             node.attrs['type'] = [TYPE_CHAR] + _name_type[1:]
         else:
-            assert False, f"Type {_name_type} doesn't support array-like indexing{node.coord}"
+            assert False, f"Type {_name_type} doesn't support array-like indexing" + str(node.coord)
 
     def visit_Assert(self, node: Assert):  # [expr*]
         self.visit(node.expr)
         _expr_type = node.expr.attrs['type']
-        assert _expr_type == [TYPE_BOOL], f"No implementation for: `assert {_expr_type}`{node.coord}"
+        assert _expr_type == [TYPE_BOOL], f"No implementation for: `assert {_expr_type}`" + str(node.coord)
 
     def visit_Assignment(self, node: Assignment):  # [op, lvalue*, rvalue*]
         self.visit(node.lvalue)
@@ -191,9 +191,9 @@ class Visitor(NodeVisitor):
             _lname = node.lvalue.attrs['name']
             _ltype = node.lvalue.attrs['type']
         else:
-            assert False, f"Assignment to invalid lvalue `{type(node.lvalue)}`{node.coord}"
+            assert False, f"Assignment to invalid lvalue `{type(node.lvalue)}`" + str(node.coord)
 
-        assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`{node.coord}"
+        assert _lname in self.symtab.current_scope, f"Assignment to unknown lvalue `{_lname}`" + str(node.coord)
 
         if isinstance(node.lvalue, ID):
             _ltype = self.symtab.lookup(_lname)['type']
@@ -211,15 +211,15 @@ class Visitor(NodeVisitor):
 
         if _rname is not None:
             assert _rname in self.symtab.current_scope, (
-                f"Assignment of unknown rvalue: `{_lname}` = `{_rname}`{node.coord}")
+                f"Assignment of unknown rvalue: `{_lname} = {_rname}`" + str(node.coord))
 
-        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`{node.coord}"
+        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
 
         assert node.op in uC_ops.assign_ops, (
-            f"Unexpected operator in adssignment operation: `{node.op}`{node.coord}")
+            f"Unexpected operator in assignment operation: `{node.op}`" + str(node.coord))
 
         assert node.op in _ltype[0].assign_ops, (  # use the "outermost" type
-            f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`{node.coord}")
+            f"Operation not supported by type {_ltype}: {_ltype} `{node.op}` {_rtype}" + str(node.coord))
 
         node.attrs['type'] = _ltype
 
@@ -232,7 +232,7 @@ class Visitor(NodeVisitor):
             if isinstance(_operand, ID):
                 _operand_name = _operand.name
                 assert _operand_name in self.symtab.current_scope, (
-                    f"Identifier `{_operand_name}` not defined{node.coord}")
+                    f"Identifier `{_operand_name}` not defined" + str(node.coord))
                 _type = self.symtab.lookup(_operand_name)['type']
 
             else:
@@ -242,7 +242,7 @@ class Visitor(NodeVisitor):
             _operand_types[i] = _type
         _ltype, _rtype = _operand_types
 
-        assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`{node.coord}"
+        assert _ltype == _rtype, f"Type mismatch: {_ltype} `{node.op}` {_rtype}" + str(node.coord)
 
         if node.op in uC_ops.binary_ops:
             _type_ops = _ltype[0].binary_ops  # use the "outermost" type
@@ -253,10 +253,10 @@ class Visitor(NodeVisitor):
             node.attrs['type'] = [TYPE_BOOL]
 
         else:
-            assert False, f"Unexpected operator in binary operation: `{node.op}`{node.coord}"
+            assert False, f"Unexpected operator in binary operation: `{node.op}`" + str(node.coord)
 
         assert node.op in _type_ops, (
-            f"Operation not supported by type {_ltype}: `{_ltype} {node.op} {_rtype}`{node.coord}")
+            f"Operation not supported by type {_ltype}: {_ltype} `{node.op}` {_rtype}" + str(node.coord))
 
         try:
             _lvalue = node.left.attrs['value']
@@ -266,7 +266,7 @@ class Visitor(NodeVisitor):
             pass
 
     def visit_Break(self, node: Break):  # []
-        assert self.symtab.in_loop, f"Break outside a loop{node.coord}"
+        assert self.symtab.in_loop, f"Break outside a loop" + str(node.coord)
 
     def visit_Cast(self, node: Cast):  # [type*, expr*]
         assert isinstance(node.type, Type)
@@ -286,7 +286,7 @@ class Visitor(NodeVisitor):
         ):
             _valid_cast = True
 
-        assert _valid_cast, f"Cast from `{_src_type}` to `{_dst_type}` is not supported{node.coord}"
+        assert _valid_cast, f"Cast from {_src_type} to {_dst_type} is not supported" + str(node.coord)
         node.attrs['type'] = _dst_type
 
         try:
@@ -314,7 +314,7 @@ class Visitor(NodeVisitor):
                 # print("*** in if-statement scope")
                 pass
             else:
-                assert False, f"Unexpected type openning a compount statement: {type(_parent)}{node.coord}"
+                assert False, f"Unexpected compound statement below {type(_parent)}" + str(node.coord)
 
         if node.decls is not None:
             for decl in node.decls:
@@ -341,10 +341,10 @@ class Visitor(NodeVisitor):
 
         if not isinstance(node.type, FuncDecl):
             assert sym_name not in self.symtab.local_scope, (
-                f"Redeclaration of `{sym_name}`{node.coord}")
+                f"Redeclaration of `{sym_name}`" + str(node.coord))
         elif sym_name in self.symtab.local_scope:
             assert not self.symtab.lookup(sym_name).get('defined?', False), (
-                f"Redeclaration of already defined `{sym_name}`{node.coord}")
+                f"Redeclaration of already defined `{sym_name}`" + str(node.coord))
 
         sym_attrs = {}
         self.visit(node.type)
@@ -360,27 +360,27 @@ class Visitor(NodeVisitor):
             sym_attrs['param_names'] = node.type.attrs.get('param_names', [])
             if sym_name in self.symtab.local_scope:
                 assert sym_attrs['type'] == self.symtab.lookup(sym_name)['type'], (
-                    f"Redeclaration of function {sym_name} with different return type: " +
-                    f"{sym_attrs['type']} and {self.symtab.lookup(sym_name)['type']}{node.coord}")
+                    f"Redeclaration of function `{sym_name}` with different return type: " +
+                    f"{sym_attrs['type']} and {self.symtab.lookup(sym_name)['type']}" + str(node.coord))
 
                 # checking parameter types
                 _declared_param_types = self.symtab.lookup(sym_name)['param_types']
                 assert len(sym_attrs['param_types']) == len(_declared_param_types), (
                     f"Conflicting parameter count for `{sym_name}`: " +
                     f"{len(sym_attrs['param_types'])} passed, " +
-                    f"{len(_declared_param_types)} expected{node.coord}")
+                    f"{len(_declared_param_types)} expected" + str(node.coord))
                 for _new_type, _old_type in zip(sym_attrs['param_types'], _declared_param_types):
                     assert _new_type == _old_type, (
                         f"Conflicting types for `{sym_name}`: " +
-                        f"{_new_type} passed, {_old_type} expected{node.coord}")
+                        f"{_new_type} passed, {_old_type} expected" + str(node.coord))
 
         else:
-            assert False, f"Unexpected type {type(node.type)} for node.type{node.coord}"
+            assert False, f"Unexpected type {type(node.type)} for node.type" + str(node.coord)
 
         if node.init is None:
             if isinstance(node.type, ArrayDecl):
                 assert sym_attrs['dim'] is not None, (  # NOTE this must be True for the uC language
-                    f"Array dimensions for `{sym_name}` can't be infered at compile time{node.coord}")
+                    f"Array dimensions for `{sym_name}` can't be infered at compile time" + str(node.coord))
 
         else:
             self.visit(node.init)
@@ -392,7 +392,7 @@ class Visitor(NodeVisitor):
                 if not (node.type.attrs.get('dim', None) is None or node.init.attrs.get('dim', None) is None):
                     assert node.type.attrs.get('dim', []) == node.init.attrs.get('dim', []), (
                         f"Dims must be equal on declaration and definition: " +
-                        f"{node.type.attrs.get('dim', [])} and {node.init.attrs.get('dim', [])}{node.coord}")
+                        f"{node.type.attrs.get('dim', [])} and {node.init.attrs.get('dim', [])}" + str(node.coord))
                 else:
                     sym_attrs['dim'] = (
                         node.type.attrs.get('dim', [])
@@ -406,7 +406,7 @@ class Visitor(NodeVisitor):
                     sym_attrs['dim'] = node.init.attrs['dim']  # NOTE hack for strings
 
             assert init_type == sym_attrs['type'], (
-                f"Implicit conversions are not supported: {sym_attrs['type']} = {init_type}{node.coord}")
+                f"Implicit conversions are not supported: {sym_attrs['type']} `=` {init_type}" + str(node.coord))
 
             # NOTE here's where we'd treat ArrayDecl with init and check that dim is Constant
 
@@ -440,7 +440,7 @@ class Visitor(NodeVisitor):
         if node.cond is not None:
             self.visit(node.cond)
             assert node.cond.attrs['type'] == [TYPE_BOOL], (
-                f"Condition should be a bool instead of {node.cond.attrs['type']}{node.coord}")
+                f"Condition should evaluate to boolean instead of {node.cond.attrs['type']}" + str(node.coord))
 
         if node.next is not None:
             self.visit(node.next)
@@ -455,7 +455,7 @@ class Visitor(NodeVisitor):
         assert isinstance(node.name, ID)
         self.visit(node.name)
         _name = node.name.attrs['name']
-        assert _name in self.symtab.current_scope, f"Function `{_name}` not defined{node.coord}"
+        assert _name in self.symtab.current_scope, f"Function `{_name}` not defined" + str(node.coord)
 
         if node.args is not None:
             self.visit(node.args)
@@ -472,7 +472,7 @@ class Visitor(NodeVisitor):
         assert len(_param_types) == len(_passed_args), (
             "Too " + ("many" if len(_param_types) < len(_passed_args) else "few") +
             f" arguments in call to `{_name}`: " +
-            f"{len(_passed_args)} passed, {len(_param_types)} expected{node.coord}")
+            f"{len(_passed_args)} passed, {len(_param_types)} expected" + str(node.coord))
 
         for _passed_arg, _param_type in zip(_passed_args, _param_types):
             if isinstance(_passed_arg, ID):
@@ -482,7 +482,7 @@ class Visitor(NodeVisitor):
 
             assert passed_type == _param_type, (
                 f"Wrong argument type in call to `{_name}`: " +
-                f"{passed_type} passed, {_param_type} expected{node.coord}")
+                f"{passed_type} passed, {_param_type} expected" + str(node.coord))
 
         node.attrs['type'] = _func['type'][1:]  # get the return type (ignoring TYPE_FUNC)
         node.attrs['name'] = _name
@@ -536,7 +536,8 @@ class Visitor(NodeVisitor):
         #         elif isinstance(stmt, If):
         #             if stmt.ifelse is not None:
         #                 pass
-        # assert _has_return or TYPE_VOID in node.attrs['type'], f"Function `{node.attrs['name']}` has no return{node.coord}"
+        # assert _has_return or TYPE_VOID in node.attrs['type'], (
+        #     f"Function `{node.attrs['name']}` has no return" + str(node.coord))
 
         # FIXME sym_attrs isn't being added to the scope's table
 
@@ -556,7 +557,7 @@ class Visitor(NodeVisitor):
 
         self.visit(node.cond)
         assert node.cond.attrs['type'] == [TYPE_BOOL], (
-            f"Condition should be a bool instead of {node.cond.attrs['type']}{node.coord}")
+            f"Condition should evaluate to boolean instead of {node.cond.attrs['type']}" + str(node.coord))
 
         if isinstance(node.ifthen, Compound):
             node.ifthen.attrs['parent'] = node
@@ -579,7 +580,7 @@ class Visitor(NodeVisitor):
         for expr in node.exprs[1:]:
             self.visit(expr)
             assert _type == expr.attrs['type'], (
-                f"Init list must have homogeneous types: {_type} and {expr.attrs['type']}{node.coord}")
+                f"Init list must have homogeneous types: {_type} and {expr.attrs['type']}" + str(node.coord))
 
         if _type[0] == TYPE_CHAR:
             assert len(_type) == 1
@@ -592,7 +593,7 @@ class Visitor(NodeVisitor):
             dim = node.exprs[0].attrs['dim']
             for expr in node.exprs[1:]:
                 assert dim == expr.attrs['dim'], (
-                    f"Init list must have homogeneous dim sizes: {dim} and {expr.attrs['dim']}{node.coord}")
+                    f"Init list must have equal dim sizes: {dim} and {expr.attrs['dim']}" + str(node.coord))
             node.attrs['dim'] = [len(node.exprs)] + dim
         else:
             for expr in node.exprs:
@@ -618,13 +619,13 @@ class Visitor(NodeVisitor):
             for _expr in _print_exprs:
                 if isinstance(_expr, ID):
                     assert _expr.name in self.symtab.current_scope, (
-                        f"Attempt to print unknown identifier: `{_expr.name}`{node.coord}")
+                        f"Attempt to print unknown identifier: `{_expr.name}`" + str(node.coord))
                 elif isinstance(_expr, ArrayRef):
                     assert _expr.attrs['name'] in self.symtab.current_scope, (
-                        f"Attempt to print unknown array: `{_expr.attrs['name']}`{node.coord}")
+                        f"Attempt to print unknown array: `{_expr.attrs['name']}`" + str(node.coord))
                 elif isinstance(_expr, FuncCall):
                     assert _expr.attrs['name'] in self.symtab.current_scope, (
-                        f"Attempt to print the return of an unknown function: `{_expr.attrs['name']}`{node.coord}")
+                        f"Attempt to print unknown function return value: `{_expr.attrs['name']}`" + str(node.coord))
 
     def visit_Program(self, node: Program):  # [gdecls**]
         self.symtab.begin_scope()
@@ -635,7 +636,7 @@ class Visitor(NodeVisitor):
 
         for _key, _item in self.symtab.local_scope.items():
             if _item['type'][0] == TYPE_FUNC:
-                assert _item.get('defined?', False), f"Function declared but not defined{node.coord}"
+                assert _item.get('defined?', False), f"Function `{_key}` declared but not defined"
 
         self.symtab.end_scope()
 
@@ -648,23 +649,23 @@ class Visitor(NodeVisitor):
         for _expr in _read_exprs:
             if isinstance(_expr, ID):
                 assert _expr.name in self.symtab.current_scope, (
-                    f"Attempt to read into unknown identifier: `{_expr.name}`{node.coord}")
+                    f"Attempt to read into unknown identifier: `{_expr.name}`" + str(node.coord))
             elif isinstance(_expr, ArrayRef):
                 assert _expr.attrs['name'] in self.symtab.current_scope, (
-                    f"Attempt to read into unknown array: `{_expr.attrs['name']}`{node.coord}")
+                    f"Attempt to read into unknown array: `{_expr.attrs['name']}`" + str(node.coord))
             else:
-                assert False, f"Unexpected node type in read: {type(_expr)}{node.coord}"
+                assert False, f"Unexpected node type in read: {type(_expr)}" + str(node.coord)
 
     def visit_Return(self, node: Return):  # [expr*]
-        assert self.symtab.in_func, f"Return outside a function{node.coord}"
+        assert self.symtab.in_func, f"Return outside a function" + str(node.coord)
 
+        _expr_type = [TYPE_INT]  # NOTE functions return 'int' by default
         if node.expr is not None:
             self.visit(node.expr)
-            assert node.expr.attrs['type'] == self.symtab.curr_func.attrs['type'][1:], (
-                f"Returning {node.expr.attrs['type']} on a {self.symtab.curr_func.attrs['type'][1:]} function{node.coord}")
-        else:
-            assert [TYPE_VOID] == self.symtab.curr_func.attrs['type'][1:], (
-                f"Returning {[TYPE_VOID]} on a {self.symtab.curr_func.attrs['type'][1:]} function{node.coord}")
+            _expr_type = node.expr.attrs['type']
+
+        assert _expr_type == self.symtab.curr_func.attrs['type'][1:], (
+            f"Returning {_expr_type} on a {self.symtab.curr_func.attrs['type'][1:]} function" + str(node.coord))
 
     def visit_Type(self, node: Type):  # [names]
         node.attrs['type'] = [uC_types.from_name(name) for name in node.names]
@@ -675,17 +676,19 @@ class Visitor(NodeVisitor):
         node.attrs['type'] = node.type.attrs['type']
 
     def visit_UnaryOp(self, node: UnaryOp):  # [op, expr*]
-        assert node.op in uC_ops.unary_ops, f"Unexpected operator in unary operation: `{node.op}`{node.coord}"
+        assert node.op in uC_ops.unary_ops, f"Unexpected operator in unary operation: `{node.op}`" + str(node.coord)
 
         self.visit(node.expr)
 
         _operand_name = node.expr.attrs.get('name', None)
         if isinstance(node.expr, ID):
-            assert _operand_name in self.symtab.current_scope, f"Identifier `{_operand_name}` not defined{node.coord}"
+            assert _operand_name in self.symtab.current_scope, (
+                f"Identifier `{_operand_name}` not defined" + str(node.coord))
             _type = self.symtab.lookup(_operand_name)['type']
 
         elif isinstance(node.expr, FuncCall):
-            assert _operand_name in self.symtab.current_scope, f"Function `{_operand_name}` not defined{node.coord}"
+            assert _operand_name in self.symtab.current_scope, (
+                f"Function `{_operand_name}` not defined" + str(node.coord))
             _type = self.symtab.lookup(_operand_name)['type'][1:]  # ignore TYPE_FUNC
 
         else:
@@ -695,15 +698,12 @@ class Visitor(NodeVisitor):
 
         assert node.op in _type[0].unary_ops, (  # use the "outermost" type
             f"Operation not supported by type {_type}: "
-            + (
-                f"`{node.op}{_type}`"
-                if node.op[0] != 'p'
-                else f"`{_type}{node.op[1:]}`{node.coord}"
-            )
+            + (f"`{node.op}`{_type}" if node.op[0] != 'p' else f"`{_type}`{node.op[1:]}")
+            + str(node.coord)
         )
 
         if "++" in node.op or "--" in node.op:
-            assert isinstance(node.expr, (ID, ArrayRef)), f"Expression is not assignable{node.coord}"
+            assert isinstance(node.expr, (ID, ArrayRef)), f"Expression is not assignable" + str(node.coord)
 
         node.attrs['type'] = _type
 
@@ -717,7 +717,7 @@ class Visitor(NodeVisitor):
 
         self.visit(node.cond)
         assert node.cond.attrs['type'] == [TYPE_BOOL], (
-            f"Condition should be a bool instead of {node.cond.attrs['type']}{node.coord}")
+            f"Condition should evaluate to boolean instead of {node.cond.attrs['type']}" + str(node.coord))
 
         if isinstance(node.body, Compound):
             node.body.attrs['parent'] = node
