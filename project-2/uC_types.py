@@ -107,7 +107,7 @@ TYPE_FUNC = UCType(
     assign_ops  =   None,
 )
 
-# TODO implement for pointers / references
+# NOTE implement for pointers / references
 #TYPE_PTR = UCType(
 #    'ptr',
 #    default     =   0,
