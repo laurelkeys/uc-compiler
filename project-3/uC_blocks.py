@@ -38,6 +38,7 @@ from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
 ###########################################################
 
 class Block:
+    ''' Base class representing a CFG block. '''
 
     def __init__(self, label):
         self.label = label      # label that identifies the block
@@ -45,6 +46,9 @@ class Block:
         self.sucessors = []     # list of sucessors
         self.predecessors = []  # list of predecessors
         self.next_block = None  # link to the next block
+
+        if label is not None:
+            self.instructions.append((label, ))  # FIXME use emit_label
 
     def append(self,instr):
         self.instructions.append(instr)
@@ -83,6 +87,18 @@ class BlockVisitor:
                 getattr(self, name)(block)
             block = block.next_block
 
+class EmitBlocks(BlockVisitor):
+    ''' Block visitor class that creates basic blocks for the CFG. '''
+
+    def __init__(self):
+        self.code = []
+
+    def visit_BasicBlock(self, block: BasicBlock):
+        self.code.extend(block.instructions)
+
+    def visit_ConditionBlock(self, block: ConditionBlock):
+        self.code.extend(block.instructions)
+
 ###########################################################
 ## uC Intermediate Representation (IR) ####################
 ###########################################################
@@ -92,11 +108,16 @@ class GenerateCode(NodeVisitor):
 
     def __init__(self):
         super(GenerateCode, self).__init__()
-        self.fname = "$global"
-        self.versions = {self.fname: 0}  # version dictionary for temporaries
         self.code = []  # generated code as a list of tuples
+
+        self.fname = "$global"
         self.fregisters = ChainMap()
         self.farray_dim = ChainMap()
+
+        self.curr_block = None
+
+        self.versions = { self.fname: 0 }  # version dictionary for temporaries
+        self.labels = {}  # version dictionary for block labels
 
     def new_temp(self, var_name=None):
         ''' Create a new temporary variable of a given scope (function name). '''
@@ -107,6 +128,11 @@ class GenerateCode(NodeVisitor):
         if var_name is not None:
             self.fregisters[var_name] = name  # bind the param name to the temp created
         return name
+
+    def new_label(self, name=None):
+        ''' Create a unique block label prefixed by `name`. '''
+        self.labels[name] = 1 + self.labels.get(name, 0)
+        return f"{name}.{self.labels[name]}"
 
     def begin_function(self, fname):
         self.fname = fname
