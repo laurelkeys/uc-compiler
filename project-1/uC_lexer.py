@@ -235,6 +235,3 @@ class UCLexer:
     def t_error(self, t):
         msg = "Illegal character '%s'" % repr(t.value[0])
         self._error(msg, t)
-        # FIXME the lexer must report the following error messages:
-        #       lineno: Unterminated string
-        #       lineno: Unterminated comment
