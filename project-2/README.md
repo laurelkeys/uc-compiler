@@ -103,7 +103,7 @@ Your SSA ([Static Single Assignment](https://en.wikipedia.org/wiki/Static_single
 ```
 ## Labels & Branches:
 ```python
-       ('label', )                                          # Label definition
+       ('label:', )                                         # Label definition
        ('jump', target)                                     # Jump to a target label
        ('cbranch', expr_test, true_target, false_target)    # Conditional branch
 ```

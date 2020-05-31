@@ -659,7 +659,7 @@ class Visitor(NodeVisitor):
     def visit_Return(self, node: Return):  # [expr*]
         assert self.symtab.in_func, f"Return outside a function" + str(node.coord)
 
-        _expr_type = [TYPE_INT]  # NOTE functions return 'int' by default
+        _expr_type = [TYPE_VOID]
         if node.expr is not None:
             self.visit(node.expr)
             _expr_type = node.expr.attrs['type']
