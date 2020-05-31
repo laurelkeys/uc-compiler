@@ -125,7 +125,6 @@ class GenerateCode(NodeVisitor):
     def emit_label(self, label):
         ''' Label definition. '''
         self.code.append((label, ))
-        # self.code.append((f"{label}:", ))  # FIXME this breaks the interpreter
 
     def emit_jump(self, target):
         ''' Jump to a target label. '''

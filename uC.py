@@ -58,12 +58,22 @@ class Compiler:
         self.gen = GenerateCode()
         self.gen.visit(self.ast)
         self.gencode = self.gen.code
-        _str = ""
-        # FIXME debug only
-        print("----")
-        for _code in self.gencode:
-            print(_code)
+
+        def print_code_line(instruction, line_number=None):
+            line = ""
+            if line_number is not None:
+                line += f"{line_number}:  ".rjust(3 + len(str(len(self.gencode))), " ") # padding wizardry
+            line += " ".join(map(str, instruction))
+            if len(instruction) == 1 and instruction[0].isdigit():
+                line += ":"  # label
+            print(line)
+
+        print("----") # FIXME debug only
+        for i, _code in enumerate(self.gencode):
+            print_code_line(line_number=i, instruction=_code)
+
         if not susy and ir_file is not None:
+            _str = ""
             for _code in self.gencode:
                 _str += f"{_code}\n"
             ir_file.write(_str)
