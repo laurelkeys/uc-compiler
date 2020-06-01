@@ -8,5 +8,5 @@ int main() {
     int c = 2, d = 3;
     int e = foo(c, d);
     assert e == 50;
-    return e;
+    return 0;
 }
