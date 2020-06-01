@@ -10,8 +10,7 @@ import __context_root__
 
 import sys
 
-from uC_errors import error, errors_reported, clear_errors, \
-                      subscribe_errors
+from uC_errors import error, errors_reported, clear_errors, subscribe_errors
 
 from uC_parser import UCParser
 from uC_sema import Visitor
@@ -62,15 +61,19 @@ class Compiler:
         def print_code_line(instruction, line_number=None):
             line = ""
             if line_number is not None:
-                line += f"{line_number}:  ".rjust(3 + len(str(len(self.gencode))), " ") # padding wizardry
+                line += f"{line_number}:  ".rjust(3 + len(str(len(self.gencode))), " ")  # padding
             line += " ".join(map(str, instruction))
             if len(instruction) == 1 and instruction[0].isdigit():
                 line += ":"  # label
+            elif instruction[0].startswith("define"):
+                line = f"\n{line}"
+            elif not instruction[0].startswith("global"):
+                line = f"  {line}"
             print(line)
 
         print("----") # FIXME debug only
         for i, _code in enumerate(self.gencode):
-            print_code_line(line_number=i, instruction=_code)
+            print_code_line(instruction=_code)  # line_number=i,
 
         if not susy and ir_file is not None:
             _str = ""

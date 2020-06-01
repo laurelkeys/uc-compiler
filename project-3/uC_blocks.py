@@ -1,15 +1,3 @@
-import os
-import sys
-
-from collections import ChainMap
-
-import uC_ops
-import uC_types
-
-from uC_AST import *
-
-from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
-                      TYPE_BOOL, TYPE_ARRAY, TYPE_FUNC)
 
 # NOTE A basic block (BB) is a sequence of instructions where the control flow enters
 #      only at the beginning of the block and exits at the end of the block, without the
@@ -48,7 +36,7 @@ class Block:
         self.next_block = None  # link to the next block
 
         if label is not None:
-            self.instructions.append((label, ))  # FIXME use emit_label
+            self.instructions.append((label, ))
 
     def append(self,instr):
         self.instructions.append(instr)

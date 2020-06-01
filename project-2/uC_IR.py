@@ -1,13 +1,9 @@
-import os
-import sys
-
 from collections import ChainMap
 
 import uC_ops
 import uC_types
 
 from uC_AST import *
-
 from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
                       TYPE_BOOL, TYPE_ARRAY, TYPE_FUNC)
 
