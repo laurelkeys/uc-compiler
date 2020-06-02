@@ -23,12 +23,15 @@ class GenerateCode(NodeVisitor):
         self.fregisters = ChainMap()
         self.farray_dim = ChainMap()
 
-    def new_temp(self, var_name=None):
+    def new_temp(self, var_name=None, temp_name=None):
         ''' Create a new temporary variable of a given scope (function name). '''
         if self.fname not in self.versions:
             self.versions[self.fname] = 0
-        name = "%" + "%d" % (self.versions[self.fname])
-        self.versions[self.fname] += 1
+        if temp_name is not None:
+            name = f"%{temp_name}"
+        else:
+            name = f"%{self.versions[self.fname]}"
+            self.versions[self.fname] += 1
         if var_name is not None:
             self.fregisters[var_name] = name  # bind the param name to the temp created
         return name
@@ -370,7 +373,7 @@ class GenerateCode(NodeVisitor):
                 node.attrs['reg'] = f"@{_name}"
 
             else:
-                _target = self.new_temp()
+                _target = self.new_temp(temp_name=_name)
                 self.fregisters[_name] = _target
                 self.emit_alloc(_type, varname=_target)
                 if node.init is not None:
@@ -460,7 +463,7 @@ class GenerateCode(NodeVisitor):
             if node.args is not None:
                 for _arg, _arg_reg in zip(node.args, node.attrs['args_reg']):
                     _type = self.unwrap_type(_arg.attrs['type'])
-                    _actual_reg = self.new_temp(_arg.name.name)
+                    _actual_reg = self.new_temp(_arg.name.name, temp_name=_arg.name.name)
                     self.emit_alloc(_type, varname=_actual_reg)
                     self.emit_store(_type, source=_arg_reg, target=_actual_reg)
 
