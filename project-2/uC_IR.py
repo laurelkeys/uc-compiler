@@ -533,7 +533,7 @@ class GenerateCode(NodeVisitor):
             self.visit(expr)
             _target.append(expr.attrs['reg'])
 
-        if node.attrs.get('child?', False):
+        if _fname == '$global' or node.attrs.get('child?', False):
             node.attrs['reg'] = _target
         else:
             node.attrs['reg'] = self.create_array_initlist(
