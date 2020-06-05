@@ -104,10 +104,41 @@ class ControlFlowGraph:
 
     def __init__(self, ircode):
         # TODO create basic blocks from the IR
-        for code_instr in ircode:
-            print(
-                Instruction.extract_from(code_instr).name.rjust(8),
-                "=>", 
-                code_instr, 
-            )
-        pass
+        pp = []
+
+        leaders = { 0 }
+        branch_targets = set()
+
+        for i, code_instr in enumerate(ircode):
+            instr_type = Instruction.extract_from(code_instr)
+            if instr_type == Instruction.Type.DEFINE:
+                leaders.add(i)
+            elif instr_type == Instruction.Type.JUMP:
+                leaders.add(i + 1)
+                _, target = code_instr
+                branch_targets.add(target)
+            elif instr_type == Instruction.Type.CBRANCH:
+                leaders.add(i + 1)
+                _, _, true_target, false_target = code_instr
+                branch_targets.add(true_target)
+                branch_targets.add(false_target)
+
+            pp.append(Instruction.extract_from(code_instr).name.rjust(8) + "=>" + str(code_instr))
+
+        # NOTE sanity check for instructions subject to deviation (may not be necessary)
+        for i, code_instr in enumerate(ircode):
+            instr_type = Instruction.extract_from(code_instr)
+            if instr_type == Instruction.Type.LABEL:
+                if code_instr[0] in branch_targets:
+                    leaders.add(i)
+
+        first_instr = ircode[0]
+        self.head = Block("$first")
+        leaders = sorted(list(leaders))
+        for start, end in zip(leaders[:-1], leaders[1:]):
+            print(f"start={start}, end-1={end-1}")
+        print(f"start={leaders[-1]}, end-1={len(ircode)-1}")
+
+
+        for i, p in enumerate(pp):
+            print(str(i).rjust(2), ":  " if i not in leaders else ": *", p)

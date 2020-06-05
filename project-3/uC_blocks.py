@@ -38,8 +38,11 @@ class Block:
         if label is not None:
             self.instructions.append((label, ))
 
-    def append(self,instr):
+    def append(self, instr):
         self.instructions.append(instr)
+
+    def extend(self, instr_list):
+        self.instructions.extend(instr_list)
 
     def __iter__(self):
         return iter(self.instructions)
