@@ -15,6 +15,7 @@ from uC_errors import error, errors_reported, clear_errors, subscribe_errors
 from uC_parser import UCParser
 from uC_sema import Visitor
 from uC_IR import GenerateCode
+from uC_CFG import ControlFlowGraph
 from uc_interpreter import Interpreter
 
 ###########################################################
@@ -81,6 +82,10 @@ class Compiler:
                 _str += f"{_code}\n"
             ir_file.write(_str)
 
+    def _opt(self, susy, ir_file, debug):
+        self.cfg = ControlFlowGraph(self.gencode)
+        # TODO stuff..
+
     def _do_compile(self, susy, ast_file, ir_file, debug, parse_only):
         ''' Compiles the code to the given file object. '''
         self._parse(susy, ast_file, debug)
@@ -89,12 +94,14 @@ class Compiler:
         if not errors_reported():
             if not parse_only: # FIXME remove
                 self._gencode(susy, ir_file)
+                print("----")
+                self._opt(susy, ir_file, debug)
 
     def compile(self, code, susy, ast_file, ir_file, run_ir, debug, parse_only):
         ''' Compiles the given code string. '''
         self.code = code
         with subscribe_errors(lambda msg: sys.stderr.write(msg + "\n")):
-            self._do_compile(susy, ast_file, debug, ir_file, parse_only)
+            self._do_compile(susy, ast_file, ir_file, debug, parse_only)
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
             elif run_ir:
