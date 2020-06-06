@@ -106,39 +106,68 @@ class ControlFlowGraph:
         # TODO create basic blocks from the IR
         pp = []
 
-        leaders = { 0 }
+        leader_to_line = { '$head': 0 }
         branch_targets = set()
 
         for i, code_instr in enumerate(ircode):
             instr_type = Instruction.extract_from(code_instr)
             if instr_type == Instruction.Type.DEFINE:
-                leaders.add(i)
+                _, source = code_instr
+                leader_to_line[source] = i
             elif instr_type == Instruction.Type.JUMP:
-                leaders.add(i + 1)
+                # NOTE i+1 is a leader
                 _, target = code_instr
                 branch_targets.add(target)
             elif instr_type == Instruction.Type.CBRANCH:
-                leaders.add(i + 1)
+                # NOTE i+1 is a leader
                 _, _, true_target, false_target = code_instr
                 branch_targets.add(true_target)
                 branch_targets.add(false_target)
-
             pp.append(Instruction.extract_from(code_instr).name.rjust(8) + "=>" + str(code_instr))
 
-        # NOTE sanity check for instructions subject to deviation (may not be necessary)
+
+        # NOTE make instructions subject to deviation leaders
         for i, code_instr in enumerate(ircode):
             instr_type = Instruction.extract_from(code_instr)
             if instr_type == Instruction.Type.LABEL:
-                if code_instr[0] in branch_targets:
-                    leaders.add(i)
+                label = f"%{code_instr[0]}"
+                if label in branch_targets:
+                    leader_to_line[label] = i
 
-        first_instr = ircode[0]
-        self.head = Block("$first")
-        leaders = sorted(list(leaders))
-        for start, end in zip(leaders[:-1], leaders[1:]):
-            print(f"start={start}, end-1={end-1}")
-        print(f"start={leaders[-1]}, end-1={len(ircode)-1}")
+        print(leader_to_line)
 
+        # make blocks from leaders starting lines
+        line_to_leader = {v: k for k, v in leader_to_line.items()}
+        leader_lines = list(sorted(line_to_leader.keys()))
+        leader_lines.append(len(ircode)) # accounts for last block creation
+        leaders = {}
+
+        for start, end in zip(leader_lines[:-1], leader_lines[1:]):
+            label = line_to_leader[start]
+            leaders[label] = Block(label)
+            leaders[label].extend(ircode[start:end])
+            # print(f"{start=}, {end-1=} {leaders[label]=}")
+
+
+        for (label, block), next_line in zip(leaders.items(), leader_lines[1:]):
+            if next_line == len(ircode): break
+
+            last_instr = block.instructions[-1]
+            instr_type = Instruction.extract_from(last_instr)
+
+            if instr_type == Instruction.Type.JUMP:
+                _, target = last_instr
+                block.next_block[True] = leaders[target]
+
+            elif instr_type == Instruction.Type.CBRANCH:
+                _, _, true_target, false_target = last_instr
+                block.next_block[True] = leaders[true_target]
+                block.next_block[False] = leaders[false_target]
+
+            else:
+                block.next_block[True] = leaders[line_to_leader[next_line]]
 
         for i, p in enumerate(pp):
-            print(str(i).rjust(2), ":  " if i not in leaders else ": *", p)
+            print(str(i).rjust(2), ":  " if i not in line_to_leader else ": *", p)
+        
+        print(leaders)

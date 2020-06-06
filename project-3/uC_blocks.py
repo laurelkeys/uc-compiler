@@ -31,12 +31,12 @@ class Block:
     def __init__(self, label):
         self.label = label      # label that identifies the block
         self.instructions = []  # instructions in the block
-        self.sucessors = []     # list of sucessors
-        self.predecessors = []  # list of predecessors
-        self.next_block = None  # link to the next block
+        # self.sucessors = []     # list of sucessors
+        # self.predecessors = []  # list of predecessors
+        self.next_block = {True: None, False: None}  # link to the next block
 
-        if label is not None:
-            self.instructions.append((label, ))
+        # if label is not None:
+        #     self.instructions.append((label, ))
 
     def append(self, instr):
         self.instructions.append(instr)
@@ -46,6 +46,9 @@ class Block:
 
     def __iter__(self):
         return iter(self.instructions)
+    
+    def __repr__(self):
+        return f"Block({self.label}, {[f'{key}: {v.label}' for key, v in self.next_block.items() if v is not None]})"
 
 class BasicBlock(Block):
     ''' Class for a simple basic block.\n
