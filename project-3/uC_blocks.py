@@ -28,15 +28,14 @@
 class Block:
     ''' Base class representing a CFG block. '''
 
-    def __init__(self, label):
+    def __init__(self, label=None):
         self.label = label      # label that identifies the block
         self.instructions = []  # instructions in the block
-        # self.sucessors = []     # list of sucessors
-        # self.predecessors = []  # list of predecessors
-        self.next_block = {True: None, False: None}  # link to the next block
+        self.sucessors = []     # list of sucessors
+        self.predecessors = []  # list of predecessors
 
-        # if label is not None:
-        #     self.instructions.append((label, ))
+        if label is not None:
+            self.instructions.append((label, ))
 
     def append(self, instr):
         self.instructions.append(instr)
@@ -46,49 +45,11 @@ class Block:
 
     def __iter__(self):
         return iter(self.instructions)
-    
+
     def __repr__(self):
-        return f"Block({self.label}, {[f'{key}: {v.label}' for key, v in self.next_block.items() if v is not None]})"
-
-class BasicBlock(Block):
-    ''' Class for a simple basic block.\n
-        Control flow unconditionally flows to the next block.
-    '''
-
-    def __init__(self, label):
-        super(BasicBlock, self).__init__(label)
-
-class ConditionBlock(Block):
-    ''' Class for a block representing an conditional statement.\n
-        There are two branches to handle each possibility.
-    '''
-
-    def __init__(self, label):
-        super(ConditionBlock, self).__init__(label)
-        self.taken = None
-        self.fall_through = None
-
-class BlockVisitor:
-    ''' Class for visiting basic blocks.\n
-        Define a subclass and methods such as `visit_BasicBlock()` or `visit_ConditionBlock()`
-        to implement custom processing (similar to AST's `NodeVisitor`).
-    '''
-
-    def visit(self, block):
-        while isinstance(block, Block):
-            name = "visit_%s" % type(block).__name__
-            if hasattr(self, name):
-                getattr(self, name)(block)
-            block = block.next_block
-
-class EmitBlocks(BlockVisitor):
-    ''' Block visitor class that creates basic blocks for the CFG. '''
-
-    def __init__(self):
-        self.code = []
-
-    def visit_BasicBlock(self, block: BasicBlock):
-        self.code.extend(block.instructions)
-
-    def visit_ConditionBlock(self, block: ConditionBlock):
-        self.code.extend(block.instructions)
+        return (
+            f"Block({self.label}"
+            + f", sucessors=[{', '.join([sucessor.label for sucessor in self.sucessors])}]"
+            + f", predecessors=[{', '.join([predecessor.label for predecessor in self.predecessors])}]"
+            + ")"
+        )
