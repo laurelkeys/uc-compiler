@@ -1,3 +1,4 @@
+from collections import namedtuple
 
 # NOTE A basic block (BB) is a sequence of instructions where the control flow enters
 #      only at the beginning of the block and exits at the end of the block, without the
@@ -25,6 +26,10 @@
 ## uC Basic Blocks (BBs) ##################################
 ###########################################################
 
+
+Leader = namedtuple(typename="Leader", field_names=["label", "line"])
+
+
 class Block:
     ''' Base class representing a CFG block. '''
 
@@ -35,7 +40,7 @@ class Block:
         self.predecessors = []  # list of predecessors
 
         if label is not None:
-            self.instructions.append((label, ))
+            self.instructions.append((label,))
 
     def append(self, instr):
         self.instructions.append(instr)
@@ -49,7 +54,7 @@ class Block:
     def __repr__(self):
         return (
             f"Block({self.label}"
-            + f", sucessors=[{', '.join([sucessor.label for sucessor in self.sucessors])}]"
-            + f", predecessors=[{', '.join([predecessor.label for predecessor in self.predecessors])}]"
+            + f", sucessors=[{', '.join([s.label for s in self.sucessors])}]"
+            + f", predecessors=[{', '.join([p.label for p in self.predecessors])}]"
             + ")"
         )

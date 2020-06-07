@@ -1,4 +1,5 @@
 from collections import ChainMap
+from enum import Enum, unique
 
 import uC_ops
 import uC_types
@@ -108,17 +109,7 @@ class GenerateCode(NodeVisitor):
     # Binary & Relational/Equality/Logical Operations
     def emit_op(self, _op, _type, left, right, target):
         ''' target = left `_op` right. '''
-        opcode = {
-            '+':  'add', '-':  'sub',
-            '*':  'mul', '/':  'div', '%': 'mod',
-
-            '&&': 'and', '||': 'or',
-
-            '==': 'eq',  '!=': 'ne',
-            '<':  'lt',  '<=': 'le',
-            '>':  'gt',  '>=': 'ge',
-        }
-        self.code.append((f"{opcode[_op]}_{_type}", left, right, target))
+        self.code.append((f"{Instruction.opcode[_op]}_{_type}", left, right, target))
 
     # Labels & Branches
     def emit_label(self, label):
@@ -699,3 +690,53 @@ class GenerateCode(NodeVisitor):
         self.visit(node.body)
         self.emit_jump(loop_top)
         self.emit_label(loop_end[1:])
+
+
+class Instruction:
+    ''' Helper class for identiying uC IR instruction types. '''
+
+    opcode = {
+        '+':  'add', '-':  'sub',
+        '*':  'mul', '/':  'div', '%': 'mod',
+
+        '&&': 'and', '||': 'or',
+
+        '==': 'eq',  '!=': 'ne',
+        '<':  'lt',  '<=': 'le',
+        '>':  'gt',  '>=': 'ge',
+    }
+
+    @unique
+    class Type(Enum):
+        ALLOC   =  1  # _type, varname
+        GLOBAL  =  2  # _type, varname, opt_value=None
+        LOAD    =  3  # _type, varname, target
+        STORE   =  4  # _type, source, target
+        LITERAL =  5  # _type, value, target
+        ELEM    =  6  # _type, source, index, target
+        FPTOSI  =  7  # fvalue, target
+        SITOFP  =  8  # ivalue, target
+        OP      =  9  # _op, _type, left, right, target
+        LABEL   = 10  # label
+        JUMP    = 11  # target
+        CBRANCH = 12  # expr_test, true_target, false_target
+        DEFINE  = 13  # source
+        CALL    = 14  # source, opt_target=None):
+        RETURN  = 15  # _type, opt_target=None
+        PARAM   = 16  # _type, source
+        READ    = 17  # _type, source
+        PRINT   = 18  # _type, source=None
+
+    @staticmethod
+    def type_of(instr_tuple):
+        head, *_ = instr_tuple
+
+        if head in Instruction.opcode.values():
+            return Instruction.Type.OP
+
+        # HACK this relies on names not overlapping
+        for instr_type in Instruction.Type:
+            if head.startswith(instr_type.name.lower()):
+                return instr_type
+
+        return Instruction.Type.LABEL
