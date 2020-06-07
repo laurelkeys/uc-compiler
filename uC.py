@@ -15,12 +15,14 @@ from uC_errors import error, errors_reported, clear_errors, subscribe_errors
 from uC_parser import UCParser
 from uC_sema import Visitor
 from uC_IR import GenerateCode
-from uC_CFG import ControlFlowGraph
+from uC_CFG import ControlFlowGraph, GraphViewer
 from uc_interpreter import Interpreter
 
 ###########################################################
 ## uC Compiler ############################################
 ###########################################################
+
+graph = False
 
 class Compiler:
     ''' This object encapsulates the compiler and serves as a facade interface for the compiler itself. '''
@@ -84,6 +86,12 @@ class Compiler:
 
     def _opt(self, susy, ir_file, debug):
         self.cfg = ControlFlowGraph(self.gencode)
+        # TODO graph before simplifying as well
+        self.cfg.simplify()
+        if graph:
+            for entry_name, entry_block in self.cfg.entries.items():
+                GraphViewer.view_entry(entry_name, entry_block)
+
         # TODO stuff..
 
     def _do_compile(self, susy, ast_file, ir_file, debug, parse_only):
@@ -109,7 +117,6 @@ class Compiler:
                 self.vm = Interpreter()
                 self.vm.run(self.gencode)
         return 0
-
 
 def run_compiler():
     ''' Runs the command-line compiler. '''
@@ -142,6 +149,9 @@ def run_compiler():
                 debug = True
             elif param == '-p': # FIXME remove
                 parse_only = True
+            elif param == '-g': # FIXME remove
+                global graph
+                graph = True
             else:
                 print("Unknown option: %s" % param)
                 sys.exit(1)

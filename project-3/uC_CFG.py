@@ -1,3 +1,5 @@
+import os
+
 from collections import namedtuple
 from enum import Enum, unique
 
@@ -111,23 +113,46 @@ class ControlFlowGraph:
 
         print(f"\nentries={', '.join(self.entries.keys())}")
 
-        for entry_name, entry_block in self.entries.items():
-            GraphViewer.view_entry(entry_name, entry_block)
+    def simplify(self):
+        ''' Attempts to merge basic blocks. '''
+
+        pass
+
+    def entry_blocks(self, entry_name):
+        ''' Returns a generator for the blocks of the entry. '''
+        visited = set()
+
+        def visit(block):
+            if block.label not in visited:
+                visited.add(block.label)
+                yield block
+                for sucessor in block.sucessors:
+                    yield from visit(sucessor)
+
+        yield from visit(self.entries[entry_name])
 
 
 class GraphViewer:
-
     @staticmethod
     def view_entry(entry_name, entry_block):
-        g = Digraph("g", filename=f"graphviz/{entry_name}.gv", node_attr={"shape": "record"})
+        fname = f"graphviz/{entry_name}.gv"
+        try:
+            os.remove(fname)
+        except OSError:
+            pass
+        g = Digraph("g", filename=fname, node_attr={"shape": "record"})
+
+        def format_line(instr):
+            line = " ".join(map(str, instr))
+            return f"{line}:" if len(instr) == 1 and instr[0].isdigit() else f"  {line}"
 
         def _visit(block):
             name = block.label
             label = "{" + name + ":\l\t"
-            for instr in block.instructions[1:]:
-                label += str(instr) + "\l\t" # FIXME pretty print
+            for instr in block.instructions[2:]:  # FIXME
+                label += format_line(instr) + "\l\t"
             label += "}"
-            g.node(name, label=label)
+            g.node(name, label)
 
             for pred in block.predecessors:
                 g.edge(pred.label, name)
