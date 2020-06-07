@@ -17,6 +17,7 @@ class ControlFlowGraph:
         self.entries = {}
 
         leader_lines = set()
+        entry_exit_line = {}
         entry_branch_targets = {}
         entry_leaders_to_lines = {}
         # FIXME treat global variable declarations
@@ -29,10 +30,10 @@ class ControlFlowGraph:
             if instr_type == Instruction.Type.DEFINE:
                 leader_lines.add(i)
                 if curr_entry is not None:
-                    print(curr_entry, "ends at", i-1)
+                    entry_exit_line[curr_entry] = i - 1
                 curr_entry = code_instr[1]
                 entry_branch_targets[curr_entry] = set()
-                entry_leaders_to_lines[curr_entry] = { "entry": i }
+                entry_leaders_to_lines[curr_entry] = {"entry": i}
 
             elif instr_type == Instruction.Type.JUMP:
                 leader_lines.add(i + 1)
@@ -44,6 +45,7 @@ class ControlFlowGraph:
                 _, _, true_target, false_target = code_instr
                 entry_branch_targets[curr_entry].add(true_target)
                 entry_branch_targets[curr_entry].add(false_target)
+        entry_exit_line[curr_entry] = len(ircode) - 1
 
         # make instructions subject to deviation leaders
         curr_entry = None
@@ -65,57 +67,44 @@ class ControlFlowGraph:
         )
 
         for entry, leader_to_line in entry_leaders_to_lines.items():
-            print(entry)
-            for line, leader in sorted((line, leader) for leader, line in leader_to_line.items()):
-                print(" ", leader, ":", line)
+            blocks = {}
+            line_to_leader = sorted((line, leader) for leader, line in leader_to_line.items())
 
-        leader_lines = list(sorted(leader_lines))
+            # create blocks from leaders' starting lines
+            exit_line = entry_exit_line[entry]
+            for (start, leader), (end, _) in zip(line_to_leader, line_to_leader[1:] + [(exit_line + 1, None)]):
+                block = Block(leader)
+                block.extend(ircode[start:end])
+                if not blocks:
+                    self.entries[entry] = block
+                blocks[leader] = block
 
-        # # create blocks from leaders' starting lines
-        entry_lines_to_leaders = {
-            entry: {line: leader for leader, line in leader_to_line.items()}
-            for entry, leader_to_line in entry_leaders_to_lines.items()
-        }
-        print("\n", leader_lines)
-        print("\n", entry_leaders_to_lines)
-        print("\n", entry_lines_to_leaders)
-        exit()
+            # connect blocks that belong to the same function
+            for (start, leader), (end, next_leader) in zip(line_to_leader, line_to_leader[1:] + [(exit_line + 1, None)]):
+                block = blocks[leader]
+                last_instr = block.instructions[-1]
+                instr_type = Instruction.type_of(last_instr)
 
-        leaders = {}
-        for start, end in zip(leader_lines, leader_lines[1:] + [len(ircode)]):
-            label = line_to_leader[start]
-            if label[0] == "@":
-                leaders[label] = Block("entry")
-                leaders[label].extend(ircode[start+1:end])
-                self.entries[label] = leaders[label]
-            else:
-                leaders[label] = Block(label)
-                leaders[label].extend(ircode[start:end])
+                if instr_type == Instruction.Type.JUMP:
+                    _, target = last_instr
+                    block.sucessors.append(blocks[target])
+                    blocks[target].predecessors.append(block)
 
-        # # connect blocks that belong to the same function
-        # for (label, block), next_leader_line in zip(leaders.items(), leader_lines[1:]):
-        #     last_instr = block.instructions[-1]
-        #     instr_type = Instruction.type_of(last_instr)
+                elif instr_type == Instruction.Type.CBRANCH:
+                    _, _, true_target, false_target = last_instr
+                    block.sucessors.append(blocks[true_target])
+                    block.sucessors.append(blocks[false_target])
+                    blocks[true_target].predecessors.append(block)
+                    blocks[false_target].predecessors.append(block)
 
-        #     if instr_type == Instruction.Type.JUMP:
-        #         _, target = last_instr
-        #         block.sucessors.append(leaders[target])
-        #         leaders[target].predecessors.append(block)
+                elif instr_type != Instruction.Type.RETURN:
+                    print(">>>", last_instr, instr_type)
+                    print(">>>", start, leader, end, next_leader)
+                    block.sucessors.append(blocks[next_leader])
+                    blocks[next_leader].predecessors.append(block)
 
-        #     elif instr_type == Instruction.Type.CBRANCH:
-        #         _, _, true_target, false_target = last_instr
-        #         block.sucessors.append(leaders[true_target])
-        #         block.sucessors.append(leaders[false_target])
-        #         leaders[true_target].predecessors.append(block)
-        #         leaders[false_target].predecessors.append(block)
+            print(f"\nentry={entry}")
+            for block in blocks.values():
+                print(" ", block)
 
-        #     elif instr_type != Instruction.Type.RETURN:
-        #         next_leader_label = line_to_leader[next_leader_line]
-        #         block.sucessors.append(leaders[next_leader_label])
-        #         leaders[next_leader_label].predecessors.append(block)
-
-        # print("\n" + "\n".join(map(str, leaders.values())))
-
-        # print(leader_to_line)
-        # print(line_to_leader)
-        # print(self.entries)
+        print(f"\nentries={', '.join(self.entries.keys())}")
