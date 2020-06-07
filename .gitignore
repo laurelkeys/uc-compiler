@@ -5,6 +5,9 @@
 *.ir
 *.ast
 
+# GraphViz
+graphviz/
+
 # PLY
 parser.out
 parsetab.py

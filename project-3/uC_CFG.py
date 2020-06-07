@@ -1,6 +1,8 @@
 from collections import namedtuple
 from enum import Enum, unique
 
+from graphviz import Digraph
+
 from uC_blocks import *
 from uC_IR import Instruction
 
@@ -70,9 +72,11 @@ class ControlFlowGraph:
             blocks = {}
             line_to_leader = sorted((line, leader) for leader, line in leader_to_line.items())
 
-            # create blocks from leaders' starting lines
             exit_line = entry_exit_line[entry]
-            for (start, leader), (end, _) in zip(line_to_leader, line_to_leader[1:] + [(exit_line + 1, None)]):
+            line_to_leader.append((exit_line + 1, None))  # HACK used for the last block
+
+            # create blocks from leaders' starting lines
+            for (start, leader), (end, _) in zip(line_to_leader[:-1], line_to_leader[1:]):
                 block = Block(leader)
                 block.extend(ircode[start:end])
                 if not blocks:
@@ -80,7 +84,7 @@ class ControlFlowGraph:
                 blocks[leader] = block
 
             # connect blocks that belong to the same function
-            for (start, leader), (end, next_leader) in zip(line_to_leader, line_to_leader[1:] + [(exit_line + 1, None)]):
+            for (start, leader), (_, next_leader) in zip(line_to_leader[:-1], line_to_leader[1:]):
                 block = blocks[leader]
                 last_instr = block.instructions[-1]
                 instr_type = Instruction.type_of(last_instr)
@@ -98,8 +102,6 @@ class ControlFlowGraph:
                     blocks[false_target].predecessors.append(block)
 
                 elif instr_type != Instruction.Type.RETURN:
-                    print(">>>", last_instr, instr_type)
-                    print(">>>", start, leader, end, next_leader)
                     block.sucessors.append(blocks[next_leader])
                     blocks[next_leader].predecessors.append(block)
 
@@ -108,3 +110,42 @@ class ControlFlowGraph:
                 print(" ", block)
 
         print(f"\nentries={', '.join(self.entries.keys())}")
+
+        for entry_name, entry_block in self.entries.items():
+            GraphViewer.view_entry(entry_name, entry_block)
+
+
+class GraphViewer:
+
+    @staticmethod
+    def view_entry(entry_name, entry_block):
+        g = Digraph("g", filename=f"graphviz/{entry_name}.gv", node_attr={"shape": "record"})
+
+        def _visit(block):
+            name = block.label
+            label = "{" + name + ":\l\t"
+            for instr in block.instructions[1:]:
+                label += str(instr) + "\l\t" # FIXME pretty print
+            label += "}"
+            g.node(name, label=label)
+
+            for pred in block.predecessors:
+                g.edge(pred.label, name)
+
+            if name == "entry":
+                g.node(entry_name, label=None, _attributes={"shape": "ellipse"})
+                g.edge(entry_name, name)
+
+        visited = set()
+
+        def visit(block):
+            if block not in visited:
+                visited.add(block)
+                _visit(block)
+                for succ in block.sucessors:
+                    visit(succ)
+
+        visit(entry_block)
+
+        g.view()
+
