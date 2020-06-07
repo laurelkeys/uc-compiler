@@ -28,6 +28,7 @@ from collections import namedtuple
 
 
 Leader = namedtuple(typename="Leader", field_names=["label", "line"])
+Def = namedtuple(typename="Def", field_names=["line", "instruction"])
 
 
 class Block:

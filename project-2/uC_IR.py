@@ -699,7 +699,7 @@ class Instruction:
         '+':  'add', '-':  'sub',
         '*':  'mul', '/':  'div', '%': 'mod',
 
-        '&&': 'and', '||': 'or',
+        '&&': 'and', '||': 'or', '!': 'not',
 
         '==': 'eq',  '!=': 'ne',
         '<':  'lt',  '<=': 'le',
@@ -721,7 +721,7 @@ class Instruction:
         JUMP    = 11  # target
         CBRANCH = 12  # expr_test, true_target, false_target
         DEFINE  = 13  # source
-        CALL    = 14  # source, opt_target=None):
+        CALL    = 14  # source, opt_target=None
         RETURN  = 15  # _type, opt_target=None
         PARAM   = 16  # _type, source
         READ    = 17  # _type, source

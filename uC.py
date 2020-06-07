@@ -16,6 +16,7 @@ from uC_parser import UCParser
 from uC_sema import Visitor
 from uC_IR import GenerateCode
 from uC_CFG import ControlFlowGraph, GraphViewer
+from uC_DFA import DataFlowAnalysis
 from uc_interpreter import Interpreter
 
 ###########################################################
@@ -87,11 +88,12 @@ class Compiler:
     def _opt(self, susy, ir_file, debug):
         self.cfg = ControlFlowGraph(self.gencode)
         # TODO graph before simplifying as well
-        self.cfg.simplify()
+        # self.cfg.simplify()
         if graph:
             for entry_name, entry_block in self.cfg.entries.items():
                 GraphViewer.view_entry(entry_name, entry_block)
 
+        DataFlowAnalysis.reaching_definitions(self.cfg)
         # TODO stuff..
 
     def _do_compile(self, susy, ast_file, ir_file, debug, parse_only):

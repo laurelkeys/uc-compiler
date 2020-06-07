@@ -40,7 +40,8 @@ class ControlFlowGraph:
                 entry_leaders_to_lines[curr_entry] = {"entry": i}
 
             elif instr_type == Instruction.Type.JUMP:
-                leader_lines.add(i + 1)
+                # if Instruction.type_of(ircode[i + 1]) != Instruction.Type.JUMP:
+                leader_lines.add(i + 1)  # HACK (e.g. if-body ending with return)
                 _, target = code_instr
                 entry_branch_targets[curr_entry].add(target)
 
@@ -68,7 +69,7 @@ class ControlFlowGraph:
             line
             for leader_to_line in entry_leaders_to_lines.values()
             for line in leader_to_line.values()
-        )
+        ), f"\nleader_lines={sorted(leader_lines)}\nentry_leaders_to_lines={entry_leaders_to_lines}"
 
         for entry, leader_to_line in entry_leaders_to_lines.items():
             blocks = {}
@@ -108,16 +109,19 @@ class ControlFlowGraph:
                     blocks[next_leader].predecessors.append(block)
 
     def simplify(self):
-        ''' Attempts to merge basic blocks. '''
+        ''' Attempts to merge basic blocks.\n
+            See https://en.wikipedia.org/wiki/Dominator_(graph_theory)#Algorithms
+        '''
         for entry in self.entries.keys():
             blocks_to_merge = []
+
+            # NOTE special case algorithm:
             for block in self.entry_blocks(entry):
                 if len(block.sucessors) == 1:
                     sucessor = block.sucessors[0]
                     if len(sucessor.predecessors) == 1:
                         blocks_to_merge.append((block, sucessor))
 
-            print(f"blocks_to_merge={blocks_to_merge}")
             for top, bottom in blocks_to_merge:
                 # fix code
                 if Instruction.type_of(top.instructions[-1]) == Instruction.Type.JUMP:
