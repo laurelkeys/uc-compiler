@@ -60,12 +60,15 @@ class ControlFlowGraph:
 
     def __init__(self, ircode):
         ''' Represent the IR code as a graph of basic blocks. '''
-        pp = []
+        self.entries = {}
 
-        leader_lines = { 0 }
-        leader_to_line = { f"$first": 0 }
+        leader_lines = set()
+        leader_to_line = dict()
         branch_targets = set()
 
+        # FIXME treat global variable declarations
+
+        # make defines and instructions following deviations leaders
         for i, code_instr in enumerate(ircode):
             instr_type = Instruction.type_of(code_instr)
             if instr_type == Instruction.Type.DEFINE:
@@ -81,9 +84,8 @@ class ControlFlowGraph:
                 _, _, true_target, false_target = code_instr
                 branch_targets.add(true_target)
                 branch_targets.add(false_target)
-            pp.append(Instruction.type_of(code_instr).name.rjust(8) + "=>" + str(code_instr))
 
-        # NOTE make instructions subject to deviation leaders
+        # make instructions subject to deviation leaders
         for i, code_instr in enumerate(ircode):
             if Instruction.type_of(code_instr) == Instruction.Type.LABEL:
                 label = f"%{code_instr[0]}"
@@ -91,17 +93,24 @@ class ControlFlowGraph:
                     leader_lines.add(i)
                     leader_to_line[label] = i
 
-        # create blocks from leaders' starting lines
-        line_to_leader = { v: k for k, v in leader_to_line.items() }
-        assert set(line_to_leader.keys()) == leader_lines
+        assert set(leader_to_line.values()) == leader_lines  # sanity check
         leader_lines = list(sorted(leader_lines))
 
+        # create blocks from leaders' starting lines
+        line_to_leader = { v: k for k, v in leader_to_line.items() }
         leaders = {}
+
         for start, end in zip(leader_lines, leader_lines[1:] + [len(ircode)]):
             label = line_to_leader[start]
-            leaders[label] = Block(label)
-            leaders[label].extend(ircode[start:end])
+            if label[0] == "@":
+                leaders[label] = Block("entry")
+                leaders[label].extend(ircode[start + 1:end])
+                self.entries[label] = leaders[label]
+            else:
+                leaders[label] = Block(label)
+                leaders[label].extend(ircode[start:end])
 
+        # connect blocks that belong to the same function
         for (label, block), next_leader_line in zip(leaders.items(), leader_lines[1:]):
             last_instr = block.instructions[-1]
             instr_type = Instruction.type_of(last_instr)
@@ -109,17 +118,19 @@ class ControlFlowGraph:
             if instr_type == Instruction.Type.JUMP:
                 _, target = last_instr
                 block.sucessors.append(leaders[target])
+                leaders[target].predecessors.append(block)
 
             elif instr_type == Instruction.Type.CBRANCH:
                 _, _, true_target, false_target = last_instr
                 block.sucessors.append(leaders[true_target])
                 block.sucessors.append(leaders[false_target])
+                leaders[true_target].predecessors.append(block)
+                leaders[false_target].predecessors.append(block)
 
-            else:
-                block.sucessors.append(leaders[line_to_leader[next_leader_line]])
-
-        for i, p in enumerate(pp):
-            print(str(i).rjust(2), ":  " if i not in line_to_leader else ": *", p)
+            elif instr_type != Instruction.Type.RETURN:
+                next_leader_label = line_to_leader[next_leader_line]
+                block.sucessors.append(leaders[next_leader_label])
+                leaders[next_leader_label].predecessors.append(block)
 
         print("\n" + "\n".join(map(str, leaders.values())))
 
