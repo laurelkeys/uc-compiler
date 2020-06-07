@@ -64,36 +64,47 @@ class ControlFlowGraph:
 
         leader_lines = set()
         leader_to_line = dict()
-        branch_targets = set()
+        branch_targets = dict() # set()
 
         # FIXME treat global variable declarations
 
         # make defines and instructions following deviations leaders
+        curr_entry = None
         for i, code_instr in enumerate(ircode):
             instr_type = Instruction.type_of(code_instr)
             if instr_type == Instruction.Type.DEFINE:
                 leader_lines.add(i)
                 _, source = code_instr
-                leader_to_line[source] = i
+                leader_to_line[source] = { "entry": i }
+                branch_targets[source] = set()
+                curr_entry = source
             elif instr_type == Instruction.Type.JUMP:
                 leader_lines.add(i + 1)
                 _, target = code_instr
-                branch_targets.add(target)
+                branch_targets[curr_entry].add(target)
             elif instr_type == Instruction.Type.CBRANCH:
                 leader_lines.add(i + 1)
                 _, _, true_target, false_target = code_instr
-                branch_targets.add(true_target)
-                branch_targets.add(false_target)
+                branch_targets[curr_entry].add(true_target)
+                branch_targets[curr_entry].add(false_target)
 
         # make instructions subject to deviation leaders
+        curr_entry = None
         for i, code_instr in enumerate(ircode):
-            if Instruction.type_of(code_instr) == Instruction.Type.LABEL:
+            instr_type = Instruction.type_of(code_instr)
+            if instr_type == Instruction.Type.DEFINE:
+                curr_entry = code_instr[1]
+            elif instr_type == Instruction.Type.LABEL:
                 label = f"%{code_instr[0]}"
-                if label in branch_targets:
+                if label in branch_targets[curr_entry]:
                     leader_lines.add(i)
-                    leader_to_line[label] = i
+                    leader_to_line[curr_entry][label] = i
 
-        assert set(leader_to_line.values()) == leader_lines  # sanity check
+        # assert set(leader_to_line.values()) == leader_lines
+        print(
+            f"\n{leader_to_line}\n{leader_lines}\n{branch_targets}"
+        )  # sanity check
+        exit()
         leader_lines = list(sorted(leader_lines))
 
         # create blocks from leaders' starting lines
@@ -136,3 +147,4 @@ class ControlFlowGraph:
 
         print(leader_to_line)
         print(line_to_leader)
+        print(self.entries)
