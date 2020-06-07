@@ -39,9 +39,6 @@ class Block:
         self.sucessors = []     # list of sucessors
         self.predecessors = []  # list of predecessors
 
-        if label is not None:
-            self.instructions.append((label,))
-
     def append(self, instr):
         self.instructions.append(instr)
 

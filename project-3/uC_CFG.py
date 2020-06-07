@@ -107,16 +107,28 @@ class ControlFlowGraph:
                     block.sucessors.append(blocks[next_leader])
                     blocks[next_leader].predecessors.append(block)
 
-            print(f"\nentry={entry}")
-            for block in blocks.values():
-                print(" ", block)
-
-        print(f"\nentries={', '.join(self.entries.keys())}")
-
     def simplify(self):
         ''' Attempts to merge basic blocks. '''
+        for entry in self.entries.keys():
+            blocks_to_merge = []
+            for block in self.entry_blocks(entry):
+                if len(block.sucessors) == 1:
+                    sucessor = block.sucessors[0]
+                    if len(sucessor.predecessors) == 1:
+                        blocks_to_merge.append((block, sucessor))
 
-        pass
+            print(f"blocks_to_merge={blocks_to_merge}")
+            for top, bottom in blocks_to_merge:
+                # fix code
+                if Instruction.type_of(top.instructions[-1]) == Instruction.Type.JUMP:
+                    top.instructions = top.instructions[:-1] + bottom.instructions[1:]
+                else:
+                    top.instructions = top.instructions + bottom.instructions[1:]
+                # fix edges
+                top.sucessors = bottom.sucessors
+                for suc in bottom.sucessors:
+                    suc.predecessors.remove(bottom)
+                    suc.predecessors.append(top)
 
     def entry_blocks(self, entry_name):
         ''' Returns a generator for the blocks of the entry. '''
@@ -149,7 +161,7 @@ class GraphViewer:
         def _visit(block):
             name = block.label
             label = "{" + name + ":\l\t"
-            for instr in block.instructions[2:]:  # FIXME
+            for instr in block.instructions[1:]:
                 label += format_line(instr) + "\l\t"
             label += "}"
             g.node(name, label)
@@ -167,8 +179,8 @@ class GraphViewer:
             if block not in visited:
                 visited.add(block)
                 _visit(block)
-                for succ in block.sucessors:
-                    visit(succ)
+                for suc in block.sucessors:
+                    visit(suc)
 
         visit(entry_block)
 
