@@ -740,3 +740,19 @@ class Instruction:
                 return instr_type
 
         return Instruction.Type.LABEL
+
+    @staticmethod
+    def is_def(instr_tuple):
+        instr_type = Instruction.type_of(instr_tuple)
+
+        if instr_type == Instruction.Type.CALL:
+            return len(instr_tuple) == 3  # target is optional
+
+        return instr_type in [
+            Instruction.Type.LOAD,
+            Instruction.Type.STORE,
+            Instruction.Type.LITERAL,
+            Instruction.Type.ELEM,
+            Instruction.Type.OP,
+            Instruction.Type.READ,
+        ]

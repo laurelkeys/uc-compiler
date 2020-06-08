@@ -8,42 +8,30 @@ from uC_blocks import *
 ###########################################################
 
 
-def _is_def(instr):
-    instr_type = Instruction.type_of(instr)
-
-    if instr_type == Instruction.Type.CALL:
-        return len(instr) == 3  # target is optional
-
-    return instr_type in [
-        Instruction.Type.LOAD,
-        Instruction.Type.STORE,
-        Instruction.Type.LITERAL,
-        Instruction.Type.ELEM,
-        Instruction.Type.OP,
-        Instruction.Type.READ,
-    ]
-
-
 class DataFlowAnalysis:
+    @staticmethod
+    def gen_kill_defs(cfg: ControlFlowGraph, entry_name):
+        ''' Returns the GEN, KILL and DEFS sets for every block of an entry. '''
+        block_gen, block_kill = {}, {}  # sets for every line in a block
+        block_defs = {}  # maps variables to definition lines in a block
+
+        for block in cfg.entry_blocks(entry_name):
+            label = block.label
+            block_gen[label], block_kill[label] = {}, {}
+            block_defs[label] = {}
+            for i, instr in enumerate(block.instructions):
+                if _is_def(instr):
+                    target = instr[-1]
+                    block_gen[label][i] = instr
+                    block_kill[label][i] = copy(block_defs[label].get(target, []))
+                    block_defs[label].setdefault(target, []).append(i)
+
+        return block_gen, block_kill, block_defs
+
     @staticmethod
     def reaching_definitions(cfg: ControlFlowGraph):
         for entry in cfg.entries.keys():
-
-            # make gen and kill sets for every line in a block
-            block_gen, block_kill = {}, {}
-            block_defs = {}  # maps variables to definitions (lines) in a block
-
-            for block in cfg.entry_blocks(entry):
-                label = block.label
-                block_gen[label], block_kill[label] = {}, {}
-                block_defs[label] = {}
-                for i, instr in enumerate(block.instructions):
-                    if _is_def(instr):
-                        print("def @", i, "of", label)
-                        target = instr[-1]
-                        block_gen[label][i] = instr
-                        block_kill[label][i] = copy(block_defs[label].get(target, []))
-                        block_defs[label].setdefault(target, []).append(i)
+            block_gen, block_kill, block_defs = DataFlowAnalysis.gen_kill_defs(cfg, entry)
 
             print(f"block_gen:\n   ", "\n   ".join(f"{k}: {v}" for k, v in block_gen.items()))
             print(f"block_kill:\n   ", "\n   ".join(f"{k}: {v}" for k, v in block_kill.items()))
@@ -51,4 +39,13 @@ class DataFlowAnalysis:
 
             # make in and out sets for every line in a block
             block_in, block_out = {}, {}
+
+            last_block_out = None
+            for block in cfg.entry_blocks(entry_name):
+                label = block.label
+                block_in[label], block_out[label] = {}, {}
+                for i, instr in enumerate(block.instructions):
+                    block_in[label][i] = []
+                    # for pred in
+
 
