@@ -71,17 +71,19 @@ class ControlFlowGraph:
             for line in leader_to_line.values()
         ), f"\nleader_lines={sorted(leader_lines)}\nentry_leaders_to_lines={entry_leaders_to_lines}"
 
+        leader_lines = list(sorted(leader_lines))
+        exit_line = { leader_lines[-1]: len(ircode) - 1 }
+        for start, end in zip(leader_lines[:-1], leader_lines[1:]):
+            exit_line[start] = end - 1
+
         for entry, leader_to_line in entry_leaders_to_lines.items():
             blocks = {}
             line_to_leader = sorted((line, leader) for leader, line in leader_to_line.items())
 
-            exit_line = entry_exit_line[entry]
-            line_to_leader.append((exit_line + 1, None))  # HACK used for the last block
-
             # create blocks from leaders' starting lines
-            for (start, leader), (end, _) in zip(line_to_leader[:-1], line_to_leader[1:]):
+            for start, leader in line_to_leader:
                 block = Block(leader)
-                block.extend(ircode[start:end])
+                block.extend(ircode[start : exit_line[start] + 1])
                 if not blocks:
                     self.entries[entry] = block
                 blocks[leader] = block
@@ -108,6 +110,12 @@ class ControlFlowGraph:
                     block.sucessors.append(blocks[next_leader])
                     blocks[next_leader].predecessors.append(block)
 
+            # remove immediate dead blocks
+            for block in blocks.values():
+                if not block.predecessors and block.label != "entry":
+                    for suc in block.sucessors:
+                        suc.predecessors.remove(block)
+
     def simplify(self):
         ''' Attempts to merge basic blocks.\n
             See https://en.wikipedia.org/wiki/Dominator_(graph_theory)#Algorithms
@@ -115,7 +123,7 @@ class ControlFlowGraph:
         for entry in self.entries.keys():
             blocks_to_merge = []
 
-            # NOTE special case algorithm:
+            # NOTE special case algorithm
             for block in self.entry_blocks(entry):
                 if len(block.sucessors) == 1:
                     sucessor = block.sucessors[0]
