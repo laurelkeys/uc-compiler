@@ -64,13 +64,6 @@ class ControlFlowGraph:
                     leader_lines.add(i)
                     entry_leaders_to_lines[curr_entry][label] = i
 
-        # sanity check
-        assert leader_lines == set(
-            line
-            for leader_to_line in entry_leaders_to_lines.values()
-            for line in leader_to_line.values()
-        ), f"\nleader_lines={sorted(leader_lines)}\nentry_leaders_to_lines={entry_leaders_to_lines}"
-
         leader_lines = list(sorted(leader_lines))
         exit_line = { leader_lines[-1]: len(ircode) - 1 }
         for start, end in zip(leader_lines[:-1], leader_lines[1:]):
