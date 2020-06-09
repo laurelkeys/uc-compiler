@@ -37,7 +37,7 @@ class ControlFlowGraph:
                     entry_exit_line[curr_entry] = i - 1
                 curr_entry = code_instr[1]
                 entry_branch_targets[curr_entry] = set()
-                entry_leaders_to_lines[curr_entry] = {f"%entry": i}
+                entry_leaders_to_lines[curr_entry] = {r"%entry": i}
 
             elif instr_type == Instruction.Type.JUMP:
                 # if Instruction.type_of(ircode[i + 1]) != Instruction.Type.JUMP:
@@ -50,6 +50,7 @@ class ControlFlowGraph:
                 _, _, true_target, false_target = code_instr
                 entry_branch_targets[curr_entry].add(true_target)
                 entry_branch_targets[curr_entry].add(false_target)
+
         entry_exit_line[curr_entry] = len(ircode) - 1
 
         # make instructions subject to deviation leaders
@@ -105,7 +106,7 @@ class ControlFlowGraph:
 
             # remove immediate dead blocks
             for block in blocks.values():
-                if not block.predecessors and block.label != f"%entry":
+                if not block.predecessors and block.label != r"%entry":
                     for suc in block.sucessors:
                         suc.predecessors.remove(block)
 
@@ -175,7 +176,7 @@ class GraphViewer:
                         g.edge(pred.label, name, " T" if block == pred.sucessors[0] else " F")
                     else:
                         g.edge(pred.label, name)
-                if name == f"%entry":
+                if name == r"%entry":
                     g.node(entry_name, label=None, _attributes={"shape": "ellipse"})
                     g.edge(entry_name, name)
 
