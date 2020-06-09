@@ -104,7 +104,7 @@ class Interpreter(object):
                 op = ircode[self.pc]
             except IndexError:
                 break
-            if not op[0].isdigit():
+            if len(op) > 1:  # that is, not label
                 opcode, modifier = self._extract_operation(op[0])
                 if opcode.startswith('global'):
                     self.globals[op[1]] = self.offset
@@ -139,7 +139,7 @@ class Interpreter(object):
             except IndexError:
                 break
             self.pc += 1
-            if not op[0].isdigit():
+            if len(op) > 1 or op[0] == 'return_void':
                 opcode, modifier = self._extract_operation(op[0])
                 if hasattr(self, "run_" + opcode):
                     if not modifier:
@@ -158,19 +158,22 @@ class Interpreter(object):
         _lpc = self.pc
         while True:
             try:
-                _opcode = self.code[_lpc][0]
+                _op = self.code[_lpc]
+                _opcode = _op[0]
                 _lpc += 1
                 if _opcode == 'define':
                     break
-                elif _opcode.isdigit():
-                    # labels don't go to memory, just in the dictionary
-                    self.vars['%' + _opcode] = _lpc
+                elif len(_op) == 1 and _opcode != 'return_void':
+                    # labels don't go to memory, just store the pc on dictionary
+                    # labels appears as name:, so we need to extract just the name
+                    # self.vars['%' + _opcode[:-1]] = _lpc
+                    self.vars['%' + _opcode] = _lpc  # FIXME add ':' to labels
             except IndexError:
                 break
 
     def _alloc_reg(self, target):
         # Alloc space in memory and save the offset in the dictionary
-        # for new vars or tempraries, only.
+        # for new vars or temporaries, only.
         if target not in self.vars:
             self.vars[target] = self.offset
             self.offset += 1
@@ -397,6 +400,9 @@ class Interpreter(object):
     run_print_float = run_print_int
     run_print_char = run_print_int
     run_print_bool = run_print_int
+
+    def run_print_void(self):
+        print(end="\n", flush=True)
 
     def run_read_int(self, source):
         global inputline

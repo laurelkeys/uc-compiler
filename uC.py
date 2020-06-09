@@ -39,28 +39,27 @@ class Compiler:
         self.parser = UCParser()
         self.ast = self.parser.parse(self.code, '', debug)
 
-    def _sema(self, susy, ast_file, parse_only):
+    def _sema(self, susy, ast_file):
         ''' Decorate the AST with semantic actions.\n
             If `ast_file` is not `None`, prints out the abstract syntax tree (AST). '''
         try:
-            if not parse_only: # FIXME remove
-                self.sema = Visitor()
-                self.sema.visit(self.ast)
-            if susy:
-                self.ast.show(showcoord=True)
-                if not parse_only:
-                    print("----")
-                    #print("----\n" + str(self.sema.symtab)) # FIXME remove
-            elif ast_file is not None:
+            self.sema = Visitor()
+            self.sema.visit(self.ast)
+            if not susy and ast_file is not None:
                 self.ast.show(buf=ast_file, showcoord=True)
         except AssertionError as e:
             error(None, e)
 
     def _gencode(self, susy, ir_file):
-        ''' Generate uCIR Code for the decorated AST. '''
+        ''' Generate uCIR code for the decorated AST. '''
+        print("----")
         self.gen = GenerateCode()
         self.gen.visit(self.ast)
         self.gencode = self.gen.code
+
+        ## FIXME
+        ## if not susy and ir_file is not None:
+        ##     self.gen.show(buf=ir_file)
 
         def print_code_line(instruction, line_number=None):
             line = ""
@@ -85,7 +84,9 @@ class Compiler:
                 _str += f"{_code}\n"
             ir_file.write(_str)
 
-    def _opt(self, susy, ir_file, debug):
+    def _opt(self, susy, opt_file, debug):
+        ''' Optimize the generated uCIR code. '''
+        print("----")
         self.cfg = ControlFlowGraph(self.gencode)
         # TODO graph before simplifying as well
         # self.cfg.simplify()
@@ -96,43 +97,50 @@ class Compiler:
         DataFlowAnalysis.reaching_definitions(self.cfg)
         # TODO stuff..
 
-    def _do_compile(self, susy, ast_file, ir_file, debug, parse_only):
+    def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, debug):
         ''' Compiles the code to the given file object. '''
         self._parse(susy, ast_file, debug)
         if not errors_reported():
-            self._sema(susy, ast_file, parse_only)
+            self._sema(susy, ast_file)
         if not errors_reported():
-            if not parse_only: # FIXME remove
-                self._gencode(susy, ir_file)
-                print("----")
-                self._opt(susy, ir_file, debug)
+            self._gencode(susy, ir_file)
+            if opt:
+                self._opt(susy, opt_file, debug)
 
-    def compile(self, code, susy, ast_file, ir_file, run_ir, debug, parse_only):
+    def compile(self, code, susy, ast_file, ir_file, opt_file, opt, run_ir, debug):
         ''' Compiles the given code string. '''
         self.code = code
         with subscribe_errors(lambda msg: sys.stderr.write(msg + "\n")):
-            self._do_compile(susy, ast_file, ir_file, debug, parse_only)
+            self._do_compile(susy, ast_file, ir_file, opt_file, opt, debug)
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
-            elif run_ir:
-                print("----")
-                self.vm = Interpreter()
-                self.vm.run(self.gencode)
+            else:
+                if opt:
+                    self.speedup = len(self.gencode) / len(self.optcode)
+                    sys.stderr.write("speedup = %.2f\n" % self.speedup)
+                if run_ir:
+                    print("----")
+                    self.vm = Interpreter()
+                    if opt:
+                        self.vm.run(self.optcode)
+                    else:
+                        self.vm.run(self.gencode)
         return 0
 
 def run_compiler():
     ''' Runs the command-line compiler. '''
 
     if len(sys.argv) < 2:
-        print("Usage: python uC.py <source-file> [-at-susy] [-no-ir] [-no-run] [-no-ast] [-debug]")
+        print("Usage: python uC.py <source-file> [-at-susy] [-no-ast] [-no-ir] [-no-run] [-cfg] [-opt] [-debug]")
         sys.exit(1)
 
     emit_ast = True
     emit_ir = True
     run_ir = True
     susy = False
+    # cfg = False
+    opt = True  # False
     debug = False
-    parse_only = False # FIXME remove
 
     params = sys.argv[1:]
     files = sys.argv[1:]
@@ -147,13 +155,14 @@ def run_compiler():
                 susy = True
             elif param == '-no-run':
                 run_ir = False
+            elif param in ['-cfg', '-g']:
+                # cfg = True
+                global graph
+                graph = True  # FIXME
+            elif param == '-opt':
+                opt = True
             elif param == '-debug':
                 debug = True
-            elif param == '-p': # FIXME remove
-                parse_only = True
-            elif param == '-g': # FIXME remove
-                global graph
-                graph = True
             else:
                 print("Unknown option: %s" % param)
                 sys.exit(1)
@@ -181,11 +190,18 @@ def run_compiler():
             ir_file = open(ir_filename, 'w')
             open_files.append(ir_file)
 
+        opt_file = None
+        if opt and not susy:
+            opt_filename = source_filename[:-3] + '.opt'
+            print("Outputting the optimized uCIR to %s." % opt_filename)
+            opt_file = open(opt_filename, 'w')
+            open_files.append(opt_file)
+
         source = open(source_filename, 'r')
         code = source.read()
         source.close()
 
-        retval = Compiler().compile(code, susy, ast_file, ir_file, run_ir, debug, parse_only)
+        retval = Compiler().compile(code, susy, ast_file, ir_file, opt_file, opt, run_ir, debug)
         for f in open_files:
             f.close()
         if retval != 0:

@@ -20,7 +20,7 @@ class DataFlowAnalysis:
             block_gen[label], block_kill[label] = {}, {}
             block_defs[label] = {}
             for i, instr in enumerate(block.instructions):
-                if _is_def(instr):
+                if Instruction.is_def(instr):
                     target = instr[-1]
                     block_gen[label][i] = instr
                     block_kill[label][i] = copy(block_defs[label].get(target, []))
@@ -38,14 +38,14 @@ class DataFlowAnalysis:
             print(f"block_defs:\n   ", "\n   ".join(f"{k}: {v}" for k, v in block_defs.items()))
 
             # make in and out sets for every line in a block
-            block_in, block_out = {}, {}
+            # block_in, block_out = {}, {}
 
-            last_block_out = None
-            for block in cfg.entry_blocks(entry_name):
-                label = block.label
-                block_in[label], block_out[label] = {}, {}
-                for i, instr in enumerate(block.instructions):
-                    block_in[label][i] = []
-                    # for pred in
+            # last_block_out = None
+            # for block in cfg.entry_blocks(entry_name):
+            #     label = block.label
+            #     block_in[label], block_out[label] = {}, {}
+            #     for i, instr in enumerate(block.instructions):
+            #         block_in[label][i] = []
+            #         # for pred in
 
 

@@ -37,7 +37,7 @@ class ControlFlowGraph:
                     entry_exit_line[curr_entry] = i - 1
                 curr_entry = code_instr[1]
                 entry_branch_targets[curr_entry] = set()
-                entry_leaders_to_lines[curr_entry] = {"entry": i}
+                entry_leaders_to_lines[curr_entry] = {f"%entry": i}
 
             elif instr_type == Instruction.Type.JUMP:
                 # if Instruction.type_of(ircode[i + 1]) != Instruction.Type.JUMP:
@@ -105,7 +105,7 @@ class ControlFlowGraph:
 
             # remove immediate dead blocks
             for block in blocks.values():
-                if not block.predecessors and block.label != "entry":
+                if not block.predecessors and block.label != f"%entry":
                     for suc in block.sucessors:
                         suc.predecessors.remove(block)
 
