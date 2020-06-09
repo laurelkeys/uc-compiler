@@ -65,7 +65,7 @@ class ControlFlowGraph:
                     entry_leaders_to_lines[curr_entry][label] = i
 
         leader_lines = list(sorted(leader_lines))
-        exit_line = { leader_lines[-1]: len(ircode) - 1 }
+        exit_line = {leader_lines[-1]: len(ircode) - 1}
         for start, end in zip(leader_lines[:-1], leader_lines[1:]):
             exit_line[start] = end - 1
 
@@ -116,7 +116,8 @@ class ControlFlowGraph:
         for entry in self.entries.keys():
             blocks_to_merge = []
 
-            # NOTE special case algorithm
+            # NOTE given the restrictions of basic blocks, such as linearity,
+            #      we can use a simpler dominance algorithm to find mergings:
             for block in self.entry_blocks(entry):
                 if len(block.sucessors) == 1:
                     sucessor = block.sucessors[0]
@@ -151,43 +152,37 @@ class ControlFlowGraph:
 
 class GraphViewer:
     @staticmethod
-    def view_entry(entry_name, entry_block):
-        fname = f"graphviz/{entry_name}.gv"
-        try:
-            os.remove(fname)
-        except OSError:
-            pass
-        g = Digraph("g", filename=fname, node_attr={"shape": "record"})
-
-        def format_line(instr):
-            line = " ".join(map(str, instr))
-            return f"{line}:" if len(instr) == 1 and instr[0].isdigit() else f"  {line}"
-
-        def _visit(block):
-            name = block.label
-            label = "{" + name + ":\l\t"
-            for instr in block.instructions[1:]:
-                label += format_line(instr) + "\l\t"
-            label += "}"
-            g.node(name, label)
-
-            for pred in block.predecessors:
-                g.edge(pred.label, name)
-
-            if name == "entry":
-                g.node(entry_name, label=None, _attributes={"shape": "ellipse"})
-                g.edge(entry_name, name)
+    def view_entry(entry_name, entry_block, save_folder="graphviz", save_as_png=True):
+        g = Digraph(
+            name=entry_name,
+            directory=save_folder,
+            node_attr={"shape": "record"},
+            format="png" if save_as_png else "pdf",
+        )
 
         visited = set()
 
         def visit(block):
-            if block not in visited:
-                visited.add(block)
-                _visit(block)
-                for suc in block.sucessors:
-                    visit(suc)
+            name = block.label
+            if name not in visited:
+                node_label = "{" + name + ":\l\t"
+                for instr in block.instructions[1:]:
+                    node_label += " ".join(map(str, instr)) + "\l\t"
+                node_label += "}"
+                g.node(name, node_label)
+                for pred in block.predecessors:
+                    if len(pred.sucessors) == 2:
+                        g.edge(pred.label, name, " T" if block == pred.sucessors[0] else " F")
+                    else:
+                        g.edge(pred.label, name)
+                if name == f"%entry":
+                    g.node(entry_name, label=None, _attributes={"shape": "ellipse"})
+                    g.edge(entry_name, name)
+
+                visited.add(name)
+                for sucessor in block.sucessors:
+                    visit(sucessor)
 
         visit(entry_block)
 
         g.view()
-

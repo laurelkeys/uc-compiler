@@ -9,6 +9,6 @@ int checkPrime(int n) {
     return isPrime;
 }
 
-void main() {}
+// void main() {} /* uncomment to use without -no-run */
 
 // See https://raw.githubusercontent.com/iviarcio/mc921/27e4904b9bfff930d18baea819af1e4d75db95d9/checkPrime.gv.png

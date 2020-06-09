@@ -47,5 +47,3 @@ class DataFlowAnalysis:
             #     for i, instr in enumerate(block.instructions):
             #         block_in[label][i] = []
             #         # for pred in
-
-

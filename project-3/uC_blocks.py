@@ -61,10 +61,7 @@ class Block:
 
     def compute_in_out(self, in_set):
         gen, kill = self.gen_kill[0]
-        self.in_out = [In_Out(
-            in_=in_set,
-            out=gen.union(in_set - kill)
-        )]
+        self.in_out = [In_Out(in_=in_set, out=gen.union(in_set - kill))]
         for i, instr in enumerate(self.instructions[1:]):
             gen, kill = self.gen_kill[i]
             pred_out = self.in_out[i - 1].out
