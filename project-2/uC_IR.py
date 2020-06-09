@@ -731,7 +731,7 @@ class Instruction:
     def type_of(instr_tuple):
         head, *_ = instr_tuple
 
-        if head in Instruction.opcode.values():
+        if head.split("_")[0] in Instruction.opcode.values():
             return Instruction.Type.OP
 
         # HACK this relies on names not overlapping

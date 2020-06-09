@@ -40,8 +40,7 @@ class ControlFlowGraph:
                 entry_leaders_to_lines[curr_entry] = {r"%entry": i}
 
             elif instr_type == Instruction.Type.JUMP:
-                # if Instruction.type_of(ircode[i + 1]) != Instruction.Type.JUMP:
-                leader_lines.add(i + 1)  # HACK (e.g. if-body ending with return)
+                leader_lines.add(i + 1)
                 _, target = code_instr
                 entry_branch_targets[curr_entry].add(target)
 

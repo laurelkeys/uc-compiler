@@ -10,6 +10,10 @@ from uC_blocks import *
 
 class DataFlowAnalysis:
     @staticmethod
+    def compute_defs(cfg: ControlFlowGraph, entry_name):
+        pass
+
+    @staticmethod
     def gen_kill_defs(cfg: ControlFlowGraph, entry_name):
         ''' Returns the GEN, KILL and DEFS sets for every block of an entry. '''
         block_gen, block_kill = {}, {}  # sets for every line in a block
