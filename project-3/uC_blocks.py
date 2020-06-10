@@ -1,4 +1,7 @@
+from collections import namedtuple
+
 from uC_IR import Instruction
+
 
 # NOTE A basic block (BB) is a sequence of instructions where the control flow enters
 #      only at the beginning of the block and exits at the end of the block, without the
@@ -27,6 +30,9 @@ from uC_IR import Instruction
 ###########################################################
 
 
+In_Out = namedtuple(typename="In_Out", field_names=["in_", "out"])
+Gen_Kill = namedtuple(typename="Gen_Kill", field_names=["gen", "kill"])
+
 class Block:
     ''' Base class representing a CFG block. '''
 
@@ -35,6 +41,9 @@ class Block:
         self.instructions = []  # instructions in the block
         self.sucessors = []     # list of sucessors
         self.predecessors = []  # list of predecessors
+
+        self.in_out = In_Out(set(), set())
+        self.gen_kill = Gen_Kill(set(), set())
 
     # @property def in_set(self): return self.in_out[0].in_
     # @property def out_set(self): return self.in_out[-1].out

@@ -5,6 +5,8 @@
 *.ir
 *.ast
 
+project-1/test_files
+
 # GraphViz
 graphviz/
 
