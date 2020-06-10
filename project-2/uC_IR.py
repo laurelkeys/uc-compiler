@@ -699,7 +699,7 @@ class Instruction:
         '+':  'add', '-':  'sub',
         '*':  'mul', '/':  'div', '%': 'mod',
 
-        '&&': 'and', '||': 'or', #'!': 'not',
+        '&&': 'and', '||': 'or', '!': 'not',
 
         '==': 'eq',  '!=': 'ne',
         '<':  'lt',  '<=': 'le',
@@ -715,7 +715,7 @@ class Instruction:
 
         'and': lambda l, r: int(l and r),
         'or': lambda l, r: int(l or r),
-        #'not': lambda x: int(not x),
+        # 'not': lambda x: int(not x),
 
         'eq': lambda l, r: int(l == r),
         'ne': lambda l, r: int(l != r),
