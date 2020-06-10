@@ -35,12 +35,29 @@ class DataFlow:
             for entry in cfg.entries:
                 print("\n\nentry", entry)
                 for block in cfg.entry_blocks(entry):
-                    print("\nblock", block.label)
                     gen_kill_list = DataFlow.LivenessAnalysis.compute_gen_kill(block)
                     in_out_list = DataFlow.LivenessAnalysis.compute_in_out(block, gen_kill_list)
+                    print("\nblock", block.label)
+                    print("\nblock", DataFlow.LivenessAnalysis.compute_block_gen_kill(gen_kill_list))
+                    # TODO print DataFlow.LivenessAnalysis.compute_block_in_out(gen_kill_list)
                     for gen_kill, in_out, instr in zip(gen_kill_list, in_out_list, block.instructions):
                         print(str(instr).ljust(40), in_out)
                         print(str(instr).ljust(40), gen_kill)
+
+        @staticmethod
+        def compute_block_in_out(block_gen_kill, successors_in):
+            block_out = successors_in
+            block_gen, block_kill = block_gen_kill
+            block_in = block_gen.union(block_out - block_kill)
+            return block_in, block_out
+
+        @staticmethod
+        def compute_block_gen_kill(gen_kill_list):
+            block_gen, block_kill = gen_kill_list[0]
+            for gen, kill in gen_kill_list[1:]:
+                block_gen = gen.union(block_gen - kill)
+                block_kill = block_kill.union(kill)
+            return Gen_Kill(block_gen, block_kill)
 
         @staticmethod
         def compute_in_out(block, gen_kill_list):
@@ -55,7 +72,6 @@ class DataFlow:
                 in_out_list.append(In_Out(in_, out))
 
             return in_out_list[::-1]
-
 
         @staticmethod
         def compute_gen_kill(block):
