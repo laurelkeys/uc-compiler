@@ -699,11 +699,30 @@ class Instruction:
         '+':  'add', '-':  'sub',
         '*':  'mul', '/':  'div', '%': 'mod',
 
-        '&&': 'and', '||': 'or', '!': 'not',
+        '&&': 'and', '||': 'or', #'!': 'not',
 
         '==': 'eq',  '!=': 'ne',
         '<':  'lt',  '<=': 'le',
         '>':  'gt',  '>=': 'ge',
+    }
+
+    fold = {
+        'add': lambda l, r: l + r,
+        'sub': lambda l, r: l - r,
+        'mul': lambda l, r: l * r,
+        'div': lambda l, r: l // r if isinstance(r, int) else l / r,
+        'mod': lambda l, r: l % r,
+
+        'and': lambda l, r: int(l and r),
+        'or': lambda l, r: int(l or r),
+        #'not': lambda x: int(not x),
+
+        'eq': lambda l, r: int(l == r),
+        'ne': lambda l, r: int(l != r),
+        'lt': lambda l, r: int(l < r),
+        'le': lambda l, r: int(l <= r),
+        'gt': lambda l, r: int(l > r),
+        'ge': lambda l, r: int(l >= r),
     }
 
     @unique

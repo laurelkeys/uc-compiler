@@ -11,21 +11,26 @@ class Optimizer:
     def constant_folding(cfg: ControlFlowGraph):
         for entry in cfg.entries.keys():
             for block in cfg.entry_blocks(entry):
-                is_constant = {}
+                constant_value = {}
                 for i in range(len(block.instructions)):
                     instr = block.instructions[i]
                     instr_type = Instruction.type_of(instr)
-                    if Instruction.is_def(instr):
-                        if instr_type == Instruction.Type.OP:
-                            _, left, right, target = instr
-                            print("target", target, "|", left, right, "| instr", instr)
-                        elif instr_type == Instruction.Type.ELEM:
-                            _, arr, idx, target = instr
-                            print("target", target, "|", arr, idx, "| instr", instr)
-                        else:
-                            _, var, target = instr
-                            print("target", target, "|", var, "| instr", instr)
+                    if instr_type == Instruction.Type.OP:
+                        op, left, right, target = instr
+                        opcode, *optype = op.split("_")
+                        left = constant_value.get(left, left)
+                        right = constant_value.get(right, right)
+                        if not isinstance(left, str) and not isinstance(right, str):
+                            value = Instruction.fold[opcode](left, right)
+                            constant_value[target] = value
+                            block.instructions[i] = (f"literal_{'_'.join(optype)}", value, target)
 
+                    elif Instruction.is_def(instr) and instr_type != Instruction.Type.ELEM:
+                        op, var, target = instr
+                        var = constant_value.get(var, var)
+                        if not isinstance(var, str):
+                            constant_value[target] = var
+                            block.instructions[i] = (op, var, target)
 
     @staticmethod
     def constant_propagation(cfg: ControlFlowGraph):
