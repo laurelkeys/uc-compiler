@@ -8,8 +8,8 @@ from uC_blocks import *
 
 class Optimizer:
     @staticmethod
-    def constant_folding(cfg: ControlFlowGraph):
-        print(">> constant folding <<")
+    def constant_folding_and_propagation(cfg: ControlFlowGraph):
+        print(">> constant folding + propagation <<")
         for entry in cfg.entries.keys():
             for block in cfg.entry_blocks(entry):
                 constant_value = {}
@@ -58,17 +58,14 @@ class Optimizer:
                             constant_value[target] = float(var)
                             block.instructions[i] = (f"literal_float", float(var), target)
 
-                    else:
-                        pass  # ALLOC, GLOBAL, ELEM, LABEL, JUMP, CBRANCH, DEFINE, RETURN, PARAM, READ
+                    # else: ALLOC, GLOBAL, ELEM, LABEL, JUMP, CBRANCH, DEFINE, RETURN, PARAM, READ
 
-                for instr in block.instructions:
-                    print(instr)
-        print(">> constant folding <<")
-
-    @staticmethod
-    def constant_propagation(cfg: ControlFlowGraph):
-        pass
+                print("\n".join(Instruction.prettify(block.instructions)))
+        print(">> constant folding + propagation <<")
 
     @staticmethod
     def dead_code_elimination(cfg: ControlFlowGraph):
-        pass
+        print(">> dead code elimination <<")
+        for block in cfg.exit_blocks():
+            print(block.label)
+        print(">> dead code elimination <<")

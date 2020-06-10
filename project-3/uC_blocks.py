@@ -1,5 +1,3 @@
-from collections import namedtuple
-
 from uC_IR import Instruction
 
 # NOTE A basic block (BB) is a sequence of instructions where the control flow enters
@@ -29,10 +27,6 @@ from uC_IR import Instruction
 ###########################################################
 
 
-In_Out = namedtuple(typename="In_Out", field_names=["in_", "out"])
-Gen_Kill = namedtuple(typename="Gen_Kill", field_names=["gen", "kill"])
-
-
 class Block:
     ''' Base class representing a CFG block. '''
 
@@ -45,30 +39,30 @@ class Block:
     # @property def in_set(self): return self.in_out[0].in_
     # @property def out_set(self): return self.in_out[-1].out
 
-    def compute_gen_kill(self):
-        self.gen_kill = []
-        defs = {}  # map variables to definitions
-        for i, instr in enumerate(self.instructions):
-            if Instruction.is_def(instr):
-                target = instr[-1]
-                defs.setdefault(target, set()).add(i)
-                self.gen_kill.append(Gen_Kill(
-                    gen={i},
-                    kill=defs[target] - {i}
-                ))
-            else:
-                self.gen_kill.append(Gen_Kill(set(), set()))
+    # def compute_gen_kill(self):
+    #     self.gen_kill = []
+    #     defs = {}  # map variables to definitions
+    #     for i, instr in enumerate(self.instructions):
+    #         if Instruction.is_def(instr):
+    #             target = instr[-1]
+    #             defs.setdefault(target, set()).add(i)
+    #             self.gen_kill.append(Gen_Kill(
+    #                 gen={i},
+    #                 kill=defs[target] - {i}
+    #             ))
+    #         else:
+    #             self.gen_kill.append(Gen_Kill(set(), set()))
 
-    def compute_in_out(self, in_set):
-        gen, kill = self.gen_kill[0]
-        self.in_out = [In_Out(in_=in_set, out=gen.union(in_set - kill))]
-        for i, instr in enumerate(self.instructions[1:]):
-            gen, kill = self.gen_kill[i]
-            pred_out = self.in_out[i - 1].out
-            self.in_out.append(In_Out(
-                in_=pred_out,
-                out=gen.union(pred_out - kill)
-            ))
+    # def compute_in_out(self, in_set):
+    #     gen, kill = self.gen_kill[0]
+    #     self.in_out = [In_Out(in_=in_set, out=gen.union(in_set - kill))]
+    #     for i, instr in enumerate(self.instructions[1:]):
+    #         gen, kill = self.gen_kill[i]
+    #         pred_out = self.in_out[i - 1].out
+    #         self.in_out.append(In_Out(
+    #             in_=pred_out,
+    #             out=gen.union(pred_out - kill)
+    #         ))
 
     def append(self, instr):
         self.instructions.append(instr)

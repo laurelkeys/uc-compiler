@@ -1,3 +1,4 @@
+from collections import namedtuple
 from copy import copy
 
 from uC_CFG import *
@@ -8,46 +9,93 @@ from uC_blocks import *
 ###########################################################
 
 
-class DataFlowAnalysis:
-    @staticmethod
-    def compute_defs(cfg: ControlFlowGraph, entry_name):
-        pass
+In_Out = namedtuple(typename="In_Out", field_names=["in_", "out"])
+Gen_Kill = namedtuple(typename="Gen_Kill", field_names=["gen", "kill"])
 
-    @staticmethod
-    def gen_kill_defs(cfg: ControlFlowGraph, entry_name):
-        ''' Returns the GEN, KILL and DEFS sets for every block of an entry. '''
-        block_gen, block_kill = {}, {}  # sets for every line in a block
-        block_defs = {}  # maps variables to definition lines in a block
 
-        for block in cfg.entry_blocks(entry_name):
-            label = block.label
-            block_gen[label], block_kill[label] = {}, {}
-            block_defs[label] = {}
-            for i, instr in enumerate(block.instructions):
-                if Instruction.is_def(instr):
-                    target = instr[-1]
-                    block_gen[label][i] = instr
-                    block_kill[label][i] = copy(block_defs[label].get(target, []))
-                    block_defs[label].setdefault(target, []).append(i)
+class DataFlow:
+    # @staticmethod
+    # def compute_defs(cfg: ControlFlowGraph, entry_name):
+    #     pass
 
-        return block_gen, block_kill, block_defs
+    class ReachingDefinitions:
+        @staticmethod
+        def compute_gen_kill(block):
+            for instr in block.instructions:
+                raise NotImplementedError
 
-    @staticmethod
-    def reaching_definitions(cfg: ControlFlowGraph):
-        for entry in cfg.entries.keys():
-            block_gen, block_kill, block_defs = DataFlowAnalysis.gen_kill_defs(cfg, entry)
+        @staticmethod
+        def compute(cfg: ControlFlowGraph):
+            for entry in cfg.entries.keys():
+                raise NotImplementedError
 
-            print(f"block_gen:\n   ", "\n   ".join(f"{k}: {v}" for k, v in block_gen.items()))
-            print(f"block_kill:\n   ", "\n   ".join(f"{k}: {v}" for k, v in block_kill.items()))
-            print(f"block_defs:\n   ", "\n   ".join(f"{k}: {v}" for k, v in block_defs.items()))
+    class LivenessAnalysis:
+        @staticmethod
+        def compute(cfg: ControlFlowGraph):
+            for entry in cfg.entries:
+                print("\n\nentry", entry)
+                for block in cfg.entry_blocks(entry):
+                    print("\nblock", block.label)
+                    gen_kill_list = DataFlow.LivenessAnalysis.compute_gen_kill(block)
+                    for gen_kill, instr in zip(gen_kill_list, block.instructions):
+                        print(str(instr).ljust(40), gen_kill)
 
-            # make in and out sets for every line in a block
-            # block_in, block_out = {}, {}
+        @staticmethod
+        def compute_gen_kill(block):
+            gen_kill_list = []
+            for instr in block.instructions:
+                instr_type = Instruction.type_of(instr)
 
-            # last_block_out = None
-            # for block in cfg.entry_blocks(entry_name):
-            #     label = block.label
-            #     block_in[label], block_out[label] = {}, {}
-            #     for i, instr in enumerate(block.instructions):
-            #         block_in[label][i] = []
-            #         # for pred in
+                gen_kill = Gen_Kill(set(), set())
+                if instr_type in [
+                    Instruction.Type.LOAD,
+                    Instruction.Type.STORE,
+                    Instruction.Type.FPTOSI,
+                    Instruction.Type.SITOFP,
+                ]:
+                    _, x, t = instr
+                    gen_kill = Gen_Kill({x}, {t})
+
+                elif instr_type == Instruction.Type.LITERAL:
+                    _, _, t = instr
+                    gen_kill = Gen_Kill(set(), {t})
+
+                elif instr_type == Instruction.Type.ELEM:
+                    _, arr, idx, t = instr
+                    gen_kill = Gen_Kill({arr, idx}, {t})
+
+                elif instr_type == Instruction.Type.OP:
+                    if len(instr) == 3:  # boolean not (!)
+                        _, x, t = instr
+                        gen_kill = Gen_Kill({x}, {t})
+                    else:
+                        _, left, right, t = instr
+                        gen_kill = Gen_Kill({left, right}, {t})
+
+                elif instr_type == Instruction.Type.CBRANCH:
+                    _, expr_test, _, _ = instr
+                    gen_kill = Gen_Kill({expr_test}, set())
+
+                elif instr_type == Instruction.Type.CALL and len(instr) == 3:
+                    _, _, t = instr
+                    gen_kill = Gen_Kill(set(), {t})
+
+                elif instr_type == Instruction.Type.RETURN and len(instr) == 2:
+                    _, ret_value = instr
+                    gen_kill = Gen_Kill({ret_value}, set())
+
+                elif instr_type == Instruction.Type.PARAM:
+                    _, x = instr
+                    gen_kill = Gen_Kill({x}, set())
+
+                elif instr_type == Instruction.Type.READ:
+                    _, x = instr
+                    gen_kill = Gen_Kill(set(), {x})
+
+                elif instr_type == Instruction.Type.PRINT and len(instr) == 2:
+                    _, x = instr
+                    gen_kill = Gen_Kill({x}, set())
+
+                gen_kill_list.append(gen_kill)
+
+            return gen_kill_list

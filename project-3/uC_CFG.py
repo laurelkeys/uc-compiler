@@ -144,7 +144,7 @@ class ControlFlowGraph:
                     self.exit.predecessors.append(top)
 
     def entry_blocks(self, entry_name):
-        ''' Returns a generator for the blocks of the entry. '''
+        ''' Returns a generator for the blocks from the entry (i.e. forward). '''
         visited = set()
 
         def visit(block):
@@ -155,6 +155,19 @@ class ControlFlowGraph:
                     yield from visit(sucessor)
 
         yield from visit(self.entries[entry_name])
+
+    def exit_blocks(self):
+        ''' Returns a generator for the blocks from the exit (i.e. backward). '''
+        visited = set()
+
+        def visit(block):
+            if block.label not in visited:
+                visited.add(block.label)
+                yield block
+                for predecessor in block.predecessors:
+                    yield from visit(predecessor)
+
+        yield from visit(self.exit)
 
 
 class GraphViewer:

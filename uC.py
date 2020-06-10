@@ -16,7 +16,7 @@ from uC_parser import UCParser
 from uC_sema import Visitor
 from uC_IR import GenerateCode, Instruction
 from uC_CFG import ControlFlowGraph, GraphViewer
-from uC_DFA import DataFlowAnalysis
+from uC_DFA import DataFlow
 from uC_opt import Optimizer
 from uc_interpreter import Interpreter
 
@@ -73,14 +73,19 @@ class Compiler:
     def _opt(self, susy, opt_file, emit_cfg, debug):
         ''' Optimize the generated uCIR code. '''
         self.cfg = ControlFlowGraph(self.gencode)
+
         # NOTE the graph is being plotted after simplifying
-        self.cfg.simplify()
+        # self.cfg.simplify()
         if emit_cfg:
             for entry_name, entry_block in self.cfg.entries.items():
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
-        # DataFlowAnalysis.reaching_definitions(self.cfg)
-        # Optimizer.constant_folding(self.cfg)
+        # DataFlow.ReachingDefinitions.compute(self.cfg)
+        # Optimizer.constant_folding_and_propagation(self.cfg)
+
+        DataFlow.LivenessAnalysis.compute(self.cfg)
+        # Optimizer.dead_code_elimination(self.cfg)
+
         # TODO stuff..
 
     def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, emit_cfg, debug):
