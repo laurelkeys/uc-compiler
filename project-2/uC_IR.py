@@ -24,6 +24,11 @@ class GenerateCode(NodeVisitor):
         self.fregisters = ChainMap()
         self.farray_dim = ChainMap()
 
+    def show(self, buf=sys.stdout, show_lines=False, end_with_newline=True):
+        buf.write("\n".join(Instruction.prettify(self.code, show_lines)))
+        if end_with_newline:
+            buf.write("\n")
+
     def new_temp(self, var_name=None, temp_name=None):
         ''' Create a new temporary variable of a given scope (function name). '''
         if self.fname not in self.versions:
@@ -715,7 +720,7 @@ class Instruction:
 
         'and': lambda l, r: int(l and r),
         'or': lambda l, r: int(l or r),
-        # 'not': lambda x: int(not x),
+        #'not': lambda x: int(not x),
 
         'eq': lambda l, r: int(l == r),
         'ne': lambda l, r: int(l != r),
@@ -723,6 +728,9 @@ class Instruction:
         'le': lambda l, r: int(l <= r),
         'gt': lambda l, r: int(l > r),
         'ge': lambda l, r: int(l >= r),
+
+        #'fptosi': lambda x: int(x),
+        #'sitofp': lambda x: float(x),
     }
 
     @unique
@@ -775,3 +783,17 @@ class Instruction:
             Instruction.Type.OP,
             Instruction.Type.READ,
         ]
+
+    @staticmethod
+    def prettify(instr_list, show_lines=False):
+        code = []
+        for i, instr in enumerate(instr_list):
+            line = " ".join(map(str, instr))
+            if len(instr) == 1 and instr[0] != "return_void":
+                line = f"{line}:"  # label
+            elif not instr[0].startswith(("define", "global")):
+                line = f"  {line}"
+            if show_lines:
+                line = f"{i}: ".rjust(2 + len(str(len(instr_list)))) + line
+            code.append(line)
+        return code

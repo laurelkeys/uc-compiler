@@ -44,6 +44,23 @@ class Optimizer:
                             constant_value[target] = var
                             block.instructions[i] = (f"literal_{'_'.join(optype)}", var, target)
 
+                    elif instr_type == Instruction.Type.FPTOSI:
+                        _, var, target = instr
+                        var = constant_value.get(var, var)
+                        if not isinstance(var, str):
+                            constant_value[target] = int(var)
+                            block.instructions[i] = (f"literal_int", int(var), target)
+
+                    elif instr_type == Instruction.Type.SITOFP:
+                        _, var, target = instr
+                        var = constant_value.get(var, var)
+                        if not isinstance(var, str):
+                            constant_value[target] = float(var)
+                            block.instructions[i] = (f"literal_float", float(var), target)
+
+                    else:
+                        pass  # ALLOC, GLOBAL, ELEM, LABEL, JUMP, CBRANCH, DEFINE, RETURN, PARAM, READ
+
                 for instr in block.instructions:
                     print(instr)
         print(">> constant folding <<")

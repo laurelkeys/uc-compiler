@@ -14,7 +14,7 @@ from uC_errors import error, errors_reported, clear_errors, subscribe_errors
 
 from uC_parser import UCParser
 from uC_sema import Visitor
-from uC_IR import GenerateCode
+from uC_IR import GenerateCode, Instruction
 from uC_CFG import ControlFlowGraph, GraphViewer
 from uC_DFA import DataFlowAnalysis
 from uC_opt import Optimizer
@@ -60,22 +60,8 @@ class Compiler:
         ## if not susy and ir_file is not None:
         ##     self.gen.show(buf=ir_file)
 
-        def print_code_line(instruction, line_number=None):
-            line = ""
-            line += " ".join(map(str, instruction))
-            if len(instruction) == 1 and instruction[0] != "return_void":
-                line += ":"  # label
-            elif instruction[0].startswith("define"):
-                line = f"{line}"
-            elif not instruction[0].startswith("global"):
-                line = f"  {line}"
-            if line_number is not None:  # padding
-                line = f"{line_number}:  ".rjust(3 + len(str(len(self.gencode))), " ") + line
-            print(line)
-
         print("----")  # FIXME debug only
-        for i, _code in enumerate(self.gencode):
-            print_code_line(line_number=i, instruction=_code)  # line_number=i,
+        self.gen.show(show_lines=True)
         print("----")
 
         if not susy and ir_file is not None:
@@ -94,7 +80,7 @@ class Compiler:
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
         # DataFlowAnalysis.reaching_definitions(self.cfg)
-        Optimizer.constant_folding(self.cfg)
+        # Optimizer.constant_folding(self.cfg)
         # TODO stuff..
 
     def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, emit_cfg, debug):

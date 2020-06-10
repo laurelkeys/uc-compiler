@@ -19,6 +19,7 @@ class ControlFlowGraph:
     def __init__(self, ircode):
         ''' Represent the IR code as a graph of basic blocks. '''
         self.entries = {}
+        self.exit = Block(r"%exit")  # dummy block used for backward analysis
 
         leader_lines = set()
         entry_exit_line = {}
@@ -108,6 +109,8 @@ class ControlFlowGraph:
                 if not block.predecessors and block.label != r"%entry":
                     for suc in block.sucessors:
                         suc.predecessors.remove(block)
+                if not block.sucessors:
+                    self.exit.predecessors.append(block)
 
     def simplify(self):
         ''' Attempts to merge basic blocks.\n
@@ -135,6 +138,10 @@ class ControlFlowGraph:
                 for suc in bottom.sucessors:
                     suc.predecessors.remove(bottom)
                     suc.predecessors.append(top)
+                # fix exit
+                if bottom in self.exit.predecessors:
+                    self.exit.predecessors.remove(bottom)
+                    self.exit.predecessors.append(top)
 
     def entry_blocks(self, entry_name):
         ''' Returns a generator for the blocks of the entry. '''
