@@ -107,12 +107,15 @@ class DataFlow:
                 gen_kill = Gen_Kill(set(), set())
                 if instr_type in [
                     Instruction.Type.LOAD,
-                    Instruction.Type.STORE,
                     Instruction.Type.FPTOSI,
                     Instruction.Type.SITOFP,
                 ]:
                     _, x, t = instr
                     gen_kill = Gen_Kill({x}, {t})
+
+                elif instr_type == Instruction.Type.STORE:
+                    _, x, t = instr
+                    gen_kill = Gen_Kill({x,t}, set())
 
                 elif instr_type == Instruction.Type.LITERAL:
                     _, _, t = instr

@@ -50,7 +50,8 @@ class Optimizer:
                         op, var_, target = instr
                         opcode, *optype = op.split("_")
                         var = constant_value.get(var_, var_)
-                        if not isinstance(var, str):
+                        print(optype)
+                        if not isinstance(var, str) and len(optype) <= 1:
                             constant_value[target] = var
                             if not op.startswith("literal_"): print("from:", (op, var_, target))
                             block.instructions[i] = (f"literal_{'_'.join(optype)}", var, target)
@@ -97,7 +98,6 @@ class Optimizer:
                     if instr_type in [
                         # Instruction.Type.ALLOC,
                         Instruction.Type.LOAD,
-                        Instruction.Type.STORE,
                         Instruction.Type.FPTOSI,
                         Instruction.Type.SITOFP,
                         Instruction.Type.LITERAL,
@@ -105,6 +105,11 @@ class Optimizer:
                         Instruction.Type.OP,
                     ]:
                         is_dead = instr[-1] not in out
+                    elif instr_type == Instruction.Type.STORE:
+                        op, var_, target = instr
+                        opcode, *optype = op.split("_")
+                        if '*' not in optype: # don't remove store on pointers
+                            is_dead = instr[-1] not in out
 
                     if not is_dead:
                         new_instructions.append(instr)
