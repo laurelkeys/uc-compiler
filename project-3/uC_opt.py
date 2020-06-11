@@ -86,19 +86,7 @@ class Optimizer:
                     Instruction.Type.LITERAL,
                     Instruction.Type.ELEM,
                     Instruction.Type.OP,
-                    Instruction.Type.CBRANCH,
-                    Instruction.Type.PARAM,
-                    Instruction.Type.READ,
                 ]:
-                    is_dead = instr[-1] not in out
-
-                elif instr_type == Instruction.Type.CALL and len(instr) == 3:
-                    is_dead = instr[-1] not in out
-
-                elif instr_type == Instruction.Type.RETURN and len(instr) == 2:
-                    is_dead = instr[-1] not in out
-
-                elif instr_type == Instruction.Type.PRINT and len(instr) == 2:
                     is_dead = instr[-1] not in out
 
                 if not is_dead:

@@ -61,7 +61,7 @@ class DataFlow:
                 for block in cfg.exit_blocks():
                     before = block.in_out
 
-                    block_out = set()
+                    block_out = set(cfg.globals.keys())  # start with all global variables
                     for suc in block.sucessors:
                         block_out = block_out.union(suc.in_out.in_)
 

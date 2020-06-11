@@ -20,19 +20,23 @@ class ControlFlowGraph:
         ''' Represent the IR code as a graph of basic blocks. '''
         self.entries = {}
         self.exit = Block(r"%exit")  # dummy block used for backward analysis
+        self.globals = {}  # store global variable declarations
 
         leader_lines = set()
         entry_exit_line = {}
         entry_branch_targets = {}
         entry_leaders_to_lines = {}
-        # FIXME treat global variable declarations
 
         # make defines and instructions following deviations leaders
         curr_entry = None
         for i, code_instr in enumerate(ircode):
             instr_type = Instruction.type_of(code_instr)
 
-            if instr_type == Instruction.Type.DEFINE:
+            if instr_type == Instruction.Type.GLOBAL:
+                _, varname, *_ = code_instr
+                self.globals[varname] = code_instr
+
+            elif instr_type == Instruction.Type.DEFINE:
                 leader_lines.add(i)
                 if curr_entry is not None:
                     entry_exit_line[curr_entry] = i - 1
