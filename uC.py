@@ -80,11 +80,8 @@ class Compiler:
             for entry_name, entry_block in self.cfg.entries.items():
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
-        # DataFlow.ReachingDefinitions.compute(self.cfg)
         # Optimizer.constant_folding_and_propagation(self.cfg)
-
-        DataFlow.LivenessAnalysis.compute(self.cfg)
-        # Optimizer.dead_code_elimination(self.cfg)
+        Optimizer.dead_code_elimination(self.cfg)
 
         # TODO stuff..
 

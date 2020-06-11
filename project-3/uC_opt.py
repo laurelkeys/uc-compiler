@@ -1,3 +1,4 @@
+from uC_DFA import DataFlow
 from uC_CFG import *
 from uC_blocks import *
 
@@ -9,6 +10,7 @@ from uC_blocks import *
 class Optimizer:
     @staticmethod
     def constant_folding_and_propagation(cfg: ControlFlowGraph):
+        DataFlow.ReachingDefinitions.compute(cfg)
         print(">> constant folding + propagation <<")
         for entry in cfg.entries.keys():
             for block in cfg.entry_blocks(entry):
@@ -65,7 +67,8 @@ class Optimizer:
 
     @staticmethod
     def dead_code_elimination(cfg: ControlFlowGraph):
+        DataFlow.LivenessAnalysis.compute(cfg)
         print(">> dead code elimination <<")
-        for block in cfg.exit_blocks():
-            print(block.label)
+        # for block in cfg.exit_blocks():
+        #     print(block.label)
         print(">> dead code elimination <<")

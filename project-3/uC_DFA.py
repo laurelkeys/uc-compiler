@@ -1,4 +1,3 @@
-# from collections import namedtuple
 from copy import copy
 
 from uC_CFG import *
@@ -9,15 +8,7 @@ from uC_blocks import *
 ###########################################################
 
 
-# In_Out = namedtuple(typename="In_Out", field_names=["in_", "out"])
-# Gen_Kill = namedtuple(typename="Gen_Kill", field_names=["gen", "kill"])
-
-
 class DataFlow:
-    # @staticmethod
-    # def compute_defs(cfg: ControlFlowGraph, entry_name):
-    #     pass
-
     class ReachingDefinitions:
         @staticmethod
         def compute_gen_kill(block):
@@ -37,26 +28,25 @@ class DataFlow:
                 for block in cfg.entry_blocks(entry):
                     gen_kill_list = DataFlow.LivenessAnalysis.compute_gen_kill(block)
                     in_out_list = DataFlow.LivenessAnalysis.compute_in_out(block, gen_kill_list)
-                    
+
                     block_gen_kill = DataFlow.LivenessAnalysis.compute_block_gen_kill(gen_kill_list)
                     block.gen_kill = block_gen_kill
-                    # print("\nblock", block.label)
-                    # print("\nblock", block_gen_kill)
-                    # # TODO print DataFlow.LivenessAnalysis.compute_block_in_out(gen_kill_list)
-                    # for gen_kill, in_out, instr in zip(gen_kill_list, in_out_list, block.instructions):
-                    #     print(str(instr).ljust(40), in_out)
-                    #     print(str(instr).ljust(40), gen_kill)
+                    print("\nblock", block.label)
+                    print("\nblock", block_gen_kill)
+                    # TODO print DataFlow.LivenessAnalysis.compute_block_in_out(gen_kill_list)
+                    for gen_kill, in_out, instr in zip(gen_kill_list, in_out_list, block.instructions):
+                        print(str(instr).ljust(40), in_out)
+                        print(str(instr).ljust(40), gen_kill)
 
-            # entry_gen_kill = 
+            # entry_gen_kill =
             DataFlow.LivenessAnalysis.compute_blocks_in_out(cfg)
 
-            for entry in cfg.entries:
-                print("\n\nentry", entry)
-                for block in cfg.entry_blocks(entry):
-                    print("\nblock", block.label)
-                    print("block", block.gen_kill)
-                    print("block", block.in_out)
-
+            # for entry in cfg.entries:
+            #     print("\n\nentry", entry)
+            #     for block in cfg.entry_blocks(entry):
+            #         print("\nblock", block.label)
+            #         print("block", block.gen_kill)
+            #         print("block", block.in_out)
 
         @staticmethod
         def compute_blocks_in_out(cfg):
@@ -74,13 +64,12 @@ class DataFlow:
                     block_in = block_gen.union(block_out - block_kill)
                     block.in_out = In_Out(block_in, block_out)
 
-                    changed |= (before != block.in_out)
-
+                    changed |= before != block.in_out
 
         @staticmethod
         def compute_block_gen_kill(gen_kill_list):
-            block_gen, block_kill = gen_kill_list[0]
-            for gen, kill in gen_kill_list[1:]:
+            block_gen, block_kill = gen_kill_list[-1]
+            for gen, kill in gen_kill_list[-2::-1]:
                 block_gen = gen.union(block_gen - kill)
                 block_kill = block_kill.union(kill)
             return Gen_Kill(block_gen, block_kill)
