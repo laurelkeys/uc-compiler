@@ -69,6 +69,43 @@ class Optimizer:
     def dead_code_elimination(cfg: ControlFlowGraph):
         DataFlow.LivenessAnalysis.compute(cfg)
         print(">> dead code elimination <<")
-        # for block in cfg.exit_blocks():
-        #     print(block.label)
+        for block in cfg.exit_blocks():
+            # block_gen, block_kill = block.gen_kill
+            # block_in, block_out = block.in_out
+            print(block.label)
+            new_instructions = []
+            for instr, (_, out) in zip(block.instructions[::-1], block.in_out_per_line[::-1]):
+                instr_type = Instruction.type_of(instr)
+
+                is_dead = False
+                if instr_type in [
+                    Instruction.Type.LOAD,
+                    Instruction.Type.STORE,
+                    Instruction.Type.FPTOSI,
+                    Instruction.Type.SITOFP,
+                    Instruction.Type.LITERAL,
+                    Instruction.Type.ELEM,
+                    Instruction.Type.OP,
+                    Instruction.Type.CBRANCH,
+                    Instruction.Type.PARAM,
+                    Instruction.Type.READ,
+                ]:
+                    is_dead = instr[-1] not in out
+
+                elif instr_type == Instruction.Type.CALL and len(instr) == 3:
+                    is_dead = instr[-1] not in out
+
+                elif instr_type == Instruction.Type.RETURN and len(instr) == 2:
+                    is_dead = instr[-1] not in out
+
+                elif instr_type == Instruction.Type.PRINT and len(instr) == 2:
+                    is_dead = instr[-1] not in out
+
+                if not is_dead:
+                    new_instructions.append(instr)
+                else:
+                    print("KILLING THIS BEAAACH", instr)
+
+            block.instructions = new_instructions[::-1]
+
         print(">> dead code elimination <<")

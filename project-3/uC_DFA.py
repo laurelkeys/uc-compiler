@@ -27,19 +27,24 @@ class DataFlow:
                 # print("\n\nentry", entry)
                 for block in cfg.entry_blocks(entry):
                     gen_kill_list = DataFlow.LivenessAnalysis.compute_gen_kill(block)
-                    in_out_list = DataFlow.LivenessAnalysis.compute_in_out(block, gen_kill_list)
-
-                    block_gen_kill = DataFlow.LivenessAnalysis.compute_block_gen_kill(gen_kill_list)
-                    block.gen_kill = block_gen_kill
+                    block.gen_kill_per_line = gen_kill_list
+                    block.gen_kill = DataFlow.LivenessAnalysis.compute_block_gen_kill(gen_kill_list)
                     print("\nblock", block.label)
-                    print("\nblock", block_gen_kill)
+                    print("\nblock", block.gen_kill)
                     # TODO print DataFlow.LivenessAnalysis.compute_block_in_out(gen_kill_list)
-                    for gen_kill, in_out, instr in zip(gen_kill_list, in_out_list, block.instructions):
-                        print(str(instr).ljust(40), in_out)
+                    for gen_kill,  instr in zip(gen_kill_list, block.instructions):
+                        # print(str(instr).ljust(40), in_out)
                         print(str(instr).ljust(40), gen_kill)
 
             # entry_gen_kill =
+            print("\ni'm PICKLEE RIIIIIIIIIIIIIIICK")
             DataFlow.LivenessAnalysis.compute_blocks_in_out(cfg)
+            for entry in cfg.entries:
+                for block in cfg.entry_blocks(entry):
+                    print("\nBLOCK", block.label)
+                    print("\nBLOCK", block.in_out)
+                    for in_out, instr in zip(block.in_out_per_line, block.instructions):
+                        print(str(instr).ljust(40), in_out)
 
             # for entry in cfg.entries:
             #     print("\n\nentry", entry)
@@ -65,6 +70,12 @@ class DataFlow:
                     block.in_out = In_Out(block_in, block_out)
 
                     changed |= before != block.in_out
+            
+            # update in and out per line
+            for block in cfg.exit_blocks():
+                block.in_out_per_line = DataFlow.LivenessAnalysis.compute_in_out(
+                    block,  block.gen_kill_per_line, successors_in=block.in_out.out
+                )
 
         @staticmethod
         def compute_block_gen_kill(gen_kill_list):
@@ -75,9 +86,9 @@ class DataFlow:
             return Gen_Kill(block_gen, block_kill)
 
         @staticmethod
-        def compute_in_out(block, gen_kill_list):
+        def compute_in_out(block, gen_kill_list, successors_in):
             in_out_list = []
-            successors_in = set()  # NOTE the successor of the last line is empty
+            # successors_in = set()  # NOTE the successor of the last line is empty
             for instr, gen_kill in zip(block.instructions[::-1], gen_kill_list[::-1]):
                 out = successors_in
                 gen, kill = gen_kill

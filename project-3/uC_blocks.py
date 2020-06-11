@@ -44,6 +44,9 @@ class Block:
 
         self.in_out = In_Out(set(), set())
         self.gen_kill = Gen_Kill(set(), set())
+        
+        self.in_out_per_line = []
+        self.gen_kill_per_line = []
 
     # @property def in_set(self): return self.in_out[0].in_
     # @property def out_set(self): return self.in_out[-1].out

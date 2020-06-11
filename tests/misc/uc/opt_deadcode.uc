@@ -5,6 +5,7 @@ void f() {
     i = 1;          /* dead store */
     global = 1;     /* dead store */
     global = 2;
+    print(i);
     return;
     global = 3;     /* unreachable */
 }
