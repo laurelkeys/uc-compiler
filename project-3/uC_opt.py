@@ -33,7 +33,8 @@ class Optimizer:
                         opcode, *optype = op.split("_")
                         left = constant_value.get(left, left)
                         right = constant_value.get(right, right)
-                        if not isinstance(left, str) and not isinstance(right, str):
+                        if not isinstance(left, str) and not isinstance(right, str) \
+                                                     and optype[0] != "bool":  # NOTE there's no literal_bool
                             value = Instruction.fold[opcode](left, right)
                             constant_value[target] = value
                             block.instructions[i] = (f"literal_{'_'.join(optype)}", value, target)
@@ -72,7 +73,7 @@ class Optimizer:
         changed = True
         while changed:
             changed = False
-            print("CHANGING.....")
+            print("\nCHANGING.....")
             for block in cfg.exit_blocks():
                 print(block.label)
                 new_instructions = []
