@@ -21,45 +21,56 @@ class Optimizer:
 
                     if instr_type == Instruction.Type.OP:
                         if len(instr) == 3:  # boolean not (!)
-                            op, var, target = instr
+                            op, var_, target = instr
                             opcode, *optype = op.split("_")
-                            var = constant_value.get(var, var)
+                            var = constant_value.get(var_, var_)
                             if not isinstance(var, str):
                                 constant_value[target] = int(not var)
+
+                                if not op.startswith("literal_"): print("from:", (op, var_, target))
                                 block.instructions[i] = (f"literal_{'_'.join(optype)}", var, target)
+                                if not op.startswith("literal_"): print("to  :", block.instructions[i])
                             continue
 
-                        op, left, right, target = instr
+                        op, left_, right_, target = instr
                         opcode, *optype = op.split("_")
-                        left = constant_value.get(left, left)
-                        right = constant_value.get(right, right)
+                        left = constant_value.get(left_, left_)
+                        right = constant_value.get(right_, right_)
                         if not isinstance(left, str) and not isinstance(right, str) \
                                                      and optype[0] != "bool":  # NOTE there's no literal_bool
                             value = Instruction.fold[opcode](left, right)
                             constant_value[target] = value
-                            block.instructions[i] = (f"literal_{'_'.join(optype)}", value, target)
+                            if not op.startswith("literal_"): print("from:", (op, left_, right_, target))
+                            block.instructions[i] = (f"literal_{'_'.join(optype)}", var, target)
+                            if not op.startswith("literal_"): print("to  :", block.instructions[i])
 
                     elif Instruction.is_def(instr) and instr_type != Instruction.Type.ELEM:
-                        op, var, target = instr
+                        op, var_, target = instr
                         opcode, *optype = op.split("_")
-                        var = constant_value.get(var, var)
+                        var = constant_value.get(var_, var_)
                         if not isinstance(var, str):
                             constant_value[target] = var
+                            if not op.startswith("literal_"): print("from:", (op, var_, target))
                             block.instructions[i] = (f"literal_{'_'.join(optype)}", var, target)
+                            if not op.startswith("literal_"): print("to  :", block.instructions[i])
 
                     elif instr_type == Instruction.Type.FPTOSI:
-                        _, var, target = instr
+                        op, var, target = instr
                         var = constant_value.get(var, var)
                         if not isinstance(var, str):
                             constant_value[target] = int(var)
+                            if not op.startswith("literal_"): print("from:", (op, var, target))
                             block.instructions[i] = (f"literal_int", int(var), target)
+                            if not op.startswith("literal_"): print("to  :", block.instructions[i])
 
                     elif instr_type == Instruction.Type.SITOFP:
-                        _, var, target = instr
+                        op, var, target = instr
                         var = constant_value.get(var, var)
                         if not isinstance(var, str):
                             constant_value[target] = float(var)
+                            if not op.startswith("literal_"): print("from:", (op, var, target))
                             block.instructions[i] = (f"literal_float", float(var), target)
+                            if not op.startswith("literal_"): print("to  :", block.instructions[i])
 
                     # else: ALLOC, GLOBAL, ELEM, LABEL, JUMP, CBRANCH, DEFINE, RETURN, PARAM, READ
 
@@ -68,10 +79,10 @@ class Optimizer:
 
     @staticmethod
     def dead_code_elimination(cfg: ControlFlowGraph):
-        DataFlow.LivenessAnalysis.compute(cfg)
         print(">> dead code elimination <<")
         changed = True
         while changed:
+            DataFlow.LivenessAnalysis.compute(cfg)
             changed = False
             print("\nCHANGING.....")
             for block in cfg.exit_blocks():
