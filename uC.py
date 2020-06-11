@@ -80,15 +80,23 @@ class Compiler:
             for entry_name, entry_block in self.cfg.entries.items():
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
-        Optimizer.constant_folding_and_propagation(self.cfg)
-        Optimizer.dead_code_elimination(self.cfg)
+        changed = True
+        while changed:
+            lines_before = len(self.cfg.build_code())
+
+            Optimizer.constant_folding_and_propagation(self.cfg)
+            Optimizer.dead_code_elimination(self.cfg)
+            self.cfg.simplify()
+
+            changed = len(self.cfg.build_code()) != lines_before
 
         ##
+        self.optcode = self.cfg.build_code()
+
         print("----")
-        print("\n".join(Instruction.prettify(self.cfg.globals.values())))
-        for entry in self.cfg.entries.keys():
-            for block in self.cfg.entry_blocks(entry):
-                print("\n".join(Instruction.prettify(block.instructions)))
+        print("\n".join(Instruction.prettify(self.optcode)))
+        print("Lines Before:", len(self.gencode))
+        print("Lines After :", len(self.optcode))
         ##
 
         # TODO stuff..
@@ -121,12 +129,12 @@ class Compiler:
                 if run_ir:
                     print("----")
                     self.vm = Interpreter()
-                    self.vm.run(self.gencode)
+                    # self.vm.run(self.gencode)
                     # FIXME
-                    # if opt:
-                    #     self.vm.run(self.optcode)
-                    # else:
-                    #     self.vm.run(self.gencode)
+                    if opt:
+                        self.vm.run(self.optcode)
+                    else:
+                        self.vm.run(self.gencode)
         return 0
 
 

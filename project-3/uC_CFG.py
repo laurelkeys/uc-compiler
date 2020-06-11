@@ -172,6 +172,14 @@ class ControlFlowGraph:
                     yield from visit(predecessor)
 
         yield from visit(self.exit)
+    
+    def build_code(self):
+        code = []
+        code.extend(self.globals.values())
+        for entry in self.entries.keys():
+            for block in self.entry_blocks(entry):
+                code.extend(block.instructions)
+        return code
 
 
 class GraphViewer:
