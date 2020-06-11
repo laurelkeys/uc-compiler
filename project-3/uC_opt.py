@@ -40,8 +40,10 @@ class Optimizer:
                                                      and optype[0] != "bool":  # NOTE there's no literal_bool
                             value = Instruction.fold[opcode](left, right)
                             constant_value[target] = value
-                            if not op.startswith("literal_"): print("from:", (op, left_, right_, target))
-                            block.instructions[i] = (f"literal_{'_'.join(optype)}", var, target)
+                            if not op.startswith("literal_"): 
+                                print("from:", (op, left_, right_, target))
+                                print("r", right, "l", left, 'v', value)
+                            block.instructions[i] = (f"literal_{'_'.join(optype)}", value, target)
                             if not op.startswith("literal_"): print("to  :", block.instructions[i])
 
                     elif Instruction.is_def(instr) and instr_type != Instruction.Type.ELEM:
