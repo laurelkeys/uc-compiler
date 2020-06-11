@@ -75,13 +75,21 @@ class Compiler:
         self.cfg = ControlFlowGraph(self.gencode)
 
         # NOTE the graph is being plotted after simplifying
-        # self.cfg.simplify()
+        self.cfg.simplify()
         if emit_cfg:
             for entry_name, entry_block in self.cfg.entries.items():
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
-        # Optimizer.constant_folding_and_propagation(self.cfg)
+        Optimizer.constant_folding_and_propagation(self.cfg)
         Optimizer.dead_code_elimination(self.cfg)
+
+        ##
+        print("----")
+        print("\n".join(Instruction.prettify(self.cfg.globals.values())))
+        for entry in self.cfg.entries.keys():
+            for block in self.cfg.entry_blocks(entry):
+                print("\n".join(Instruction.prettify(block.instructions)))
+        ##
 
         # TODO stuff..
 

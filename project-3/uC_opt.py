@@ -10,7 +10,7 @@ from uC_blocks import *
 class Optimizer:
     @staticmethod
     def constant_folding_and_propagation(cfg: ControlFlowGraph):
-        DataFlow.ReachingDefinitions.compute(cfg)
+        # DataFlow.ReachingDefinitions.compute(cfg)
         print(">> constant folding + propagation <<")
         for entry in cfg.entries.keys():
             for block in cfg.entry_blocks(entry):
@@ -69,31 +69,35 @@ class Optimizer:
     def dead_code_elimination(cfg: ControlFlowGraph):
         DataFlow.LivenessAnalysis.compute(cfg)
         print(">> dead code elimination <<")
-        for block in cfg.exit_blocks():
-            # block_gen, block_kill = block.gen_kill
-            # block_in, block_out = block.in_out
-            print(block.label)
-            new_instructions = []
-            for instr, (_, out) in zip(block.instructions[::-1], block.in_out_per_line[::-1]):
-                instr_type = Instruction.type_of(instr)
+        changed = True
+        while changed:
+            changed = False
+            print("CHANGING.....")
+            for block in cfg.exit_blocks():
+                print(block.label)
+                new_instructions = []
+                for instr, (_, out) in zip(block.instructions[::-1], block.in_out_per_line[::-1]):
+                    instr_type = Instruction.type_of(instr)
 
-                is_dead = False
-                if instr_type in [
-                    Instruction.Type.LOAD,
-                    Instruction.Type.STORE,
-                    Instruction.Type.FPTOSI,
-                    Instruction.Type.SITOFP,
-                    Instruction.Type.LITERAL,
-                    Instruction.Type.ELEM,
-                    Instruction.Type.OP,
-                ]:
-                    is_dead = instr[-1] not in out
+                    is_dead = False
+                    if instr_type in [
+                        # Instruction.Type.ALLOC,
+                        Instruction.Type.LOAD,
+                        Instruction.Type.STORE,
+                        Instruction.Type.FPTOSI,
+                        Instruction.Type.SITOFP,
+                        Instruction.Type.LITERAL,
+                        Instruction.Type.ELEM,
+                        Instruction.Type.OP,
+                    ]:
+                        is_dead = instr[-1] not in out
 
-                if not is_dead:
-                    new_instructions.append(instr)
-                else:
-                    print("KILLING THIS BEAAACH", instr)
+                    if not is_dead:
+                        new_instructions.append(instr)
+                    else:
+                        print("KILLING THIS BEAAACH", instr)
 
-            block.instructions = new_instructions[::-1]
+                    changed |= is_dead
+                block.instructions = new_instructions[::-1]
 
         print(">> dead code elimination <<")
