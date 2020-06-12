@@ -75,10 +75,10 @@ class Compiler:
         self.cfg = ControlFlowGraph(self.gencode)
 
         # NOTE the graph is being plotted after simplifying
-        self.cfg.simplify()
         # if emit_cfg:
         #     for entry_name, entry_block in self.cfg.entries.items():
         #         GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
+        self.cfg.simplify()
 
         changed = True
         while changed:
@@ -91,7 +91,7 @@ class Compiler:
             changed = len(self.cfg.build_code()) != lines_before
 
         Optimizer.post_process_blocks(self.cfg)
-        # self.cfg.simplify()
+        self.cfg.simplify()
         if emit_cfg:
             for entry_name, entry_block in self.cfg.entries.items():
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)

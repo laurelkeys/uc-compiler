@@ -165,9 +165,9 @@ class Interpreter(object):
                     break
                 elif len(_op) == 1 and _opcode != 'return_void':
                     # labels don't go to memory, just store the pc on dictionary
-                    # labels appears as name:, so we need to extract just the name
-                    #self.vars['%' + _opcode[:-1]] = _lpc
                     self.vars['%' + _opcode] = _lpc  # NOTE we don't add ':' to labels
+                    ## labels appears as name:, so we need to extract just the name
+                    #self.vars['%' + _opcode[:-1]] = _lpc
             except IndexError:
                 break
 

@@ -17,41 +17,23 @@ class DataFlow:
 
         @staticmethod
         def compute(cfg: ControlFlowGraph):
-            for entry in cfg.entries.keys():
+            for entry in cfg.entries:
                 raise NotImplementedError
 
     class LivenessAnalysis:
         @staticmethod
         def compute(cfg: ControlFlowGraph):
             for entry in cfg.entries:
-                # print("\n\nentry", entry)
                 for block in cfg.entry_blocks(entry):
-                    gen_kill_list = DataFlow.LivenessAnalysis.compute_gen_kill(block)
-                    block.gen_kill_per_line = gen_kill_list
-                    block.gen_kill = DataFlow.LivenessAnalysis.compute_block_gen_kill(gen_kill_list)
-                    # print("\nblock", block.label)
-                    # print("\nblock", block.gen_kill)
-                    # # TODO print DataFlow.LivenessAnalysis.compute_block_in_out(gen_kill_list)
-                    # for gen_kill,  instr in zip(gen_kill_list, block.instructions):
-                    #     # print(str(instr).ljust(40), in_out)
-                    #     print(str(instr).ljust(40), gen_kill)
+                    # update gen and kill per line
+                    block.gen_kill_per_line = DataFlow.LivenessAnalysis.compute_gen_kill(block)
+                    # update the block's gen and kill
+                    block.gen_kill = DataFlow.LivenessAnalysis.compute_block_gen_kill(
+                        block.gen_kill_per_line
+                    )
 
-            # entry_gen_kill =
-            # print("\ni'm PICKLEE RIIIIIIIIIIIIIIICK")
+            # update the block's in and out
             DataFlow.LivenessAnalysis.compute_blocks_in_out(cfg)
-            # for entry in cfg.entries:
-            #     for block in cfg.entry_blocks(entry):
-            #         print("\nBLOCK", block.label)
-            #         print("\nBLOCK", block.in_out)
-            #         for in_out, instr in zip(block.in_out_per_line, block.instructions):
-            #             print(str(instr).ljust(40), in_out)
-
-            # for entry in cfg.entries:
-            #     print("\n\nentry", entry)
-            #     for block in cfg.entry_blocks(entry):
-            #         print("\nblock", block.label)
-            #         print("block", block.gen_kill)
-            #         print("block", block.in_out)
 
         @staticmethod
         def compute_blocks_in_out(cfg):
@@ -70,20 +52,12 @@ class DataFlow:
                     block.in_out = In_Out(block_in, block_out)
 
                     changed |= before != block.in_out
-            
+
             # update in and out per line
             for block in cfg.exit_blocks():
                 block.in_out_per_line = DataFlow.LivenessAnalysis.compute_in_out(
-                    block,  block.gen_kill_per_line, successors_in=block.in_out.out
+                    block, block.gen_kill_per_line, successors_in=block.in_out.out
                 )
-
-        @staticmethod
-        def compute_block_gen_kill(gen_kill_list):
-            block_gen, block_kill = gen_kill_list[-1]
-            for gen, kill in gen_kill_list[-2::-1]:
-                block_gen = gen.union(block_gen - kill)
-                block_kill = block_kill.union(kill)
-            return Gen_Kill(block_gen, block_kill)
 
         @staticmethod
         def compute_in_out(block, gen_kill_list, successors_in):
@@ -99,12 +73,21 @@ class DataFlow:
             return in_out_list[::-1]
 
         @staticmethod
+        def compute_block_gen_kill(gen_kill_list):
+            block_gen, block_kill = gen_kill_list[-1]
+            for gen, kill in gen_kill_list[-2::-1]:
+                block_gen = gen.union(block_gen - kill)
+                block_kill = block_kill.union(kill)
+
+            return Gen_Kill(block_gen, block_kill)
+
+        @staticmethod
         def compute_gen_kill(block):
             gen_kill_list = []
             for instr in block.instructions:
                 instr_type = Instruction.type_of(instr)
-
                 gen_kill = Gen_Kill(set(), set())
+
                 if instr_type in [
                     Instruction.Type.LOAD,
                     Instruction.Type.FPTOSI,
@@ -115,7 +98,7 @@ class DataFlow:
 
                 elif instr_type == Instruction.Type.STORE:
                     _, x, t = instr
-                    gen_kill = Gen_Kill({x,t}, set())
+                    gen_kill = Gen_Kill({x, t}, set())
 
                 elif instr_type == Instruction.Type.LITERAL:
                     _, _, t = instr

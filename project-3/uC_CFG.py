@@ -120,7 +120,7 @@ class ControlFlowGraph:
         ''' Attempts to merge basic blocks.\n
             See https://en.wikipedia.org/wiki/Dominator_(graph_theory)#Algorithms
         '''
-        for entry in self.entries.keys():
+        for entry in self.entries:
             blocks_to_merge = []
 
             # NOTE given the restrictions of basic blocks, such as linearity,
@@ -147,6 +147,13 @@ class ControlFlowGraph:
                     self.exit.predecessors.remove(bottom)
                     self.exit.predecessors.append(top)
 
+    # TODO rename entry_blocks() to blocks_of_entry()
+    # TODO rename exit_blocks() to blocks_from_exit()
+    # TODO use blocks_from_entry() where possible
+    # def blocks_from_entry(self):
+    #     for entry in self.entries:
+    #         yield from self.entry_blocks(entry)
+
     def entry_blocks(self, entry_name):
         ''' Returns a generator for the blocks from the entry (i.e. forward). '''
         visited = set()
@@ -172,16 +179,18 @@ class ControlFlowGraph:
                     yield from visit(predecessor)
 
         yield from visit(self.exit)
-    
+
     def build_code(self):
+        ''' Rebuild the program code from the instructions of each block. '''
         code = []
         code.extend(self.globals.values())
-        for entry in self.entries.keys():
+        for entry in self.entries:
             for block in self.entry_blocks(entry):
                 code.extend(block.instructions)
         return code
 
     def remove_block(self, block):
+        ''' Remove edges linking the given block to others on the CFG. '''
         for succ in block.sucessors:
             succ.predecessors.remove(block)
         for pred in block.predecessors:

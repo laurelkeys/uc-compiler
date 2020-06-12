@@ -606,7 +606,7 @@ class GenerateCode(NodeVisitor):
 
     def visit_UnaryOp(self, node: UnaryOp):  # [op, expr*]
         node.expr.attrs['load_ptr?'] = True
-        self.visit(node.expr)  # if ID emits load
+        self.visit(node.expr)  # emits load if ID
         _expr_reg = node.expr.attrs['reg']
         _expr_type = self.unwrap_type(node.expr.attrs['type'])
 
