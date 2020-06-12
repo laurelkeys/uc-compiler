@@ -220,6 +220,16 @@ class Optimizer:
         # print(">> post processing <<\n")
 
     @staticmethod
-    def post_process_code(cfg: ControlFlowGraph):
+    def post_process_code(code):
         # remove jumps to block right below
-        pass
+        to_remove = []
+        for i, line in enumerate(code[:-1]):
+            if line[0] == 'jump':
+                next_instr = code[i+1]
+                if (len(next_instr) == 1 and
+                    next_instr[0] not in ['return_void', 'print_void'] and
+                    line[1][1:] == next_instr[0]
+                ):
+                    to_remove.append(i)
+        code = [line for i, line in enumerate(code) if i not in to_remove]
+        return code

@@ -82,6 +82,7 @@ class Compiler:
         self.cfg.simplify()
 
         self.optcode = self.cfg.build_code()  # store the optimized code
+        self.optcode = Optimizer.post_process_code(self.optcode)
 
         if not susy and opt_file is not None:
             opt_file.write("\n".join(Instruction.prettify(self.optcode)))
