@@ -90,6 +90,8 @@ class Compiler:
 
             changed = len(self.cfg.build_code()) != lines_before
 
+        Optimizer.post_process_blocks(self.cfg)
+
         ##
         self.optcode = self.cfg.build_code()
 

@@ -36,8 +36,8 @@ class Optimizer:
                         opcode, *optype = op.split("_")
                         left = constant_value.get(left_, left_)
                         right = constant_value.get(right_, right_)
-                        if not isinstance(left, str) and not isinstance(right, str) \
-                                                     and optype[0] != "bool":  # NOTE there's no literal_bool
+                        if (not isinstance(left, str) and not isinstance(right, str) 
+                                                     and optype[0] != "bool"):  # NOTE there's no literal_bool
                             value = Instruction.fold[opcode](left, right)
                             constant_value[target] = value
                             if not op.startswith("literal_"): 
@@ -120,3 +120,72 @@ class Optimizer:
                 block.instructions = new_instructions[::-1]
 
         print(">> dead code elimination <<")
+
+    @staticmethod
+    def post_process_blocks(cfg: ControlFlowGraph):
+        # Remove unused allocs
+        
+        for entry in cfg.entries:
+            # Get all allocs
+            allocs = {}
+            used = set()
+            for block in cfg.entry_blocks(entry):
+                for line, instr in enumerate(block.instructions):
+                    instr_type = Instruction.type_of(instr)
+                    if instr_type == Instruction.Type.ALLOC:
+                        allocs[instr[-1]] = (line, block)
+                    elif instr_type == Instruction.Type.CBRANCH:
+                        _, used_var, _, _ = instr
+                        used.add(used_var)
+                    elif instr_type not in [
+                        Instruction.Type.JUMP,
+                        Instruction.Type.LABEL,
+                    ]:
+                        _, *used_vars = instr
+                        used.update(used_vars)
+
+            # kill all unused
+            to_kill = {}
+            for var_name, (line, block) in allocs.items():
+                if var_name not in used:
+                    to_kill.setdefault(block, []).append(line)
+            for block, lines in to_kill.items():
+                block.instructions = [instr for line, instr in enumerate(block.instructions) 
+                                        if line not in lines]
+
+
+        # Check branched blocks for single jump instruction
+        print("\n\n <<<< single jump block >>>>>")
+        for entry in cfg.entries:
+            for block in cfg.entry_blocks(entry):
+                
+                if len(block.instructions) == 2:
+                    last_instr = block.instructions[-1]
+                    instr_type = Instruction.type_of(last_instr)
+                    if instr_type == Instruction.Type.JUMP:
+                        assert len(block.sucessors) == 1
+                        block.sucessors[0].predecessors.remove(block)
+                        block.sucessors[0].predecessors.extend(block.predecessors)
+
+                        _, jump_label = last_instr
+                        # jump_label = "%" + jump_label
+                        for pred in block.predecessors:
+                            pred.sucessors.remove(block)
+                            pred.sucessors.append(block.sucessors[0])
+                            last_instr_pred = pred.instructions[-1]
+                            instr_type_pred = Instruction.type_of(last_instr_pred)
+                            print("predecessor:", last_instr_pred)
+
+                            if instr_type_pred == Instruction.Type.JUMP:
+                                pred.instructions[-1] = ("jump", jump_label)
+                                print("new line:", pred.instructions[-1])
+                            elif instr_type_pred == Instruction.Type.CBRANCH:
+                                op, v, l, r = last_instr_pred
+                                if l == block.label: l = jump_label
+                                if r == block.label: r = jump_label
+                                pred.instructions[-1] = (op, v, l, r)
+                                print("new line:", pred.instructions[-1], jump_label,l,r)
+                            else:
+                                assert False, "fudeu bahia"
+
+        # Remove constant condition ifs
