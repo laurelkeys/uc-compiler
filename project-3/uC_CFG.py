@@ -181,6 +181,12 @@ class ControlFlowGraph:
                 code.extend(block.instructions)
         return code
 
+    def remove_block(self, block):
+        for succ in block.sucessors:
+            succ.predecessors.remove(block)
+        for pred in block.predecessors:
+            pred.sucessors.remove(block)
+
 
 class GraphViewer:
     @staticmethod

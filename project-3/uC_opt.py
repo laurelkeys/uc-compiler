@@ -36,14 +36,15 @@ class Optimizer:
                         opcode, *optype = op.split("_")
                         left = constant_value.get(left_, left_)
                         right = constant_value.get(right_, right_)
-                        if (not isinstance(left, str) and not isinstance(right, str) 
-                                                     and optype[0] != "bool"):  # NOTE there's no literal_bool
+                        if (not isinstance(left, str) and not isinstance(right, str)) :
+                                                    #  and optype[0] != "bool"):  # NOTE there's no literal_bool
                             value = Instruction.fold[opcode](left, right)
                             constant_value[target] = value
                             if not op.startswith("literal_"): 
                                 print("from:", (op, left_, right_, target))
                                 print("r", right, "l", left, 'v', value)
-                            block.instructions[i] = (f"literal_{'_'.join(optype)}", value, target)
+                            if optype[0] != "bool":
+                                block.instructions[i] = (f"literal_{'_'.join(optype)}", value, target)
                             if not op.startswith("literal_"): print("to  :", block.instructions[i])
 
                     elif Instruction.is_def(instr) and instr_type != Instruction.Type.ELEM:
@@ -73,6 +74,27 @@ class Optimizer:
                             constant_value[target] = float(var)
                             if not op.startswith("literal_"): print("from:", (op, var, target))
                             block.instructions[i] = (f"literal_float", float(var), target)
+                            if not op.startswith("literal_"): print("to  :", block.instructions[i])
+
+                    elif instr_type == Instruction.Type.CBRANCH:
+                        op, expr_, target_true, target_false = instr
+                        expr = constant_value.get(expr_, expr_)
+                        if not isinstance(expr, str):
+                            if not op.startswith("literal_"): print("from:", (op, expr_, target_true, target_false))
+                            if bool(expr):
+                                block.instructions[i] = ("jump", target_true)
+                                for succ in block.sucessors:
+                                    if succ.label == target_false:
+                                        cfg.remove_block(succ)
+                                        break
+                                block.sucessors = [suc for suc in block.sucessors if suc.label != target_false]
+                            else:
+                                block.instructions[i] = ("jump", target_false)
+                                for succ in block.sucessors:
+                                    if succ.label == target_true:
+                                        cfg.remove_block(succ)
+                                        break
+                                block.sucessors = [suc for suc in block.sucessors if suc.label != target_true]
                             if not op.startswith("literal_"): print("to  :", block.instructions[i])
 
                     # else: ALLOC, GLOBAL, ELEM, LABEL, JUMP, CBRANCH, DEFINE, RETURN, PARAM, READ
@@ -124,9 +146,8 @@ class Optimizer:
     @staticmethod
     def post_process_blocks(cfg: ControlFlowGraph):
         # Remove unused allocs
-        
         for entry in cfg.entries:
-            # Get all allocs
+            # Get allocs and used vars
             allocs = {}
             used = set()
             for block in cfg.entry_blocks(entry):
@@ -144,7 +165,7 @@ class Optimizer:
                         _, *used_vars = instr
                         used.update(used_vars)
 
-            # kill all unused
+            # kill unused vars
             to_kill = {}
             for var_name, (line, block) in allocs.items():
                 if var_name not in used:
@@ -155,7 +176,6 @@ class Optimizer:
 
 
         # Check branched blocks for single jump instruction
-        print("\n\n <<<< single jump block >>>>>")
         for entry in cfg.entries:
             for block in cfg.entry_blocks(entry):
                 
@@ -174,18 +194,15 @@ class Optimizer:
                             pred.sucessors.append(block.sucessors[0])
                             last_instr_pred = pred.instructions[-1]
                             instr_type_pred = Instruction.type_of(last_instr_pred)
-                            print("predecessor:", last_instr_pred)
 
                             if instr_type_pred == Instruction.Type.JUMP:
                                 pred.instructions[-1] = ("jump", jump_label)
-                                print("new line:", pred.instructions[-1])
                             elif instr_type_pred == Instruction.Type.CBRANCH:
                                 op, v, l, r = last_instr_pred
                                 if l == block.label: l = jump_label
                                 if r == block.label: r = jump_label
                                 pred.instructions[-1] = (op, v, l, r)
-                                print("new line:", pred.instructions[-1], jump_label,l,r)
                             else:
-                                assert False, "fudeu bahia"
+                                assert False
 
         # Remove constant condition ifs
