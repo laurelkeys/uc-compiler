@@ -40,7 +40,7 @@ class Block:
     def __init__(self, label=None):
         self.label = label      # label that identifies the block
         self.instructions = []  # instructions in the block
-        self.sucessors = []     # list of sucessors
+        self.successors = []    # list of successors
         self.predecessors = []  # list of predecessors
 
         self.in_out = In_Out(set(), set())
@@ -61,7 +61,7 @@ class Block:
     def __repr__(self):
         return (
             f"Block({self.label}"
-            + f", sucessors=[{', '.join([s.label for s in self.sucessors])}]"
+            + f", successors=[{', '.join([s.label for s in self.successors])}]"
             + f", predecessors=[{', '.join([p.label for p in self.predecessors])}]"
             + ")"
         )

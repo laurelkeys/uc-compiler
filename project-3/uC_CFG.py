@@ -94,26 +94,26 @@ class ControlFlowGraph:
 
                 if instr_type == Instruction.Type.JUMP:
                     _, target = last_instr
-                    block.sucessors.append(blocks[target])
+                    block.successors.append(blocks[target])
                     blocks[target].predecessors.append(block)
 
                 elif instr_type == Instruction.Type.CBRANCH:
                     _, _, true_target, false_target = last_instr
-                    block.sucessors.append(blocks[true_target])
-                    block.sucessors.append(blocks[false_target])
+                    block.successors.append(blocks[true_target])
+                    block.successors.append(blocks[false_target])
                     blocks[true_target].predecessors.append(block)
                     blocks[false_target].predecessors.append(block)
 
                 elif instr_type != Instruction.Type.RETURN:
-                    block.sucessors.append(blocks[next_leader])
+                    block.successors.append(blocks[next_leader])
                     blocks[next_leader].predecessors.append(block)
 
             # remove immediate dead blocks
             for block in blocks.values():
                 if not block.predecessors and block.label != r"%entry":
-                    for suc in block.sucessors:
-                        suc.predecessors.remove(block)
-                if not block.sucessors:
+                    for succ in block.successors:
+                        succ.predecessors.remove(block)
+                if not block.successors:
                     self.exit.predecessors.append(block)
 
     def simplify(self):
@@ -125,11 +125,11 @@ class ControlFlowGraph:
 
             # NOTE given the restrictions of basic blocks, such as linearity,
             #      we can use a simpler dominance algorithm to find mergings:
-            for block in self.entry_blocks(entry):
-                if len(block.sucessors) == 1:
-                    sucessor = block.sucessors[0]
-                    if len(sucessor.predecessors) == 1:
-                        blocks_to_merge.append((block, sucessor))
+            for block in self.blocks_of_entry(entry):
+                if len(block.successors) == 1:
+                    successor = block.successors[0]
+                    if len(successor.predecessors) == 1:
+                        blocks_to_merge.append((block, successor))
 
             for top, bottom in blocks_to_merge:
                 # fix code
@@ -138,37 +138,35 @@ class ControlFlowGraph:
                 else:
                     top.instructions = top.instructions + bottom.instructions[1:]
                 # fix edges
-                top.sucessors = bottom.sucessors
-                for suc in bottom.sucessors:
-                    suc.predecessors.remove(bottom)
-                    suc.predecessors.append(top)
+                top.successors = bottom.successors
+                for succ in bottom.successors:
+                    succ.predecessors.remove(bottom)
+                    succ.predecessors.append(top)
                 # fix exit
                 if bottom in self.exit.predecessors:
                     self.exit.predecessors.remove(bottom)
                     self.exit.predecessors.append(top)
 
-    # TODO rename entry_blocks() to blocks_of_entry()
-    # TODO rename exit_blocks() to blocks_from_exit()
-    # TODO use blocks_from_entry() where possible
-    # def blocks_from_entry(self):
-    #     for entry in self.entries:
-    #         yield from self.entry_blocks(entry)
-
-    def entry_blocks(self, entry_name):
-        ''' Returns a generator for the blocks from the entry (i.e. forward). '''
+    def blocks_of_entry(self, entry):
+        ''' Returns a forward generator for the blocks from a given entry. '''
         visited = set()
 
         def visit(block):
             if block.label not in visited:
                 visited.add(block.label)
                 yield block
-                for sucessor in block.sucessors:
-                    yield from visit(sucessor)
+                for successor in block.successors:
+                    yield from visit(successor)
 
-        yield from visit(self.entries[entry_name])
+        yield from visit(self.entries[entry])
 
-    def exit_blocks(self):
-        ''' Returns a generator for the blocks from the exit (i.e. backward). '''
+    def blocks_from_entry(self):
+        ''' Returns a forward generator for all blocks. '''
+        for entry in self.entries:
+            yield from self.blocks_of_entry(entry)
+
+    def blocks_from_exit(self):
+        ''' Returns a backward generator for all blocks. '''
         visited = set()
 
         def visit(block):
@@ -184,17 +182,16 @@ class ControlFlowGraph:
         ''' Rebuild the program code from the instructions of each block. '''
         code = []
         code.extend(self.globals.values())
-        for entry in self.entries:
-            for block in self.entry_blocks(entry):
-                code.extend(block.instructions)
+        for block in self.blocks_from_entry():
+            code.extend(block.instructions)
         return code
 
     def remove_block(self, block):
         ''' Remove edges linking the given block to others on the CFG. '''
-        for succ in block.sucessors:
+        for succ in block.successors:
             succ.predecessors.remove(block)
         for pred in block.predecessors:
-            pred.sucessors.remove(block)
+            pred.successors.remove(block)
 
 
 class GraphViewer:
@@ -218,8 +215,8 @@ class GraphViewer:
                 node_label += "}"
                 g.node(name, node_label)
                 for pred in block.predecessors:
-                    if len(pred.sucessors) == 2:
-                        g.edge(pred.label, name, " T" if block == pred.sucessors[0] else " F")
+                    if len(pred.successors) == 2:
+                        g.edge(pred.label, name, " T" if block == pred.successors[0] else " F")
                     else:
                         g.edge(pred.label, name)
                 if name == r"%entry":
@@ -227,8 +224,8 @@ class GraphViewer:
                     g.edge(entry_name, name)
 
                 visited.add(name)
-                for sucessor in block.sucessors:
-                    visit(sucessor)
+                for successor in block.successors:
+                    visit(successor)
 
         visit(entry_block)
 

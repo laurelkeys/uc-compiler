@@ -9,28 +9,27 @@ from uC_blocks import *
 
 
 class DataFlow:
-    class ReachingDefinitions:
-        @staticmethod
-        def compute_gen_kill(block):
-            for instr in block.instructions:
-                raise NotImplementedError
+    # class ReachingDefinitions:
+    #     @staticmethod
+    #     def compute_gen_kill(block):
+    #         for instr in block.instructions:
+    #             raise NotImplementedError
 
-        @staticmethod
-        def compute(cfg: ControlFlowGraph):
-            for entry in cfg.entries:
-                raise NotImplementedError
+    #     @staticmethod
+    #     def compute(cfg: ControlFlowGraph):
+    #         for entry in cfg.entries:
+    #             raise NotImplementedError
 
     class LivenessAnalysis:
         @staticmethod
         def compute(cfg: ControlFlowGraph):
-            for entry in cfg.entries:
-                for block in cfg.entry_blocks(entry):
-                    # update gen and kill per line
-                    block.gen_kill_per_line = DataFlow.LivenessAnalysis.compute_gen_kill(block)
-                    # update the block's gen and kill
-                    block.gen_kill = DataFlow.LivenessAnalysis.compute_block_gen_kill(
-                        block.gen_kill_per_line
-                    )
+            for block in cfg.blocks_from_entry():
+                # update gen and kill per line
+                block.gen_kill_per_line = DataFlow.LivenessAnalysis.compute_gen_kill(block)
+                # update the block's gen and kill
+                block.gen_kill = DataFlow.LivenessAnalysis.compute_block_gen_kill(
+                    block.gen_kill_per_line
+                )
 
             # update the block's in and out
             DataFlow.LivenessAnalysis.compute_blocks_in_out(cfg)
@@ -40,12 +39,12 @@ class DataFlow:
             changed = True
             while changed:
                 changed = False
-                for block in cfg.exit_blocks():
+                for block in cfg.blocks_from_exit():
                     before = block.in_out
 
                     block_out = set(cfg.globals.keys())  # start with all global variables
-                    for suc in block.sucessors:
-                        block_out = block_out.union(suc.in_out.in_)
+                    for succ in block.successors:
+                        block_out = block_out.union(succ.in_out.in_)
 
                     block_gen, block_kill = block.gen_kill
                     block_in = block_gen.union(block_out - block_kill)
@@ -54,7 +53,7 @@ class DataFlow:
                     changed |= before != block.in_out
 
             # update in and out per line
-            for block in cfg.exit_blocks():
+            for block in cfg.blocks_from_exit():
                 block.in_out_per_line = DataFlow.LivenessAnalysis.compute_in_out(
                     block, block.gen_kill_per_line, successors_in=block.in_out.out
                 )
