@@ -32,12 +32,12 @@ class Compiler:
         self.total_errors = 0
         self.total_warnings = 0
 
-    def _parse(self, susy, ast_file, debug):
+    def _parse(self, susy, ast_file):
         ''' Parses the source code.\n
             If `ast_file` is not `None`, prints out the abstract syntax tree (AST).
         '''
         self.parser = UCParser()
-        self.ast = self.parser.parse(self.code, "", debug)
+        self.ast = self.parser.parse(self.code, "")  # , self.debug)
 
     def _sema(self, susy, ast_file):
         ''' Decorate the AST with semantic actions.\n
@@ -54,30 +54,18 @@ class Compiler:
         ''' Generate uCIR code for the decorated AST. '''
         self.gen = GenerateCode()
         self.gen.visit(self.ast)
-        self.gencode = self.gen.code
-
-        ## FIXME
-        ## if not susy and ir_file is not None:
-        ##     self.gen.show(buf=ir_file)
-
-        print("----")  # FIXME debug only
-        self.gen.show(show_lines=True)
-        print("----")
+        self.gencode = self.gen.code  # store the unoptimized code
 
         if not susy and ir_file is not None:
-            _str = ""
-            for _code in self.gencode:
-                _str += f"{_code}\n"
-            ir_file.write(_str)
+            self.gen.show(buf=ir_file)
 
-    def _opt(self, susy, opt_file, emit_cfg, debug):
+        if self.debug:
+            print("----")
+            self.gen.show()  # print the unoptimized code to stdout
+
+    def _opt(self, susy, opt_file, emit_cfg):
         ''' Optimize the generated uCIR code. '''
         self.cfg = ControlFlowGraph(self.gencode)
-
-        # NOTE the graph is being plotted after simplifying
-        # if emit_cfg:
-        #     for entry_name, entry_block in self.cfg.entries.items():
-        #         GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
         self.cfg.simplify()
 
         changed = True
@@ -92,55 +80,57 @@ class Compiler:
 
         Optimizer.post_process_blocks(self.cfg)
         self.cfg.simplify()
+
+        self.optcode = self.cfg.build_code()  # store the optimized code
+
+        if not susy and opt_file is not None:
+            opt_file.write("\n".join(Instruction.prettify(self.optcode)))
+            opt_file.write("\n")  # end the file with a newline
+
+        if self.debug:
+            print("----")  # print the optimized code to stdout
+            print("\n".join(Instruction.prettify(self.optcode)))
+
         if emit_cfg:
             for entry_name, entry_block in self.cfg.entries.items():
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
-        ##
-        self.optcode = self.cfg.build_code()
-
-        print("----")
-        print("\n".join(Instruction.prettify(self.optcode)))
-        print("Lines Before:", len(self.gencode))
-        print("Lines After :", len(self.optcode))
-        ##
-
-        # TODO stuff..
-
-    def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, emit_cfg, debug):
+    def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, emit_cfg):
         ''' Compiles the code to the given file object. '''
-        self._parse(susy, ast_file, debug)
+        self._parse(susy, ast_file)
         if not errors_reported():
             self._sema(susy, ast_file)
         if not errors_reported():
             self._gencode(susy, ir_file)
             if opt:
-                self._opt(susy, opt_file, emit_cfg, debug)
+                self._opt(susy, opt_file, emit_cfg)
+            elif emit_cfg:
+                self.cfg = ControlFlowGraph(self.gencode)
+                for entry_name, entry_block in self.cfg.entries.items():
+                    GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
     def compile(self, code, susy, ast_file, ir_file, opt_file, opt, run_ir, emit_cfg, debug):
         ''' Compiles the given code string. '''
         self.code = code
+        self.debug = debug
         with subscribe_errors(lambda msg: sys.stderr.write(msg + "\n")):
-            self._do_compile(susy, ast_file, ir_file, opt_file, opt, emit_cfg, debug)
+            self._do_compile(susy, ast_file, ir_file, opt_file, opt, emit_cfg)
             if errors_reported():
                 sys.stderr.write("{} error(s) encountered.".format(errors_reported()))
             else:
-                # FIXME
-                # if opt:
-                #     self.speedup = len(self.gencode) / len(self.optcode)
-                #     sys.stderr.write(
-                #         "original = %d, otimizado = %d, speedup = %.2f\n"
-                #         % (len(self.gencode), len(self.optcode), self.speedup)
-                #     )
+                if opt:
+                    if self.debug:
+                        print("----")
+                    self.speedup = len(self.gencode) / len(self.optcode)
+                    sys.stderr.write(
+                        "original = %d, otimizado = %d, speedup = %.2f\n"
+                        % (len(self.gencode), len(self.optcode), self.speedup)
+                    )
                 if run_ir:
-                    print("----")
+                    if self.debug:
+                        print("----")
                     self.vm = Interpreter()
-                    # self.vm.run(self.gencode)
-                    # FIXME
-                    if opt:
-                        self.vm.run(self.optcode)
-                    else:
-                        self.vm.run(self.gencode)
+                    self.vm.run(self.optcode if opt else self.gencode)
         return 0
 
 
@@ -176,9 +166,9 @@ def run_compiler():
                 run_ir = False
             elif param in ["-cfg", "-g"]:
                 emit_cfg = True
-            elif param == "-opt":
+            elif param in ["-opt", "-o"]:
                 opt = True
-            elif param == "-debug":
+            elif param in ["-debug", "-d"]:
                 debug = True
             else:
                 print("Unknown option: %s" % param)

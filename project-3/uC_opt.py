@@ -10,7 +10,7 @@ from uC_blocks import *
 class Optimizer:
     @staticmethod
     def constant_folding_and_propagation(cfg: ControlFlowGraph):
-        print(">> constant folding + propagation <<")
+        # print(">> constant folding + propagation <<")
         for entry in cfg.entries:
             for block in cfg.entry_blocks(entry):
                 constant_value = {}
@@ -57,7 +57,7 @@ class Optimizer:
                         op, var_, target = instr
                         opcode, *optype = op.split("_")
                         var = constant_value.get(var_, var_)
-                        ## print(optype)
+                        ##print(optype)
                         if not isinstance(var, str) and len(optype) <= 1:
                             constant_value[target] = var
                             ## if not op.startswith("literal_"): print("from:", (op, var_, target))
@@ -109,19 +109,19 @@ class Optimizer:
 
                     # else: ALLOC, GLOBAL, ELEM, LABEL, JUMP, CBRANCH, DEFINE, RETURN, PARAM, READ
 
-                print("\n".join(Instruction.prettify(block.instructions)))
-        print(">> constant folding + propagation <<")
+        # print("\n".join(Instruction.prettify(cfg.build_code())))
+        # print(">> constant folding + propagation <<\n")
 
     @staticmethod
     def dead_code_elimination(cfg: ControlFlowGraph):
-        print(">> dead code elimination <<")
+        # print(">> dead code elimination <<")
         changed = True
         while changed:
             DataFlow.LivenessAnalysis.compute(cfg)
             changed = False
-            print("\nCHANGING.....")
+            ##print("\nCHANGING.....")
             for block in cfg.exit_blocks():
-                print(block.label)
+                ##print(block.label)
                 new_instructions = []
                 for instr, (_, out) in zip(block.instructions[::-1], block.in_out_per_line[::-1]):
                     instr_type = Instruction.type_of(instr)
@@ -145,17 +145,19 @@ class Optimizer:
 
                     if not is_dead:
                         new_instructions.append(instr)
-                    else:
-                        print("killed:", instr)
+                    ##else:
+                    ##    print("killed:", instr)
 
                     changed |= is_dead
                 block.instructions = new_instructions[::-1]
+                ##print("\n".join(Instruction.prettify(block.instructions)))
 
-        print(">> dead code elimination <<")
+        # print("\n".join(Instruction.prettify(cfg.build_code())))
+        # print(">> dead code elimination <<\n")
 
     @staticmethod
     def post_process_blocks(cfg: ControlFlowGraph):
-        print(">> post processing <<")
+        # print(">> post processing <<")
         # Remove unused allocs
         for entry in cfg.entries:
             # Get allocs and used vars
@@ -216,4 +218,6 @@ class Optimizer:
                                 pred.instructions[-1] = (op, v, l, r)
                             else:
                                 assert False
-        print(">> post processing <<")
+
+        # print("\n".join(Instruction.prettify(cfg.build_code())))
+        # print(">> post processing <<\n")
