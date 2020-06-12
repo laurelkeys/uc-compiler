@@ -202,5 +202,24 @@ class Optimizer:
                         else:
                             assert False
 
+        # Remove global unused vars
+        code_functions = []
+        for block in cfg.blocks_from_entry():
+            code_functions.extend(block.instructions)
+
+        code_functions_str = "\n".join(Instruction.prettify(code_functions))
+
+        unused = []
+        for var_name in cfg.globals:
+            if code_functions_str.find(var_name) < 0:
+                unused.append(var_name)
+        for var in unused:
+            cfg.globals.pop(var)
+
         # print("\n".join(Instruction.prettify(cfg.build_code())))
         # print(">> post processing <<\n")
+
+    @staticmethod
+    def post_process_code(cfg: ControlFlowGraph):
+        # remove jumps to block right below
+        pass
