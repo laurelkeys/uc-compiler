@@ -5,8 +5,8 @@ from enum import Enum, unique
 
 from graphviz import Digraph
 
-from uC_blocks import *
-from uC_IR import Instruction
+from uc_blocks import *
+from uc_ir import Instruction
 
 ###########################################################
 ## uC Control-Flow Graph (CFG) ############################

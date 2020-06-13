@@ -1,7 +1,7 @@
 from copy import copy
 
-from uC_CFG import *
-from uC_blocks import *
+from uc_cfg import *
+from uc_blocks import *
 
 ###########################################################
 ## uC Data Flow Analysis (DFA) ############################

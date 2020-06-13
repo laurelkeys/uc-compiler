@@ -1,4 +1,68 @@
-import uC_ops
+
+###########################################################
+## uC Operators ###########################################
+###########################################################
+
+class UCOperator:
+    # unary operators: +, -, ++, --, &, *, !
+    unary_ops = {
+        '+': 'PLUS',
+        '-': 'MINUS',
+
+        # prefix increment and decrement
+        '++': 'PLUSPLUS',
+        '--': 'MINUSMINUS',
+
+        # suffix/postfix increment and decrement
+        'p++': 'pPLUSPLUS',
+        'p--': 'pMINUSMINUS',
+
+        # address-of and indirection
+        '&': 'ADDRESS',
+        '*': 'TIMES',
+
+        '!': 'NOT',
+    }
+
+    # binary operators: +, -, *, /, %, &&, ||
+    binary_ops = {
+
+        # additive operators
+        '+': 'PLUS',
+        '-': 'MINUS',
+
+        # multiplicative operators
+        '*': 'TIMES',
+        '/': 'DIV',
+        '%': 'MOD',
+
+        # logical operators
+        '&&': 'AND',
+        '||': 'OR',
+    }
+
+    # relational operators: ==, !=, <, >, <=, >=
+    rel_ops = {
+        '==': 'EQ',
+        '!=': 'NEQ',
+
+        '<': 'LT',
+        '>': 'GT',
+        '<=': 'LEQ',
+        '>=': 'GEQ',
+    }
+
+    # assignment operators: =, +=, -=, *=, /=, %=
+    assign_ops = {
+        '=': 'EQUALS',
+
+        '+=': 'PLUSEQUALS',
+        '-=': 'MINUSEQUALS',
+
+        '*=': 'TIMESEQUALS',
+        '/=': 'DIVEQUALS',
+        '%=': 'MODEQUALS',
+    }
 
 ###########################################################
 ## uC Built-in Types ######################################
@@ -18,10 +82,10 @@ class UCType:
         self.rel_ops = rel_ops or set()
         self.assign_ops = assign_ops or set()
 
-        assert all(op in uC_ops.unary_ops for op in self.unary_ops)
-        assert all(op in uC_ops.binary_ops for op in self.binary_ops)
-        assert all(op in uC_ops.rel_ops for op in self.rel_ops)
-        assert all(op in uC_ops.assign_ops for op in self.assign_ops)
+        assert all(op in UCOperator.unary_ops for op in self.unary_ops)
+        assert all(op in UCOperator.binary_ops for op in self.binary_ops)
+        assert all(op in UCOperator.rel_ops for op in self.rel_ops)
+        assert all(op in UCOperator.assign_ops for op in self.assign_ops)
 
     def __eq__(self, other):
         if isinstance(other, UCType):
@@ -119,7 +183,6 @@ TYPE_FUNC = UCType(
 
 
 def from_name(typename: str) -> UCType:
-    # FIXME turn into a dict
     if   typename == "int":     return TYPE_INT
     elif typename == "float":   return TYPE_FLOAT
     elif typename == "char":    return TYPE_CHAR

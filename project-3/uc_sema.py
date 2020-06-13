@@ -1,11 +1,10 @@
 from collections import ChainMap
 
-import uC_ops
-import uC_types
+import uc_types
 
-from uC_AST import *
-from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
-                      TYPE_BOOL, TYPE_ARRAY, TYPE_FUNC)
+from uc_ast import *
+from uc_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
+                      TYPE_BOOL, TYPE_ARRAY, TYPE_FUNC, UCOperator)
 
 ###########################################################
 ## uC Semantic Analysis ###################################
@@ -212,7 +211,7 @@ class Visitor(NodeVisitor):
 
         assert _ltype == _rtype, f"Type mismatch: `{_ltype} {node.op} {_rtype}`" + str(node.coord)
 
-        assert node.op in uC_ops.assign_ops, (
+        assert node.op in UCOperator.assign_ops, (
             f"Unexpected operator in assignment operation: `{node.op}`" + str(node.coord))
 
         assert node.op in _ltype[0].assign_ops, (  # use the "outermost" type
@@ -241,11 +240,11 @@ class Visitor(NodeVisitor):
 
         assert _ltype == _rtype, f"Type mismatch: {_ltype} `{node.op}` {_rtype}" + str(node.coord)
 
-        if node.op in uC_ops.binary_ops:
+        if node.op in UCOperator.binary_ops:
             _type_ops = _ltype[0].binary_ops  # use the "outermost" type
             node.attrs['type'] = _ltype
 
-        elif node.op in uC_ops.rel_ops:
+        elif node.op in UCOperator.rel_ops:
             _type_ops = _ltype[0].rel_ops  # use the "outermost" type
             node.attrs['type'] = [TYPE_BOOL]
 
@@ -324,7 +323,7 @@ class Visitor(NodeVisitor):
             self.symtab.end_scope()
 
     def visit_Constant(self, node: Constant):  # [type, value]
-        node.attrs['type'] = [uC_types.from_name(node.type)]
+        node.attrs['type'] = [uc_types.from_name(node.type)]
         node.attrs['value'] = node.value
         if node.attrs['type'] == [TYPE_STRING]:
             # NOTE ignore quotes
@@ -665,7 +664,7 @@ class Visitor(NodeVisitor):
             f"Returning {_expr_type} on a {self.symtab.curr_func.attrs['type'][1:]} function" + str(node.coord))
 
     def visit_Type(self, node: Type):  # [names]
-        node.attrs['type'] = [uC_types.from_name(name) for name in node.names]
+        node.attrs['type'] = [uc_types.from_name(name) for name in node.names]
 
     def visit_VarDecl(self, node: VarDecl):  # [declname, type*]
         assert isinstance(node.type, Type)
@@ -673,7 +672,7 @@ class Visitor(NodeVisitor):
         node.attrs['type'] = node.type.attrs['type']
 
     def visit_UnaryOp(self, node: UnaryOp):  # [op, expr*]
-        assert node.op in uC_ops.unary_ops, f"Unexpected operator in unary operation: `{node.op}`" + str(node.coord)
+        assert node.op in UCOperator.unary_ops, f"Unexpected operator in unary operation: `{node.op}`" + str(node.coord)
 
         self.visit(node.expr)
 

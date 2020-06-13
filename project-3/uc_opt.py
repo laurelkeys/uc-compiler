@@ -1,6 +1,6 @@
-from uC_DFA import DataFlow
-from uC_CFG import *
-from uC_blocks import *
+from uc_dfa import DataFlow
+from uc_cfg import *
+from uc_blocks import *
 
 ###########################################################
 ## uC Code Optimizer ######################################
