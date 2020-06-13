@@ -9,6 +9,8 @@ void f() {
     global = 3;     /* unreachable */
 }
 
+// void main() {} /* uncomment to use without -no-run */
+
 /** Below is the code fragment after dead code elimination:
  *
  *  int global;

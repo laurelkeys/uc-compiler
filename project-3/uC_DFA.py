@@ -9,17 +9,6 @@ from uC_blocks import *
 
 
 class DataFlow:
-    # class ReachingDefinitions:
-    #     @staticmethod
-    #     def compute_gen_kill(block):
-    #         for instr in block.instructions:
-    #             raise NotImplementedError
-
-    #     @staticmethod
-    #     def compute(cfg: ControlFlowGraph):
-    #         for entry in cfg.entries:
-    #             raise NotImplementedError
-
     class LivenessAnalysis:
         @staticmethod
         def compute(cfg: ControlFlowGraph):

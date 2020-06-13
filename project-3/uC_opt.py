@@ -12,6 +12,9 @@ class Optimizer:
     def constant_folding_and_propagation(cfg: ControlFlowGraph):
         # print(">> constant folding + propagation <<")
 
+        # NOTE reaching definitions's values are implicitly calculated below,
+        #      unlike dead code elimination, where we call liveness analysis
+
         for block in cfg.blocks_from_entry():
             constant_value = {}
             for i in range(len(block.instructions)):
@@ -225,10 +228,11 @@ class Optimizer:
         to_remove = []
         for i, line in enumerate(code[:-1]):
             if line[0] == 'jump':
-                next_instr = code[i+1]
-                if (len(next_instr) == 1 and
-                    next_instr[0] not in ['return_void', 'print_void'] and
-                    line[1][1:] == next_instr[0]
+                next_instr = code[i + 1]
+                if (
+                    len(next_instr) == 1
+                    and next_instr[0] not in ['return_void', 'print_void']
+                    and line[1][1:] == next_instr[0]
                 ):
                     to_remove.append(i)
         code = [line for i, line in enumerate(code) if i not in to_remove]
