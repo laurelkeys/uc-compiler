@@ -14,10 +14,10 @@ from uc_ir import Instruction
 
 
 class ControlFlowGraph:
-    ''' Control-flow graph (CFG) representation of a uC program. '''
+    """ Control-flow graph (CFG) representation of a uC program. """
 
     def __init__(self, ircode):
-        ''' Represent the IR code as a graph of basic blocks. '''
+        """ Represent the IR code as a graph of basic blocks. """
         self.entries = {}
         self.exit = Block(r"%exit")  # dummy block used for backward analysis
         self.globals = {}  # store global variable declarations
@@ -117,9 +117,9 @@ class ControlFlowGraph:
                     self.exit.predecessors.append(block)
 
     def simplify(self):
-        ''' Attempts to merge basic blocks.\n
+        """ Attempts to merge basic blocks.\n
             See https://en.wikipedia.org/wiki/Dominator_(graph_theory)#Algorithms
-        '''
+        """
         for entry in self.entries:
             blocks_to_merge = []
 
@@ -148,7 +148,7 @@ class ControlFlowGraph:
                     self.exit.predecessors.append(top)
 
     def blocks_of_entry(self, entry):
-        ''' Returns a forward generator for the blocks from a given entry. '''
+        """ Returns a forward generator for the blocks from a given entry. """
         visited = set()
 
         def visit(block):
@@ -161,12 +161,12 @@ class ControlFlowGraph:
         yield from visit(self.entries[entry])
 
     def blocks_from_entry(self):
-        ''' Returns a forward generator for all blocks. '''
+        """ Returns a forward generator for all blocks. """
         for entry in self.entries:
             yield from self.blocks_of_entry(entry)
 
     def blocks_from_exit(self):
-        ''' Returns a backward generator for all blocks. '''
+        """ Returns a backward generator for all blocks. """
         visited = set()
 
         def visit(block):
@@ -179,7 +179,7 @@ class ControlFlowGraph:
         yield from visit(self.exit)
 
     def build_code(self):
-        ''' Rebuild the program code from the instructions of each block. '''
+        """ Rebuild the program code from the instructions of each block. """
         code = []
         code.extend(self.globals.values())
         for block in self.blocks_from_entry():
@@ -187,7 +187,7 @@ class ControlFlowGraph:
         return code
 
     def remove_block(self, block):
-        ''' Remove edges linking the given block to others on the CFG. '''
+        """ Remove edges linking the given block to others on the CFG. """
         for succ in block.successors:
             succ.predecessors.remove(block)
         for pred in block.predecessors:

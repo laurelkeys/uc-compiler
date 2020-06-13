@@ -27,7 +27,7 @@ _num_errors = 0
 
 
 def error(lineno, message, filename=None):
-    ''' Report a compiler error to all subscribers. '''
+    """ Report a compiler error to all subscribers. """
     global _num_errors
     if not filename:
         if not lineno:
@@ -45,25 +45,25 @@ def error(lineno, message, filename=None):
 
 
 def errors_reported():
-    ''' Return the number of errors reported. '''
+    """ Return the number of errors reported. """
     return _num_errors
 
 
 def clear_errors():
-    ''' Reset the total number of errors reported to 0. '''
+    """ Reset the total number of errors reported to 0. """
     global _num_errors
     _num_errors = 0
 
 
 @contextmanager
 def subscribe_errors(handler):
-    ''' Context manager that allows monitoring of compiler error messages.\n
+    """ Context manager that allows monitoring of compiler error messages.\n
         Use as follows, where `handler` is a callable taking a single argument which is the error message string:
         ```
         with subscribe_errors(handler):
             # ... do compiler ops ...
         ```
-    '''
+    """
     _subscribers.append(handler)
     try:
         yield
@@ -77,22 +77,22 @@ def subscribe_errors(handler):
 
 
 class Compiler:
-    ''' This object encapsulates the compiler and serves as a facade interface for the compiler itself. '''
+    """ This object encapsulates the compiler and serves as a facade interface for the compiler itself. """
 
     def __init__(self):
         self.total_errors = 0
         self.total_warnings = 0
 
     def _parse(self, susy, ast_file):
-        ''' Parses the source code.\n
+        """ Parses the source code.\n
             If `ast_file` is not `None`, prints out the abstract syntax tree (AST).
-        '''
+        """
         self.parser = UCParser()
         self.ast = self.parser.parse(self.code, "")  # , self.debug)
 
     def _sema(self, susy, ast_file):
-        ''' Decorate the AST with semantic actions.\n
-            If `ast_file` is not `None`, prints out the abstract syntax tree (AST). '''
+        """ Decorate the AST with semantic actions.\n
+            If `ast_file` is not `None`, prints out the abstract syntax tree (AST). """
         try:
             self.sema = Visitor()
             self.sema.visit(self.ast)
@@ -102,7 +102,7 @@ class Compiler:
             error(None, e)
 
     def _gencode(self, susy, ir_file):
-        ''' Generate uCIR code for the decorated AST. '''
+        """ Generate uCIR code for the decorated AST. """
         self.gen = GenerateCode()
         self.gen.visit(self.ast)
         self.gencode = self.gen.code  # store the unoptimized code
@@ -115,7 +115,7 @@ class Compiler:
             self.gen.show()  # print the unoptimized code to stdout
 
     def _opt(self, susy, opt_file, emit_cfg):
-        ''' Optimize the generated uCIR code. '''
+        """ Optimize the generated uCIR code. """
         self.cfg = ControlFlowGraph(self.gencode)
         self.cfg.simplify()
 
@@ -148,7 +148,7 @@ class Compiler:
                 GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
     def _do_compile(self, susy, ast_file, ir_file, opt_file, opt, emit_cfg):
-        ''' Compiles the code to the given file object. '''
+        """ Compiles the code to the given file object. """
         self._parse(susy, ast_file)
         if not errors_reported():
             self._sema(susy, ast_file)
@@ -162,7 +162,7 @@ class Compiler:
                     GraphViewer.view_entry(entry_name, entry_block, save_as_png=True)
 
     def compile(self, code, susy, ast_file, ir_file, opt_file, opt, run_ir, emit_cfg, debug):
-        ''' Compiles the given code string. '''
+        """ Compiles the given code string. """
         self.code = code
         self.debug = debug
         with subscribe_errors(lambda msg: sys.stderr.write(msg + "\n")):
@@ -187,7 +187,7 @@ class Compiler:
 
 
 def run_compiler():
-    ''' Runs the command-line compiler. '''
+    """ Runs the command-line compiler. """
 
     if len(sys.argv) < 2:
         print(

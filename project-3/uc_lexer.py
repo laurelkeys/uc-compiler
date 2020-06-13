@@ -36,24 +36,25 @@ import ply.lex as lex
 ## uC Lexer ###############################################
 ###########################################################
 
+
 class UCLexer:
-    ''' A lexer for the uC programming language.\n
+    """ A lexer for the uC programming language.\n
         After building it, set the input text with `input()`, and call `token()` to get new tokens.
-    '''
+    """
 
     def __init__(self, error_func, cast_numbers=True):
-        ''' Creates a new Lexer.\n
+        """ Creates a new Lexer.\n
             `error_func` will be called in case of an error during lexing, with an error message, line and column as arguments.
-        '''
-        self.filename = ''
+        """
+        self.filename = ""
         self.error_func = error_func
-        self.last_token = None # last token returned from self.token()
-        self.cast_numbers = cast_numbers # casts values of float and int tokens
+        self.last_token = None  # last token returned from self.token()
+        self.cast_numbers = cast_numbers  # casts values of float and int tokens
 
     def build(self, **kwargs):
-        ''' Builds the lexer. Must be called after the lexer object is created.\n
+        """ Builds the lexer. Must be called after the lexer object is created.\n
             This method exists separately because the PLY manual warns against calling `lex.lex` inside `__init__`.
-        '''
+        """
         self.lexer = lex.lex(object=self, **kwargs)
 
     def input(self, text):
@@ -65,16 +66,16 @@ class UCLexer:
 
     # Internal auxiliary methods
     def _find_tok_column(self, token):
-        ''' Find the column of the token in its line. '''
-        last_cr = self.lexer.lexdata.rfind('\n', 0, token.lexpos)
+        """ Find the column of the token in its line. """
+        last_cr = self.lexer.lexdata.rfind("\n", 0, token.lexpos)
         return token.lexpos - last_cr
 
     def _make_tok_location(self, token):
-        ''' Returns the token's location as a tuple `(line, column)`. '''
+        """ Returns the token's location as a tuple `(line, column)`. """
         return token.lineno, self._find_tok_column(token)
 
     def _reset_lineno(self):
-        ''' Resets the internal line number counter of the lexer to 1. '''
+        """ Resets the internal line number counter of the lexer to 1. """
         self.lexer.lineno = 1
 
     def _error(self, msg, token):
@@ -111,124 +112,125 @@ class UCLexer:
     # Token list
     tokens = (
         # identifiers
-        'ID',
+        "ID",
 
         # constants
-        'INT_CONST', 'FLOAT_CONST',
-        'CHAR_CONST', 'STRING_LITERAL',
+        "INT_CONST", "FLOAT_CONST",
+        "CHAR_CONST", "STRING_LITERAL",
 
         # braces, brackets and parenthesis
-        'LBRACE', 'RBRACE',
-        'LBRACKET', 'RBRACKET',
-        'LPAREN', 'RPAREN',
+        "LBRACE", "RBRACE",
+        "LBRACKET", "RBRACKET",
+        "LPAREN", "RPAREN",
 
         # comma and semicolon
-        'COMMA',
-        'SEMI',
+        "COMMA",
+        "SEMI",
 
         # assignment operators: =, *=, /=, %=, +=, -=
-        'EQUALS',
-        'TIMESEQUALS', 'DIVEQUALS',
-        'MODEQUALS',
-        'PLUSEQUALS', 'MINUSEQUALS',
+        "EQUALS",
+        "TIMESEQUALS",
+        "DIVEQUALS",
+        "MODEQUALS",
+        "PLUSEQUALS",
+        "MINUSEQUALS",
 
         # binary operators: *, /, %, +, -, <, <=, >, >=, ==, !=, &&, ||
-        'TIMES', 'DIV',
-        'MOD',
-        'PLUS', 'MINUS',
-        'LT', 'LEQ', 'GT', 'GEQ', 'EQ', 'NEQ',
-        'AND', 'OR',
+        "TIMES", "DIV",
+        "MOD",
+        "PLUS", "MINUS",
+        "LT", "LEQ", "GT", "GEQ", "EQ", "NEQ",
+        "AND", "OR",
 
         # unary operators: ++, --, +, -, &, *, !
-        'PLUSPLUS', 'MINUSMINUS',
-        'ADDRESS',
-        'NOT',
-
+        "PLUSPLUS", "MINUSMINUS",
+        "ADDRESS",
+        "NOT",
         # reserved keywords
     ) + keywords
 
     # Completely ignored characters
-    t_ignore = ' \t'
+    t_ignore = " \t"
 
     # Newlines
     def t_NEWLINE(self, t):
-        r'\n+'
-        t.lexer.lineno += t.value.count('\n')
+        r"\n+"
+        t.lexer.lineno += t.value.count("\n")
 
     # Delimiters
-    t_LBRACE = r'\{'
-    t_RBRACE = r'\}'
-    t_LBRACKET = r'\['
-    t_RBRACKET = r'\]'
-    t_LPAREN = r'\('
-    t_RPAREN = r'\)'
+    t_LBRACE = r"\{"
+    t_RBRACE = r"\}"
+    t_LBRACKET = r"\["
+    t_RBRACKET = r"\]"
+    t_LPAREN = r"\("
+    t_RPAREN = r"\)"
 
-    t_COMMA = r','
-    t_SEMI = r';'
+    t_COMMA = r","
+    t_SEMI = r";"
 
     # Assignment operators
-    t_EQUALS = r'='
-    t_TIMESEQUALS = r'\*='
-    t_DIVEQUALS = r'/='
-    t_MODEQUALS = r'%='
-    t_PLUSEQUALS = r'\+='
-    t_MINUSEQUALS = r'-='
+    t_EQUALS = r"="
+    t_TIMESEQUALS = r"\*="
+    t_DIVEQUALS = r"/="
+    t_MODEQUALS = r"%="
+    t_PLUSEQUALS = r"\+="
+    t_MINUSEQUALS = r"-="
 
     # Binary operators
-    t_TIMES = r'\*'
-    t_DIV = r'/'
-    t_MOD = r'%'
-    t_PLUS = r'\+'
-    t_MINUS = r'-'
+    t_TIMES = r"\*"
+    t_DIV = r"/"
+    t_MOD = r"%"
+    t_PLUS = r"\+"
+    t_MINUS = r"-"
 
-    t_LT = r'<'
-    t_LEQ = r'<='
-    t_GT = r'>'
-    t_GEQ = r'>='
-    t_EQ = r'=='
-    t_NEQ = r'!='
+    t_LT = r"<"
+    t_LEQ = r"<="
+    t_GT = r">"
+    t_GEQ = r">="
+    t_EQ = r"=="
+    t_NEQ = r"!="
 
-    t_AND = r'\&\&'
-    t_OR = r'\|\|'
+    t_AND = r"\&\&"
+    t_OR = r"\|\|"
 
     # Unary operators
-    t_PLUSPLUS = r'\+\+'
-    t_MINUSMINUS = r'--'
+    t_PLUSPLUS = r"\+\+"
+    t_MINUSMINUS = r"--"
 
-    t_ADDRESS = r'\&'
+    t_ADDRESS = r"\&"
 
-    t_NOT = r'!'
+    t_NOT = r"!"
 
     # Constants
-    t_CHAR_CONST = r'\'([^\\\n]|(\\.))*?\''
+    t_CHAR_CONST = r"\'([^\\\n]|(\\.))*?\'"
 
-    t_STRING_LITERAL = r'\"([^\\\n]|(\\.))*?\"'
+    t_STRING_LITERAL = r"\"([^\\\n]|(\\.))*?\""
 
-    def t_FLOAT_CONST(self, t): # NOTE keep this before t_INT_CONST
-        r'((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)'
+    def t_FLOAT_CONST(self, t):  # NOTE keep this before t_INT_CONST
+        r"((0|([1-9][0-9]*))\.[0-9]*)|((|0|([1-9][0-9]*))\.[0-9]+)"
         if self.cast_numbers:
             t.value = float(t.value)
         return t
 
     def t_INT_CONST(self, t):
-        r'0|([1-9][0-9]*)'
+        r"0|([1-9][0-9]*)"
         if self.cast_numbers:
             t.value = int(t.value)
         return t
 
     # Identifiers and reserved words
     def t_ID(self, t):
-        r'[a-zA-Z_][a-zA-Z0-9_]*'
-        t.type = self.keyword_map.get(t.value, 'ID')
+        r"[a-zA-Z_][a-zA-Z0-9_]*"
+        t.type = self.keyword_map.get(t.value, "ID")
         return t
 
     # Comments
     def t_C_COMMENT(self, t):
-        r'/\*(.|\n)*?\*/'
-        t.lexer.lineno += t.value.count('\n')
+        r"/\*(.|\n)*?\*/"
+        t.lexer.lineno += t.value.count("\n")
 
     def t_CPP_COMMENT(self, t):
-        r'//.*?(\n|$)'
+        r"//.*?(\n|$)"
         t.lexer.lineno += 1
 
     # Error

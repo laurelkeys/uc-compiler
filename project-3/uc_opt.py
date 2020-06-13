@@ -10,8 +10,6 @@ from uc_blocks import *
 class Optimizer:
     @staticmethod
     def constant_folding_and_propagation(cfg: ControlFlowGraph):
-        # print(">> constant folding + propagation <<")
-
         # NOTE reaching definitions's values are implicitly calculated below,
         #      unlike dead code elimination, where we call liveness analysis
 
@@ -89,21 +87,14 @@ class Optimizer:
                                 succ for succ in block.successors if succ.label != true_target
                             ]
 
-        # print("\n".join(Instruction.prettify(cfg.build_code())))
-        # print(">> constant folding + propagation <<\n")
-
     @staticmethod
     def dead_code_elimination(cfg: ControlFlowGraph):
-        # print(">> dead code elimination <<")
-
         changed = True
         while changed:
             DataFlow.LivenessAnalysis.compute(cfg)
-            # print("\nChanging.....")
             changed = False
 
             for block in cfg.blocks_from_exit():
-                # print("block", block.label)
                 new_instructions = []
                 for instr, (_, out) in zip(block.instructions[::-1], block.in_out_per_line[::-1]):
                     instr_type = Instruction.type_of(instr)
@@ -127,20 +118,13 @@ class Optimizer:
 
                     if not is_dead:
                         new_instructions.append(instr)  # keep this instruction
-                    # else:
-                    #     print("- killed:", instr)
 
                     changed |= is_dead
 
                 block.instructions = new_instructions[::-1]
 
-        # print("\n".join(Instruction.prettify(cfg.build_code())))
-        # print(">> dead code elimination <<\n")
-
     @staticmethod
     def post_process_blocks(cfg: ControlFlowGraph):
-        # print(">> post processing <<")
-
         # Remove unused allocs
         for entry in cfg.entries:
             # get allocs and used vars
@@ -219,19 +203,16 @@ class Optimizer:
         for var in unused:
             cfg.globals.pop(var)
 
-        # print("\n".join(Instruction.prettify(cfg.build_code())))
-        # print(">> post processing <<\n")
-
     @staticmethod
     def post_process_code(code):
-        # remove jumps to block right below
+        # Remove jumps to block right below
         to_remove = []
         for i, line in enumerate(code[:-1]):
-            if line[0] == 'jump':
+            if line[0] == "jump":
                 next_instr = code[i + 1]
                 if (
                     len(next_instr) == 1
-                    and next_instr[0] not in ['return_void', 'print_void']
+                    and next_instr[0] not in ["return_void", "print_void"]
                     and line[1][1:] == next_instr[0]
                 ):
                     to_remove.append(i)

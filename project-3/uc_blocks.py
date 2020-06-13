@@ -35,12 +35,12 @@ Gen_Kill = namedtuple(typename="Gen_Kill", field_names=["gen", "kill"])
 
 
 class Block:
-    ''' Base class representing a CFG block. '''
+    """ Base class representing a CFG block. """
 
     def __init__(self, label=None):
-        self.label = label      # label that identifies the block
+        self.label = label  # label that identifies the block
         self.instructions = []  # instructions in the block
-        self.successors = []    # list of successors
+        self.successors = []  # list of successors
         self.predecessors = []  # list of predecessors
 
         self.in_out = In_Out(set(), set())
