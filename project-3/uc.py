@@ -114,6 +114,7 @@ class Compiler:
             print("----")
             self.gen.show()  # print the unoptimized code to stdout
 
+
     def _opt(self, susy, opt_file, emit_cfg):
         """ Optimize the generated uCIR code. """
         self.cfg = ControlFlowGraph(self.gencode)

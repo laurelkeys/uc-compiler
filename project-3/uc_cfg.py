@@ -168,15 +168,19 @@ class ControlFlowGraph:
     def blocks_from_exit(self):
         """ Returns a backward generator for all blocks. """
         visited = set()
+        # NOTE in this case we can't use the label to check for visited blocks
+        #      as we are walking through every basic block in the CFG (i.e. we
+        #      are not restricted to a single function, so labels can be reused)
 
         def visit(block):
-            if block.label not in visited:
-                visited.add(block.label)
+            if block not in visited:
+                visited.add(block)
                 yield block
                 for predecessor in block.predecessors:
                     yield from visit(predecessor)
 
-        yield from visit(self.exit)
+        for predecessor in self.exit.predecessors:
+            yield from visit(predecessor)
 
     def build_code(self):
         """ Rebuild the program code from the instructions of each block. """

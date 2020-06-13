@@ -1,6 +1,6 @@
      original otimizado speedup
 t1      38       32      1.19
-t2      78       61      1.28
+t2      78       56      1.39
 t3      25        7      3.57
 t4      52       41      1.27
 t5      50       41      1.22
