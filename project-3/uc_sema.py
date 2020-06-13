@@ -590,8 +590,6 @@ class Visitor(NodeVisitor):
         # assert _has_return or TYPE_VOID in node.attrs['type'], (
         #     f"Function `{node.attrs['name']}` has no return" + str(node.coord))
 
-        # FIXME sym_attrs isn't being added to the scope's table
-
         self.symtab.end_scope(func=True)
 
     def visit_GlobalDecl(self, node: GlobalDecl):  # [decls**]

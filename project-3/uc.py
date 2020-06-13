@@ -201,8 +201,8 @@ def run_compiler():
     emit_ir = True
     run_ir = True
     susy = False
-    opt = True  # FIXME set to False by default
-    debug = True  # FIXME set to False by default
+    opt = False
+    debug = False
 
     params = sys.argv[1:]
     files = sys.argv[1:]
@@ -217,12 +217,12 @@ def run_compiler():
                 susy = True
             elif param == "-no-run":
                 run_ir = False
-            elif param in ["-cfg", "-g"]:
+            elif param == "-cfg":
                 emit_cfg = True
-            elif param in ["-opt", "-o"]:
-                opt = not opt  # True
-            elif param in ["-debug", "-d"]:
-                debug = not debug  # True
+            elif param == "-opt":
+                opt = True
+            elif param == "-debug":
+                debug = True
             else:
                 print("Unknown option: %s" % param)
                 sys.exit(1)

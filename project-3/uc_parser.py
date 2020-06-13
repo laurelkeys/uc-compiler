@@ -191,8 +191,6 @@ class UCParser:
     def p_identifier(self, p):
         """ identifier : ID """
         p[0] = ID(p[1], coord=self._token_coord(p, 1))
-        # TODO https://github.com/eliben/pycparser/blob/master/pycparser/c_parser.py#L1307
-        # FIXME convert p_identifier__list into a p_identifier_list (separated by COMMA's)
 
     def p_identifier__list__opt(self, p):
         """ identifier__list__opt : empty
@@ -517,7 +515,7 @@ class UCParser:
         if len(p) == 2:
             p[0] = p[1]
         else:
-            p[0] = p[2]  # FIXME should the initializer_list be __opt (?)
+            p[0] = p[2]
 
     def p_initializer_list(self, p):
         """ initializer_list : initializer

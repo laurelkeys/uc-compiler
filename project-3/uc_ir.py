@@ -49,24 +49,17 @@ class GenerateCode(NodeVisitor):
         self.fregisters = self.fregisters.parents
         self.farray_dim = self.farray_dim.parents
 
-    # FIXME sometimes we"re returning a UCType, and at others we are
-    # returning a string, we should choose one way and fix the tests we do
     def unwrap_type(self, _type, _dim=None):
         if len(_type) == 1:
             return _type[0]
         elif _type[0] == TYPE_ARRAY:
-            assert _dim is not None, f"!!mising dim for type: {_type}"
-            # FIXME (incomplete) fix this for multi dimensional arrays
             _base_type = _type[-1]
-
             product = 1
             type_tail = ""
             for d in reversed(_dim):
                 product *= d
                 type_tail = f"_{product}{type_tail}"
             return str(_base_type) + type_tail
-        else:
-            assert False, f"!!fix this type: {_type}"
 
     ###########################################################
     ## SSA Code Instructions ##################################
@@ -196,7 +189,7 @@ class GenerateCode(NodeVisitor):
         if node.attrs.get("child?", False):
             _dim = self.farray_dim[node.attrs["name"]]
             _type = self.unwrap_type(node.attrs["type"], _dim)
-            # NOTE ugly hack
+            # NOTE this could be prettier..
             _prod = int(_type.split("_")[-node.attrs["type"].count(TYPE_ARRAY)])
             _prod_target = self.new_temp()
             self.emit_literal(TYPE_INT, value=_prod, target=_prod_target)
