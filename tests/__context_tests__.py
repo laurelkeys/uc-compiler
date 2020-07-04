@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.join(abs_dir_path, ".."))
 sys.path.insert(0, os.path.join(abs_dir_path, "..", "project-1"))
 sys.path.insert(0, os.path.join(abs_dir_path, "..", "project-2"))
 sys.path.insert(0, os.path.join(abs_dir_path, "..", "project-3"))
+sys.path.insert(0, os.path.join(abs_dir_path, "..", "project-4"))
 
 if __name__ == "__main__":
     print(f"abs_dir_path = '{abs_dir_path}'")
