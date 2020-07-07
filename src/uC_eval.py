@@ -22,7 +22,7 @@ class CodeEvaluator:
 
     def eval(self, uC_code: str, optimize: bool = True):
         ast = self.parser.parse(uC_code)
-        llvm_code = self.generator.compile_llvm(ast)
+        llvm_code = self.generator.generate_code(ast)
 
         llvm_module = llvm.parse_assembly(llvmir=str(llvm_code))
         llvm_module.verify()  # NOTE dump .ll unoptimized code here
