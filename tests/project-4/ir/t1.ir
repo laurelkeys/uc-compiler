@@ -1,0 +1,38 @@
+global_string @assert_message_6_5 assertion_fail on 6:5
+global_int_4 @v [1, 2, 3, 4]
+define @main
+  alloc_int %sum
+  alloc_int %i
+  literal_int 0 %2
+  store_int %2 %i
+3:
+  load_int %i %6
+  literal_int 4 %7
+  lt_int %6 %7 %8
+  cbranch %8 %4 %5
+4:
+  load_int %sum %9
+  load_int %i %10
+  elem_int @v %10 %11
+  load_int_* %11 %12
+  add_int %9 %12 %13
+  store_int %13 %sum
+  load_int %i %14
+  literal_int 1 %15
+  add_int %14 %15 %16
+  store_int %16 %i
+  jump %3
+5:
+  load_int %sum %17
+  literal_int 10 %18
+  eq_int %17 %18 %19
+  cbranch %19 %20 %21
+20:
+  jump %22
+21:
+  print_string @assert_message_6_5
+  jump %1
+22:
+  jump %1
+1:
+  return_void

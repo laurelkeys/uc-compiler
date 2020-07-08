@@ -1,0 +1,178 @@
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 2:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 2:1
+        Compound:    @ 2:1
+            Decl: ID(name='a'  )
+                ArrayDecl: 
+                    ArrayDecl: 
+                        VarDecl: 
+                            Type: ['int']   @ 3:5
+                        Constant: int, 10   @ 3:15
+                    Constant: int, 10   @ 3:11
+            Decl: ID(name='transpose'  )
+                ArrayDecl: 
+                    ArrayDecl: 
+                        VarDecl: 
+                            Type: ['int']   @ 3:5
+                        Constant: int, 10   @ 3:34
+                    Constant: int, 10   @ 3:30
+            Decl: ID(name='r'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:5
+            Decl: ID(name='c'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:5
+            Decl: ID(name='i'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:5
+            Decl: ID(name='j'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:5
+            Assignment: =   @ 4:5
+                ID: r   @ 4:5
+                Constant: int, 5   @ 4:9
+            Assignment: =   @ 4:12
+                ID: c   @ 4:12
+                Constant: int, 4   @ 4:16
+            For:    @ 7:5
+                Assignment: =   @ 7:10
+                    ID: i   @ 7:10
+                    Constant: int, 0   @ 7:14
+                BinaryOp: <   @ 7:17
+                    ID: i   @ 7:17
+                    ID: r   @ 7:21
+                UnaryOp: ++   @ 7:26
+                    ID: i   @ 7:26
+                For:    @ 8:9
+                    Assignment: =   @ 8:14
+                        ID: j   @ 8:14
+                        Constant: int, 0   @ 8:18
+                    BinaryOp: <   @ 8:21
+                        ID: j   @ 8:21
+                        ID: c   @ 8:25
+                    UnaryOp: ++   @ 8:30
+                        ID: j   @ 8:30
+                    Compound:    @ 8:1
+                        Assignment: =   @ 9:13
+                            ArrayRef:    @ 9:13
+                                ArrayRef:    @ 9:13
+                                    ID: a   @ 9:13
+                                    ID: i   @ 9:15
+                                ID: j   @ 9:18
+                            BinaryOp: +   @ 9:23
+                                BinaryOp: +   @ 9:23
+                                    Constant: int, 10   @ 9:23
+                                    BinaryOp: *   @ 9:28
+                                        ID: i   @ 9:28
+                                        Constant: int, 2   @ 9:30
+                                ID: j   @ 9:34
+            Print:    @ 13:5
+                Constant: string, "Matrix:"   @ 13:11
+            Print:    @ 13:23
+            For:    @ 14:5
+                Assignment: =   @ 14:10
+                    ID: i   @ 14:10
+                    Constant: int, 0   @ 14:14
+                BinaryOp: <   @ 14:17
+                    ID: i   @ 14:17
+                    ID: r   @ 14:21
+                UnaryOp: ++   @ 14:26
+                    ID: i   @ 14:26
+                For:    @ 15:9
+                    Assignment: =   @ 15:14
+                        ID: j   @ 15:14
+                        Constant: int, 0   @ 15:18
+                    BinaryOp: <   @ 15:21
+                        ID: j   @ 15:21
+                        ID: c   @ 15:25
+                    UnaryOp: ++   @ 15:30
+                        ID: j   @ 15:30
+                    Compound:    @ 15:1
+                        Print:    @ 16:13
+                            ExprList:    @ 16:19
+                                ArrayRef:    @ 16:19
+                                    ArrayRef:    @ 16:19
+                                        ID: a   @ 16:19
+                                        ID: i   @ 16:21
+                                    ID: j   @ 16:24
+                                Constant: string, "  "   @ 16:28
+                        If:    @ 17:13
+                            BinaryOp: ==   @ 17:17
+                                ID: j   @ 17:17
+                                BinaryOp: -   @ 17:22
+                                    ID: c   @ 17:22
+                                    Constant: int, 1   @ 17:26
+                            Print:    @ 18:17
+            For:    @ 22:5
+                Assignment: =   @ 22:10
+                    ID: i   @ 22:10
+                    Constant: int, 0   @ 22:14
+                BinaryOp: <   @ 22:17
+                    ID: i   @ 22:17
+                    ID: r   @ 22:21
+                UnaryOp: ++   @ 22:26
+                    ID: i   @ 22:26
+                For:    @ 23:9
+                    Assignment: =   @ 23:14
+                        ID: j   @ 23:14
+                        Constant: int, 0   @ 23:18
+                    BinaryOp: <   @ 23:21
+                        ID: j   @ 23:21
+                        ID: c   @ 23:25
+                    UnaryOp: ++   @ 23:30
+                        ID: j   @ 23:30
+                    Compound:    @ 23:1
+                        Assignment: =   @ 24:13
+                            ArrayRef:    @ 24:13
+                                ArrayRef:    @ 24:13
+                                    ID: transpose   @ 24:13
+                                    ID: j   @ 24:23
+                                ID: i   @ 24:26
+                            ArrayRef:    @ 24:31
+                                ArrayRef:    @ 24:31
+                                    ID: a   @ 24:31
+                                    ID: i   @ 24:33
+                                ID: j   @ 24:36
+            Print:    @ 28:5
+                Constant: string, "Transpose of the matrix:"   @ 28:11
+            Print:    @ 28:40
+            For:    @ 29:5
+                Assignment: =   @ 29:10
+                    ID: i   @ 29:10
+                    Constant: int, 0   @ 29:14
+                BinaryOp: <   @ 29:17
+                    ID: i   @ 29:17
+                    ID: c   @ 29:21
+                UnaryOp: ++   @ 29:26
+                    ID: i   @ 29:26
+                For:    @ 30:9
+                    Assignment: =   @ 30:14
+                        ID: j   @ 30:14
+                        Constant: int, 0   @ 30:18
+                    BinaryOp: <   @ 30:21
+                        ID: j   @ 30:21
+                        ID: r   @ 30:25
+                    UnaryOp: ++   @ 30:30
+                        ID: j   @ 30:30
+                    Compound:    @ 30:1
+                        Print:    @ 31:13
+                            ExprList:    @ 31:19
+                                ArrayRef:    @ 31:19
+                                    ArrayRef:    @ 31:19
+                                        ID: transpose   @ 31:19
+                                        ID: i   @ 31:29
+                                    ID: j   @ 31:32
+                                Constant: string, "  "   @ 31:36
+                        If:    @ 32:13
+                            BinaryOp: ==   @ 32:17
+                                ID: j   @ 32:17
+                                BinaryOp: -   @ 32:22
+                                    ID: r   @ 32:22
+                                    Constant: int, 1   @ 32:26
+                            Print:    @ 33:17
+            Return:    @ 35:5
+                Constant: int, 0   @ 35:12

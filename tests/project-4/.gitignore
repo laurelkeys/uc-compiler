@@ -1,0 +1,17 @@
+# uC program
+!*.uc
+
+# uC program output
+!*.out
+
+# AST representation
+!*.ast
+
+# uC IR (raw)
+!*.ir
+
+# uC IR (optimized)
+!*.opt
+
+# LLVM IR
+!*.ll

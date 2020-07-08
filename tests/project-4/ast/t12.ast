@@ -1,0 +1,45 @@
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 1:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 1:1
+        Compound:    @ 1:1
+            Decl: ID(name='a'  )
+                VarDecl: 
+                    Type: ['int']   @ 2:5
+            Decl: ID(name='b'  )
+                VarDecl: 
+                    Type: ['int']   @ 2:5
+            Assignment: =   @ 4:5
+                ID: a   @ 4:5
+                Constant: int, 11   @ 4:9
+            Assignment: =   @ 5:5
+                ID: b   @ 5:5
+                Constant: int, 99   @ 5:9
+            Assignment: =   @ 7:5
+                ID: a   @ 7:5
+                BinaryOp: +   @ 7:9
+                    ID: a   @ 7:9
+                    ID: b   @ 7:13
+            Assignment: =   @ 8:5
+                ID: b   @ 8:5
+                BinaryOp: -   @ 8:9
+                    ID: a   @ 8:9
+                    ID: b   @ 8:13
+            Assignment: =   @ 9:5
+                ID: a   @ 9:5
+                BinaryOp: -   @ 9:9
+                    ID: a   @ 9:9
+                    ID: b   @ 9:13
+            Assert:    @ 11:5
+                BinaryOp: &&   @ 11:12
+                    BinaryOp: ==   @ 11:12
+                        ID: a   @ 11:12
+                        Constant: int, 99   @ 11:17
+                    BinaryOp: ==   @ 11:23
+                        ID: b   @ 11:23
+                        Constant: int, 11   @ 11:28
+            Return:    @ 12:5
+                Constant: int, 0   @ 12:12

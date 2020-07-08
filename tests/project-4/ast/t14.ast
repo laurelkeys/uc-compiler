@@ -1,0 +1,179 @@
+Program: 
+    GlobalDecl: 
+        Decl: ID(name='power'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='n'  )
+                        VarDecl: 
+                            Type: ['int']   @ 3:11
+                    Decl: ID(name='r'  )
+                        VarDecl: 
+                            Type: ['int']   @ 3:18
+                VarDecl: 
+                    Type: ['int']   @ 3:1
+    GlobalDecl: 
+        Decl: ID(name='armstrong'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='n'  )
+                        VarDecl: 
+                            Type: ['int']   @ 5:15
+                VarDecl: 
+                    Type: ['int']   @ 5:1
+    FuncDef: 
+        Type: ['int']   @ 7:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 7:1
+        Compound:    @ 7:1
+            Decl: ID(name='n1'  )
+                VarDecl: 
+                    Type: ['int']   @ 8:5
+                Constant: int, 407   @ 8:14
+            Decl: ID(name='n2'  )
+                VarDecl: 
+                    Type: ['int']   @ 8:5
+                Constant: int, 1634   @ 8:24
+            Decl: ID(name='n3'  )
+                VarDecl: 
+                    Type: ['int']   @ 9:5
+                Constant: int, 8207   @ 9:14
+            Assert:    @ 10:5
+                BinaryOp: ==   @ 10:12
+                    FuncCall:    @ 10:12
+                        ID: armstrong   @ 10:12
+                        ID: n1   @ 10:22
+                    Constant: int, 1   @ 10:29
+            Assert:    @ 11:5
+                BinaryOp: ==   @ 11:12
+                    FuncCall:    @ 11:12
+                        ID: armstrong   @ 11:12
+                        ID: n2   @ 11:22
+                    Constant: int, 1   @ 11:29
+            Assert:    @ 12:5
+                BinaryOp: ==   @ 12:12
+                    FuncCall:    @ 12:12
+                        ID: armstrong   @ 12:12
+                        ID: n3   @ 12:22
+                    Constant: int, 0   @ 12:29
+            Assert:    @ 13:5
+                BinaryOp: ==   @ 13:12
+                    FuncCall:    @ 13:12
+                        ID: armstrong   @ 13:12
+                        Constant: int, 153   @ 13:22
+                    Constant: int, 1   @ 13:30
+            Return:    @ 14:5
+                Constant: int, 0   @ 14:12
+    FuncDef: 
+        Type: ['int']   @ 17:1
+        Decl: ID(name='power'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='n'  )
+                        VarDecl: 
+                            Type: ['int']   @ 17:11
+                    Decl: ID(name='r'  )
+                        VarDecl: 
+                            Type: ['int']   @ 17:18
+                VarDecl: 
+                    Type: ['int']   @ 17:1
+        Compound:    @ 17:1
+            Decl: ID(name='p'  )
+                VarDecl: 
+                    Type: ['int']   @ 18:3
+                Constant: int, 1   @ 18:11
+            For:    @ 19:3
+                DeclList:    @ 19:3
+                    Decl: ID(name='c'  )
+                        VarDecl: 
+                            Type: ['int']   @ 19:8
+                        Constant: int, 1   @ 19:16
+                BinaryOp: <=   @ 19:19
+                    ID: c   @ 19:19
+                    ID: r   @ 19:24
+                UnaryOp: p++   @ 19:27
+                    ID: c   @ 19:27
+                Assignment: =   @ 20:7
+                    ID: p   @ 20:7
+                    BinaryOp: *   @ 20:11
+                        ID: p   @ 20:11
+                        ID: n   @ 20:13
+            Return:    @ 21:3
+                ID: p   @ 21:10
+    FuncDef: 
+        Type: ['int']   @ 24:1
+        Decl: ID(name='armstrong'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='n'  )
+                        VarDecl: 
+                            Type: ['int']   @ 24:15
+                VarDecl: 
+                    Type: ['int']   @ 24:1
+        Compound:    @ 24:1
+            Decl: ID(name='temp'  )
+                VarDecl: 
+                    Type: ['int']   @ 25:5
+            Decl: ID(name='remainder'  )
+                VarDecl: 
+                    Type: ['int']   @ 25:5
+            Decl: ID(name='sum'  )
+                VarDecl: 
+                    Type: ['int']   @ 26:5
+                Constant: int, 0   @ 26:15
+            Decl: ID(name='digits'  )
+                VarDecl: 
+                    Type: ['int']   @ 26:5
+                Constant: int, 0   @ 26:27
+            Assignment: =   @ 27:5
+                ID: temp   @ 27:5
+                ID: n   @ 27:12
+            While:    @ 28:5
+                BinaryOp: !=   @ 28:12
+                    ID: temp   @ 28:12
+                    Constant: int, 0   @ 28:20
+                Compound:    @ 28:1
+                    Assignment: +=   @ 29:9
+                        ID: digits   @ 29:9
+                        Constant: int, 1   @ 29:19
+                    Assignment: =   @ 30:9
+                        ID: temp   @ 30:9
+                        BinaryOp: /   @ 30:16
+                            ID: temp   @ 30:16
+                            Constant: int, 10   @ 30:23
+            Assignment: =   @ 32:5
+                ID: temp   @ 32:5
+                ID: n   @ 32:12
+            While:    @ 33:5
+                BinaryOp: !=   @ 33:12
+                    ID: temp   @ 33:12
+                    Constant: int, 0   @ 33:20
+                Compound:    @ 33:1
+                    Assignment: =   @ 34:9
+                        ID: remainder   @ 34:9
+                        BinaryOp: %   @ 34:21
+                            ID: temp   @ 34:21
+                            Constant: int, 10   @ 34:28
+                    Assignment: =   @ 35:9
+                        ID: sum   @ 35:9
+                        BinaryOp: +   @ 35:15
+                            ID: sum   @ 35:15
+                            FuncCall:    @ 35:21
+                                ID: power   @ 35:21
+                                ExprList:    @ 35:27
+                                    ID: remainder   @ 35:27
+                                    ID: digits   @ 35:38
+                    Assignment: =   @ 36:9
+                        ID: temp   @ 36:9
+                        BinaryOp: /   @ 36:16
+                            ID: temp   @ 36:16
+                            Constant: int, 10   @ 36:23
+            If:    @ 38:5
+                BinaryOp: ==   @ 38:9
+                    ID: n   @ 38:9
+                    ID: sum   @ 38:14
+                Return:    @ 39:9
+                    Constant: int, 1   @ 39:16
+                Return:    @ 41:9
+                    Constant: int, 0   @ 41:16

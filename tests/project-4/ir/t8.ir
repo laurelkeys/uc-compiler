@@ -1,0 +1,37 @@
+global_string @assert_message_5_5 assertion_fail on 5:5
+define @main
+  alloc_int %x
+  literal_int 2 %2
+  store_int %2 %x
+  alloc_int %y
+  alloc_int %z
+  load_int %x %3
+  literal_int 1 %4
+  add_int %3 %4 %5
+  store_int %5 %x
+  store_int %5 %y
+  load_int %x %6
+  literal_int 1 %7
+  add_int %6 %7 %8
+  store_int %8 %x
+  store_int %6 %z
+  load_int %y %9
+  literal_int 3 %10
+  eq_int %9 %10 %11
+  load_int %z %12
+  literal_int 3 %13
+  eq_int %12 %13 %14
+  and_bool %11 %14 %15
+  cbranch %15 %16 %17
+16:
+  jump %18
+17:
+  print_string @assert_message_5_5
+  jump %1
+18:
+  literal_int 0 %19
+  store_int %19 %0
+  jump %1
+1:
+  load_int %0 %20
+  return_int %20

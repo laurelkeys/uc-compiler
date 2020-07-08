@@ -1,0 +1,78 @@
+global_string @assert_message_16_5 assertion_fail on 16:5
+define @f
+  alloc_int %n
+  store_int %0 %n
+  alloc_int %k
+  store_int %1 %k
+  alloc_int %p
+  alloc_int %q
+  alloc_int %t
+  load_int %n %7
+  literal_int 2 %8
+  lt_int %7 %8 %9
+  cbranch %9 %4 %5
+4:
+  literal_int 0 %10
+  store_int %10 %k
+  load_int %n %11
+  store_int %11 %2
+  jump %3
+  jump %6
+5:
+  load_int %n %12
+  literal_int 1 %13
+  sub_int %12 %13 %14
+  load_int %p %15
+  param_int %14
+  param_int %15
+  call @f %16
+  load_int %n %17
+  literal_int 2 %18
+  sub_int %17 %18 %19
+  load_int %q %20
+  param_int %19
+  param_int %20
+  call @f %21
+  add_int %16 %21 %22
+  store_int %22 %t
+  load_int %p %23
+  load_int %q %24
+  add_int %23 %24 %25
+  literal_int 1 %26
+  add_int %25 %26 %27
+  store_int %27 %k
+  load_int %t %28
+  store_int %28 %2
+  jump %3
+6:
+3:
+  load_int %2 %29
+  return_int %29
+define @main
+  alloc_int %m
+  literal_int 9 %2
+  store_int %2 %m
+  literal_int 3 %3
+  load_int %m %4
+  param_int %3
+  param_int %4
+  call @f %5
+  load_int %m %6
+  mul_int %5 %6 %7
+  load_int %m %8
+  load_int %m %9
+  add_int %8 %9 %10
+  eq_int %7 %10 %11
+  cbranch %11 %12 %13
+12:
+  jump %14
+13:
+  print_string @assert_message_16_5
+  jump %1
+14:
+  literal_int 0 %15
+  store_int %15 %0
+  jump %1
+1:
+  load_int %0 %16
+  return_int %16

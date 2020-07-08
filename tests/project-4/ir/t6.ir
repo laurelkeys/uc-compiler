@@ -1,0 +1,62 @@
+global_string @assert_message_9_5 assertion_fail on 9:5
+global_string @str_0_1 xpto
+global_int_5 @array_2_16 [1, 2, 3, 4, 5]
+define @main
+  alloc_int_5 %v
+  store_int_5 @array_2_16 %v
+  alloc_char_4 %c
+  store_char_4 @str_0_1 %c
+  alloc_char_4 %w
+  alloc_int %i
+  literal_int 2 %2
+  store_int %2 %i
+  alloc_int %j
+  literal_int 3 %3
+  store_int %3 %j
+  alloc_int %k
+  literal_int 4 %4
+  store_int %4 %k
+  literal_int 2 %5
+  elem_char %w %5 %6
+  literal_int 1 %7
+  elem_char %c %7 %8
+  load_char_* %8 %9
+  store_char_* %9 %6
+  load_int %i %10
+  elem_int %v %10 %11
+  load_int %i %12
+  load_int %j %13
+  add_int %12 %13 %14
+  load_int %k %15
+  add_int %14 %15 %16
+  store_int_* %16 %11
+  load_int %j %17
+  literal_int 2 %18
+  sub_int %17 %18 %19
+  store_int %19 %j
+  load_int %i %20
+  elem_char %w %20 %21
+  load_char_* %21 %22
+  load_int %j %23
+  elem_char %c %23 %24
+  load_char_* %24 %25
+  eq_char %22 %25 %26
+  load_int %i %27
+  elem_int %v %27 %28
+  load_int_* %28 %29
+  literal_int 9 %30
+  eq_int %29 %30 %31
+  and_bool %26 %31 %32
+  cbranch %32 %33 %34
+33:
+  jump %35
+34:
+  print_string @assert_message_9_5
+  jump %1
+35:
+  literal_int 0 %36
+  store_int %36 %0
+  jump %1
+1:
+  load_int %0 %37
+  return_int %37

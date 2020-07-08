@@ -1,0 +1,59 @@
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 1:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 1:1
+        Compound:    @ 1:1
+            Decl: ID(name='n'  )
+                VarDecl: 
+                    Type: ['int']   @ 2:5
+            Decl: ID(name='r'  )
+                VarDecl: 
+                    Type: ['int']   @ 2:5
+            Decl: ID(name='temp'  )
+                VarDecl: 
+                    Type: ['int']   @ 2:5
+            Decl: ID(name='sum'  )
+                VarDecl: 
+                    Type: ['float']   @ 3:5
+                Constant: float, 0.0   @ 3:17
+            Assignment: =   @ 4:5
+                ID: n   @ 4:5
+                Constant: int, 5743475   @ 4:9
+            Assignment: =   @ 5:5
+                ID: temp   @ 5:5
+                ID: n   @ 5:12
+            While:    @ 6:5
+                BinaryOp: >   @ 6:11
+                    ID: n   @ 6:11
+                    Constant: int, 0   @ 6:15
+                Compound:    @ 6:1
+                    Assignment: =   @ 7:9
+                        ID: r   @ 7:9
+                        BinaryOp: %   @ 7:13
+                            ID: n   @ 7:13
+                            Constant: int, 10   @ 7:17
+                    Assignment: =   @ 8:9
+                        ID: sum   @ 8:9
+                        BinaryOp: +   @ 8:16
+                            BinaryOp: *   @ 8:16
+                                ID: sum   @ 8:16
+                                Constant: float, 10.0   @ 8:22
+                            Cast:    @ 8:29
+                                Type: ['float']   @ 8:30
+                                ID: r   @ 8:36
+                    Assignment: =   @ 9:9
+                        ID: n   @ 9:9
+                        BinaryOp: /   @ 9:13
+                            ID: n   @ 9:13
+                            Constant: int, 10   @ 9:17
+            Assert:    @ 11:5
+                BinaryOp: ==   @ 11:12
+                    ID: temp   @ 11:12
+                    Cast:    @ 11:20
+                        Type: ['int']   @ 11:21
+                        ID: sum   @ 11:25
+            Return:    @ 12:5
+                Constant: int, 0   @ 12:12

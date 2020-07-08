@@ -1,0 +1,101 @@
+global_string @assert_message_15_5 assertion_fail on 15:5
+define @main
+  alloc_int %n
+  alloc_int %i
+  alloc_int %flag
+  literal_int 0 %2
+  store_int %2 %flag
+  literal_int 190 %3
+  store_int %3 %n
+  literal_int 2 %4
+  store_int %4 %i
+5:
+  load_int %i %8
+  load_int %n %9
+  literal_int 2 %10
+  div_int %9 %10 %11
+  le_int %8 %11 %12
+  cbranch %12 %6 %7
+6:
+  load_int %i %15
+  param_int %15
+  call @checkPrime %16
+  literal_int 1 %17
+  eq_int %16 %17 %18
+  cbranch %18 %13 %14
+13:
+  load_int %n %21
+  load_int %i %22
+  sub_int %21 %22 %23
+  param_int %23
+  call @checkPrime %24
+  literal_int 1 %25
+  eq_int %24 %25 %26
+  cbranch %26 %19 %20
+19:
+  literal_int 1 %27
+  store_int %27 %flag
+20:
+14:
+  load_int %i %28
+  literal_int 1 %29
+  add_int %28 %29 %30
+  store_int %30 %i
+  jump %5
+7:
+  load_int %flag %31
+  literal_int 1 %32
+  eq_int %31 %32 %33
+  cbranch %33 %34 %35
+34:
+  jump %36
+35:
+  print_string @assert_message_15_5
+  jump %1
+36:
+  literal_int 0 %37
+  store_int %37 %0
+  jump %1
+1:
+  load_int %0 %38
+  return_int %38
+define @checkPrime
+  alloc_int %n
+  store_int %0 %n
+  alloc_int %i
+  alloc_int %isPrime
+  literal_int 1 %3
+  store_int %3 %isPrime
+  literal_int 2 %4
+  store_int %4 %i
+5:
+  load_int %i %8
+  load_int %n %9
+  literal_int 2 %10
+  div_int %9 %10 %11
+  le_int %8 %11 %12
+  cbranch %12 %6 %7
+6:
+  load_int %n %15
+  load_int %i %16
+  mod_int %15 %16 %17
+  literal_int 0 %18
+  eq_int %17 %18 %19
+  cbranch %19 %13 %14
+13:
+  literal_int 0 %20
+  store_int %20 %isPrime
+  jump %7
+14:
+  load_int %i %21
+  literal_int 1 %22
+  add_int %21 %22 %23
+  store_int %23 %i
+  jump %5
+7:
+  load_int %isPrime %24
+  store_int %24 %1
+  jump %2
+2:
+  load_int %1 %25
+  return_int %25

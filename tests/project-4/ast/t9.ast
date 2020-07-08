@@ -1,0 +1,55 @@
+Program: 
+    GlobalDecl: 
+        Decl: ID(name='n'  )
+            VarDecl: 
+                Type: ['int']   @ 1:1
+            Constant: int, 10   @ 1:9
+    FuncDef: 
+        Type: ['int']   @ 3:1
+        Decl: ID(name='foo'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='a'  )
+                        VarDecl: 
+                            Type: ['int']   @ 3:9
+                    Decl: ID(name='b'  )
+                        VarDecl: 
+                            Type: ['int']   @ 3:16
+                VarDecl: 
+                    Type: ['int']   @ 3:1
+        Compound:    @ 3:1
+            Return:    @ 4:5
+                BinaryOp: *   @ 4:12
+                    ID: n   @ 4:12
+                    BinaryOp: +   @ 4:17
+                        ID: a   @ 4:17
+                        ID: b   @ 4:21
+    FuncDef: 
+        Type: ['int']   @ 7:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 7:1
+        Compound:    @ 7:1
+            Decl: ID(name='c'  )
+                VarDecl: 
+                    Type: ['int']   @ 8:5
+                Constant: int, 2   @ 8:13
+            Decl: ID(name='d'  )
+                VarDecl: 
+                    Type: ['int']   @ 8:5
+                Constant: int, 3   @ 8:20
+            Decl: ID(name='e'  )
+                VarDecl: 
+                    Type: ['int']   @ 9:5
+                FuncCall:    @ 9:13
+                    ID: foo   @ 9:13
+                    ExprList:    @ 9:17
+                        ID: c   @ 9:17
+                        ID: d   @ 9:20
+            Assert:    @ 10:5
+                BinaryOp: ==   @ 10:12
+                    ID: e   @ 10:12
+                    Constant: int, 50   @ 10:17
+            Return:    @ 11:5
+                Constant: int, 0   @ 11:12

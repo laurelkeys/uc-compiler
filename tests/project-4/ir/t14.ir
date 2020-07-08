@@ -1,0 +1,172 @@
+global_string @assert_message_13_5 assertion_fail on 13:5
+global_string @assert_message_12_5 assertion_fail on 12:5
+global_string @assert_message_11_5 assertion_fail on 11:5
+global_string @assert_message_10_5 assertion_fail on 10:5
+define @main
+  alloc_int %n1
+  literal_int 407 %2
+  store_int %2 %n1
+  alloc_int %n2
+  literal_int 1634 %3
+  store_int %3 %n2
+  alloc_int %n3
+  literal_int 8207 %4
+  store_int %4 %n3
+  load_int %n1 %5
+  param_int %5
+  call @armstrong %6
+  literal_int 1 %7
+  eq_int %6 %7 %8
+  cbranch %8 %9 %10
+9:
+  jump %11
+10:
+  print_string @assert_message_10_5
+  jump %1
+11:
+  load_int %n2 %12
+  param_int %12
+  call @armstrong %13
+  literal_int 1 %14
+  eq_int %13 %14 %15
+  cbranch %15 %16 %17
+16:
+  jump %18
+17:
+  print_string @assert_message_11_5
+  jump %1
+18:
+  load_int %n3 %19
+  param_int %19
+  call @armstrong %20
+  literal_int 0 %21
+  eq_int %20 %21 %22
+  cbranch %22 %23 %24
+23:
+  jump %25
+24:
+  print_string @assert_message_12_5
+  jump %1
+25:
+  literal_int 153 %26
+  param_int %26
+  call @armstrong %27
+  literal_int 1 %28
+  eq_int %27 %28 %29
+  cbranch %29 %30 %31
+30:
+  jump %32
+31:
+  print_string @assert_message_13_5
+  jump %1
+32:
+  literal_int 0 %33
+  store_int %33 %0
+  jump %1
+1:
+  load_int %0 %34
+  return_int %34
+define @power
+  alloc_int %n
+  store_int %0 %n
+  alloc_int %r
+  store_int %1 %r
+  alloc_int %p
+  literal_int 1 %4
+  store_int %4 %p
+  alloc_int %c
+  literal_int 1 %5
+  store_int %5 %c
+6:
+  load_int %c %9
+  load_int %r %10
+  le_int %9 %10 %11
+  cbranch %11 %7 %8
+7:
+  load_int %p %12
+  load_int %n %13
+  mul_int %12 %13 %14
+  store_int %14 %p
+  load_int %c %15
+  literal_int 1 %16
+  add_int %15 %16 %17
+  store_int %17 %c
+  jump %6
+8:
+  load_int %p %18
+  store_int %18 %2
+  jump %3
+3:
+  load_int %2 %19
+  return_int %19
+define @armstrong
+  alloc_int %n
+  store_int %0 %n
+  alloc_int %temp
+  alloc_int %remainder
+  alloc_int %sum
+  literal_int 0 %3
+  store_int %3 %sum
+  alloc_int %digits
+  literal_int 0 %4
+  store_int %4 %digits
+  load_int %n %5
+  store_int %5 %temp
+6:
+  load_int %temp %9
+  literal_int 0 %10
+  ne_int %9 %10 %11
+  cbranch %11 %7 %8
+7:
+  literal_int 1 %12
+  add_int %digits %12 %13
+  store_int %13 %digits
+  load_int %temp %14
+  literal_int 10 %15
+  div_int %14 %15 %16
+  store_int %16 %temp
+  jump %6
+8:
+  load_int %n %17
+  store_int %17 %temp
+18:
+  load_int %temp %21
+  literal_int 0 %22
+  ne_int %21 %22 %23
+  cbranch %23 %19 %20
+19:
+  load_int %temp %24
+  literal_int 10 %25
+  mod_int %24 %25 %26
+  store_int %26 %remainder
+  load_int %sum %27
+  load_int %remainder %28
+  load_int %digits %29
+  param_int %28
+  param_int %29
+  call @power %30
+  add_int %27 %30 %31
+  store_int %31 %sum
+  load_int %temp %32
+  literal_int 10 %33
+  div_int %32 %33 %34
+  store_int %34 %temp
+  jump %18
+20:
+  load_int %n %38
+  load_int %sum %39
+  eq_int %38 %39 %40
+  cbranch %40 %35 %36
+35:
+  literal_int 1 %41
+  store_int %41 %1
+  jump %2
+  jump %37
+36:
+  literal_int 0 %42
+  store_int %42 %1
+  jump %2
+37:
+2:
+  load_int %1 %43
+  return_int %43

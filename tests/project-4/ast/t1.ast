@@ -1,0 +1,44 @@
+Program: 
+    GlobalDecl: 
+        Decl: ID(name='v'  )
+            ArrayDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 1:1
+            InitList:    @ 1:12
+                Constant: int, 1   @ 1:12
+                Constant: int, 2   @ 1:15
+                Constant: int, 3   @ 1:18
+                Constant: int, 4   @ 1:21
+    FuncDef: 
+        Type: ['void']   @ 2:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['void']   @ 2:1
+        Compound:    @ 2:1
+            Decl: ID(name='sum'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:5
+            For:    @ 4:5
+                DeclList:    @ 4:5
+                    Decl: ID(name='i'  )
+                        VarDecl: 
+                            Type: ['int']   @ 4:10
+                        Constant: int, 0   @ 4:18
+                BinaryOp: <   @ 4:21
+                    ID: i   @ 4:21
+                    Constant: int, 4   @ 4:25
+                UnaryOp: p++   @ 4:28
+                    ID: i   @ 4:28
+                Assignment: =   @ 5:9
+                    ID: sum   @ 5:9
+                    BinaryOp: +   @ 5:15
+                        ID: sum   @ 5:15
+                        ArrayRef:    @ 5:21
+                            ID: v   @ 5:21
+                            ID: i   @ 5:23
+            Assert:    @ 6:5
+                BinaryOp: ==   @ 6:12
+                    ID: sum   @ 6:12
+                    Constant: int, 10   @ 6:19
+            Return:    @ 7:5

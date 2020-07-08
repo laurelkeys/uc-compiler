@@ -1,0 +1,67 @@
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 2:1
+        Decl: ID(name='gcd'  )
+            FuncDecl: 
+                ParamList: 
+                    Decl: ID(name='x'  )
+                        VarDecl: 
+                            Type: ['int']   @ 2:10
+                    Decl: ID(name='y'  )
+                        VarDecl: 
+                            Type: ['int']   @ 2:17
+                VarDecl: 
+                    Type: ['int']   @ 2:1
+        Compound:    @ 2:1
+            Decl: ID(name='g'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:5
+                ID: y   @ 3:13
+            While:    @ 4:5
+                BinaryOp: >   @ 4:12
+                    ID: x   @ 4:12
+                    Constant: int, 0   @ 4:16
+                Compound:    @ 4:1
+                    Assignment: =   @ 5:9
+                        ID: g   @ 5:9
+                        ID: x   @ 5:13
+                    Assignment: =   @ 6:6
+                        ID: x   @ 6:6
+                        BinaryOp: -   @ 6:10
+                            ID: y   @ 6:10
+                            BinaryOp: *   @ 6:15
+                                BinaryOp: /   @ 6:15
+                                    ID: y   @ 6:15
+                                    ID: x   @ 6:17
+                                ID: x   @ 6:22
+                    Assignment: =   @ 7:6
+                        ID: y   @ 7:6
+                        ID: g   @ 7:10
+            Return:    @ 9:5
+                ID: g   @ 9:12
+    FuncDef: 
+        Type: ['void']   @ 12:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['void']   @ 12:1
+        Compound:    @ 12:1
+            Decl: ID(name='a'  )
+                VarDecl: 
+                    Type: ['int']   @ 13:5
+                Constant: int, 198   @ 13:13
+            Decl: ID(name='b'  )
+                VarDecl: 
+                    Type: ['int']   @ 13:5
+            Assignment: =   @ 14:5
+                ID: b   @ 14:5
+                Constant: int, 36   @ 14:9
+            Assert:    @ 15:5
+                BinaryOp: ==   @ 15:12
+                    FuncCall:    @ 15:12
+                        ID: gcd   @ 15:12
+                        ExprList:    @ 15:16
+                            ID: a   @ 15:16
+                            ID: b   @ 15:19
+                    Constant: int, 18   @ 15:25
+            Return:    @ 16:5

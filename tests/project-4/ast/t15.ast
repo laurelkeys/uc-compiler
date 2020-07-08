@@ -1,0 +1,59 @@
+Program: 
+    GlobalDecl: 
+        Decl: ID(name='m'  )
+            ArrayDecl: 
+                ArrayDecl: 
+                    VarDecl: 
+                        Type: ['int']   @ 1:1
+            InitList:    @ 1:16
+                InitList:    @ 1:16
+                    Constant: int, 1   @ 1:16
+                    Constant: int, 2   @ 1:18
+                InitList:    @ 1:23
+                    Constant: int, 3   @ 1:23
+                    Constant: int, 4   @ 1:25
+                InitList:    @ 1:30
+                    Constant: int, 5   @ 1:30
+                    Constant: int, 6   @ 1:32
+    FuncDef: 
+        Type: ['int']   @ 3:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 3:1
+        Compound:    @ 3:1
+            Decl: ID(name='sum'  )
+                VarDecl: 
+                    Type: ['int']   @ 4:5
+                Constant: int, 0   @ 4:15
+            For:    @ 5:5
+                DeclList:    @ 5:5
+                    Decl: ID(name='i'  )
+                        VarDecl: 
+                            Type: ['int']   @ 5:10
+                        Constant: int, 0   @ 5:16
+                BinaryOp: <   @ 5:19
+                    ID: i   @ 5:19
+                    Constant: int, 3   @ 5:21
+                UnaryOp: p++   @ 5:24
+                    ID: i   @ 5:24
+                Compound:    @ 5:1
+                    Assignment: +=   @ 6:9
+                        ID: sum   @ 6:9
+                        BinaryOp: +   @ 6:16
+                            ArrayRef:    @ 6:16
+                                ArrayRef:    @ 6:16
+                                    ID: m   @ 6:16
+                                    ID: i   @ 6:18
+                                Constant: int, 0   @ 6:21
+                            ArrayRef:    @ 6:26
+                                ArrayRef:    @ 6:26
+                                    ID: m   @ 6:26
+                                    ID: i   @ 6:28
+                                Constant: int, 1   @ 6:31
+            Assert:    @ 8:5
+                BinaryOp: ==   @ 8:12
+                    ID: sum   @ 8:12
+                    Constant: int, 21   @ 8:19
+            Return:    @ 9:5
+                Constant: int, 0   @ 9:12
