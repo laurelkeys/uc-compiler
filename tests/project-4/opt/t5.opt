@@ -1,0 +1,41 @@
+global_string @assert_message_9_5 assertion_fail on 9:5
+define @main
+  alloc_int %n
+  alloc_int %reverse
+  literal_int 0 %reverse
+  alloc_int %rem
+  literal_int 17328 %n
+6:
+  load_int %n %9
+  literal_int 0 %10
+  gt_int %9 %10 %11
+  cbranch %11 %7 %8
+7:
+  load_int %n %12
+  literal_int 10 %13
+  mod_int %12 %13 %14
+  store_int %14 %rem
+  load_int %reverse %15
+  literal_int 10 %16
+  mul_int %15 %16 %17
+  load_int %rem %18
+  add_int %17 %18 %19
+  store_int %19 %reverse
+  load_int %n %20
+  literal_int 10 %21
+  div_int %20 %21 %22
+  store_int %22 %n
+  jump %6
+8:
+  load_int %reverse %23
+  literal_int 82371 %24
+  eq_int %23 %24 %25
+  cbranch %25 %26 %27
+26:
+  literal_int 0 %0
+1:
+  load_int %0 %30
+  return_int %30
+27:
+  print_string @assert_message_9_5
+  jump %1

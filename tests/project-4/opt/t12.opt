@@ -1,0 +1,3 @@
+define @main
+  literal_int 0 %24
+  return_int %24

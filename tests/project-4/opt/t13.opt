@@ -1,0 +1,114 @@
+global_string @assert_message_16_5 assertion_fail on 16:5
+global_string @str_14_21  
+global_string @str_12_11 Sorted list in ascending order: 
+global_int_10 @array_3_18 [5, 3, 7, 8, 4, 1, 9, 2, 0, 6]
+define @main
+  alloc_int_10 %v
+  store_int_10 @array_3_18 %v
+  alloc_int %n
+  literal_int 10 %n
+  alloc_int %c
+  alloc_int %d
+  alloc_int %swap
+  literal_int 0 %c
+4:
+  load_int %c %7
+  load_int %n %8
+  literal_int 1 %9
+  sub_int %8 %9 %10
+  lt_int %7 %10 %11
+  cbranch %11 %5 %6
+5:
+  literal_int 0 %d
+13:
+  load_int %d %16
+  load_int %n %17
+  load_int %c %18
+  sub_int %17 %18 %19
+  literal_int 1 %20
+  sub_int %19 %20 %21
+  lt_int %16 %21 %22
+  cbranch %22 %14 %15
+14:
+  load_int %d %25
+  elem_int %v %25 %26
+  load_int_* %26 %27
+  load_int %d %28
+  literal_int 1 %29
+  add_int %28 %29 %30
+  elem_int %v %30 %31
+  load_int_* %31 %32
+  gt_int %27 %32 %33
+  cbranch %33 %23 %24
+23:
+  load_int %d %34
+  elem_int %v %34 %35
+  load_int_* %35 %36
+  store_int %36 %swap
+  load_int %d %37
+  elem_int %v %37 %38
+  load_int %d %39
+  literal_int 1 %40
+  add_int %39 %40 %41
+  elem_int %v %41 %42
+  load_int_* %42 %43
+  store_int_* %43 %38
+  load_int %d %44
+  literal_int 1 %45
+  add_int %44 %45 %46
+  elem_int %v %46 %47
+  load_int %swap %48
+  store_int_* %48 %47
+24:
+  load_int %d %49
+  literal_int 1 %50
+  add_int %49 %50 %51
+  store_int %51 %d
+  jump %13
+15:
+  load_int %c %52
+  literal_int 1 %53
+  add_int %52 %53 %54
+  store_int %54 %c
+  jump %4
+6:
+  print_string @str_12_11
+  literal_int 0 %c
+56:
+  load_int %c %59
+  load_int %n %60
+  lt_int %59 %60 %61
+  cbranch %61 %57 %58
+57:
+  load_int %c %62
+  elem_int %v %62 %63
+  load_int_* %63 %64
+  print_int %64
+  print_string @str_14_21
+  load_int %c %65
+  literal_int 1 %66
+  add_int %65 %66 %67
+  store_int %67 %c
+  jump %56
+58:
+print_void:
+  literal_int 0 %68
+  elem_int %v %68 %69
+  load_int_* %69 %70
+  literal_int 0 %71
+  eq_int %70 %71 %72
+  literal_int 9 %73
+  elem_int %v %73 %74
+  load_int_* %74 %75
+  literal_int 9 %76
+  eq_int %75 %76 %77
+  and_bool %72 %77 %78
+  cbranch %78 %79 %80
+79:
+  literal_int 0 %0
+1:
+  load_int %0 %83
+  return_int %83
+80:
+  print_string @assert_message_16_5
+  jump %1

@@ -1,0 +1,46 @@
+global_string @assert_message_15_5 assertion_fail on 15:5
+define @gcd
+  alloc_int %x
+  store_int %0 %x
+  alloc_int %y
+  store_int %1 %y
+  alloc_int %g
+  load_int %y %4
+  store_int %4 %g
+5:
+  load_int %x %8
+  literal_int 0 %9
+  gt_int %8 %9 %10
+  cbranch %10 %6 %7
+6:
+  load_int %x %11
+  store_int %11 %g
+  load_int %y %12
+  load_int %y %13
+  load_int %x %14
+  div_int %13 %14 %15
+  load_int %x %16
+  mul_int %15 %16 %17
+  sub_int %12 %17 %18
+  store_int %18 %x
+  load_int %g %19
+  store_int %19 %y
+  jump %5
+7:
+  load_int %g %20
+  store_int %20 %2
+  load_int %2 %21
+  return_int %21
+define @main
+  literal_int 198 %4
+  literal_int 36 %5
+  param_int %4
+  param_int %5
+  call @gcd %6
+  literal_int 18 %7
+  eq_int %6 %7 %8
+  cbranch %8 %1 %10
+10:
+  print_string @assert_message_15_5
+1:
+  return_void

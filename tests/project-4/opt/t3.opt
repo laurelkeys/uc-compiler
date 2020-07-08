@@ -1,0 +1,45 @@
+global_string @assert_message_11_5 assertion_fail on 11:5
+define @main
+  alloc_int %n
+  alloc_int %r
+  alloc_int %temp
+  alloc_float %sum
+  literal_float 0.0 %sum
+  literal_int 5743475 %n
+  literal_int 5743475 %temp
+5:
+  load_int %n %8
+  literal_int 0 %9
+  gt_int %8 %9 %10
+  cbranch %10 %6 %7
+6:
+  load_int %n %11
+  literal_int 10 %12
+  mod_int %11 %12 %13
+  store_int %13 %r
+  load_float %sum %14
+  literal_float 10.0 %15
+  mul_float %14 %15 %16
+  load_int %r %17
+  fptosi %17 %18
+  add_float %16 %18 %19
+  store_float %19 %sum
+  load_int %n %20
+  literal_int 10 %21
+  div_int %20 %21 %22
+  store_int %22 %n
+  jump %5
+7:
+  load_int %temp %23
+  load_float %sum %24
+  fptosi %24 %25
+  eq_int %23 %25 %26
+  cbranch %26 %27 %28
+27:
+  literal_int 0 %0
+1:
+  load_int %0 %31
+  return_int %31
+28:
+  print_string @assert_message_11_5
+  jump %1
