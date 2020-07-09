@@ -24,12 +24,11 @@ class LLVMCodeGenerator(NodeVisitor):
         # Top-level container of all other LLVM IR objects
         self.module: ir.Module = ir.Module()
 
-        # Current function IR builder and symbol table
-        self.func_builder: ir.IRBuilder = None
-        self.func_symtab: Dict[str, ir.AllocaInstr] = {}
+        # Current IR builder
+        self.builder: ir.IRBuilder = None
 
-        # Global IR builder and symbol table
-        self.global_builder: ir.IRBuilder = None  # XXX may not be needed (?)
+        # Global and current function symbol tables
+        self.func_symtab: Dict[str, ir.AllocaInstr] = {}
         self.global_symtab: Dict[str, ir.AllocaInstr] = {}
 
     def generate_code(self, node: Node):
@@ -40,19 +39,25 @@ class LLVMCodeGenerator(NodeVisitor):
         ''' Create an alloca instruction in the entry block of the current function. '''
         size = None  # FIXME add as arg for implementing arrays/strings
 
-        if self.func_builder is not None:
-            with self.func_builder.goto_entry_block():
+        if self.builder is not None:
+            with self.builder.goto_entry_block():
                 var_addr = self.builder.alloca(typ=ir_type, size=size, name=f"{var_name}.addr")
+                assert var_name not in self.func_symtab  # NOTE sanity check
                 self.func_symtab[var_name] = var_addr
         else:
             # NOTE assume it's a global variable
             var_addr = ir.GlobalVariable(self.module, typ=ir_type, name=var_name)
+            assert var_name not in self.global_symtab  # NOTE sanity check
             self.global_symtab[var_name] = var_addr
 
         return var_addr
 
-    def visit_ArrayDecl(self, node: ArrayDecl): raise NotImplementedError  # [type*, dim*]
-    def visit_ArrayRef(self, node: ArrayRef): raise NotImplementedError  # [name*, subscript*]
+    def visit_ArrayDecl(self, node: ArrayDecl):  # [type*, dim*]
+        raise NotImplementedError
+
+    def visit_ArrayRef(self, node: ArrayRef):  # [name*, subscript*]
+        raise NotImplementedError
+
     def visit_Assert(self, node: Assert): raise NotImplementedError  # [expr*]
     def visit_Assignment(self, node: Assignment): raise NotImplementedError  # [op, lvalue*, rvalue*]
     def visit_BinaryOp(self, node: BinaryOp): raise NotImplementedError  # [op, left*, right*]
@@ -76,26 +81,86 @@ class LLVMCodeGenerator(NodeVisitor):
         _ass(isinstance(node.type.type, Type))
         _log(f"visiting Decl, type(node.init)={type(node.init)}")
 
-        if isinstance(node.type, VarDecl):
+        if isinstance(node.type, FuncDecl):
+            _ass(node.init is None)
+            funcdecl: FuncDecl = node.type
+
+            # Create an ir.Function to represent funcdecl
+            fn_args = []
+            for arg_decl in funcdecl.args:
+                arg_vardecl = arg_decl.type
+                fn_args.append(UCLLVM.Type.of(arg_vardecl.type.names))
+
+            fn_type = ir.FunctionType(
+                return_type=UCLLVM.Type.of(funcdecl.type.names),
+                args=fn_args
+            )
+
+            fn_name = node.name.name
+            fn = self.module.globals.get(fn_name)
+            if fn is None:
+                # Create a new function and name its arguments
+                fn = ir.Function(module=self.module, ftype=fn_type, name=fn_name)
+                for arg, arg_name in zip(fn.args, node.params):
+                    arg.name = arg_name
+            else:
+                # Assert that all we've seen is the function's prototype
+                assert isinstance(fn, ir.Function), f"Function/global name collision '{fn_name}'"
+                assert fn.is_declaration, f"Redefinition of '{fn_name}'"
+                assert len(fn.function_type.args) == len(fn_type.args), (
+                    f"Definition of '{fn_name}' with wrong argument count"
+                )
+
+            return fn
+
+        elif isinstance(node.type, VarDecl):
             # FIXME global variables
             var_addr = self.__alloca(var_name=node.name.name, ir_type=UCLLVM.Type.of(node.type.type.names))
             # TODO call a builder to store the init value on var_addr
 
-        elif isinstance(node.type, FuncDecl):
-            self.func_symtab = {}
-            pass  # FIXME functions
         elif isinstance(node.type, ArrayDecl):
             pass  # FIXME arrays
         elif isinstance(node.type, PtrDecl):
             raise NotImplementedError
 
     def visit_DeclList(self, node: DeclList): raise NotImplementedError  # [decls**]
-    def visit_EmptyStatement(self, node: EmptyStatement): raise NotImplementedError  # []
+
+    def visit_EmptyStatement(self, node: EmptyStatement):  # []
+        _log(f"visiting EmptyStatement, node={node}")
+        pass
+
     def visit_ExprList(self, node: ExprList): raise NotImplementedError  # [exprs**]
     def visit_For(self, node: For): raise NotImplementedError  # [init*, cond*, next*, body*]
     def visit_FuncCall(self, node: FuncCall): raise NotImplementedError  # [name*, args*]
+
     def visit_FuncDecl(self, node: FuncDecl): raise NotImplementedError  # [args*, type*]
-    def visit_FuncDef(self, node: FuncDef): raise NotImplementedError  # [spec*, decl*, body*]
+
+    def visit_FuncDef(self, node: FuncDef):  # [spec*, decl*, body*]
+        _ass(isinstance(node.spec, Type))
+        _ass(isinstance(node.decl, Decl))
+        _ass(isinstance(node.body, Compound))  # TODO double check for empty/single-line functions
+
+        # Reset the current function symbol table
+        self.func_symtab = {}
+
+        # Generate an ir.Function from the prototype (i.e. the function declaration)
+        fn: ir.Function = self.visit(node.Decl)
+
+        # Create a new basic block to start insertion into
+        bb_entry = fn.append_basic_block(name="entry")
+        self.builder = ir.IRBuilder(block=bb_entry)
+
+        # Add the function arguments to the stack (and the symbol table)
+        for arg in fn.args:
+            arg_addr = self.__alloca(var_name=arg.name, ir_type=arg.type)
+            self.builder.store(value=arg, ptr=arg_addr)
+
+        # Finish off generating the function
+        fn_return_value: ir.Value = self.visit(node.body)
+        self.builder.ret(value=fn_return_value)
+        self.builder = None
+
+        return fn
 
     def visit_GlobalDecl(self, node: GlobalDecl):  # [decls**]
         for decl in node.decls:
@@ -108,7 +173,9 @@ class LLVMCodeGenerator(NodeVisitor):
     def visit_If(self, node: If): raise NotImplementedError  # [cond*, ifthen*, ifelse*]
     def visit_InitList(self, node: InitList): raise NotImplementedError  # [exprs**]
     def visit_ParamList(self, node: ParamList): raise NotImplementedError  # [params**]
-    def visit_Print(self, node: Print): raise NotImplementedError  # [expr*]
+
+    def visit_Print(self, node: Print):  # [expr*]
+        raise NotImplementedError
 
     def visit_Program(self, node: Program):  # [gdecls**]
         for gdecl in node.gdecls:
