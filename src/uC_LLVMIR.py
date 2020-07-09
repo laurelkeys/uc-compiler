@@ -58,6 +58,34 @@ class LLVMCodeGenerator(NodeVisitor):
 
         return var_addr
 
+    def __binop(self, binop: str, lhs: ir.Value, rhs: ir.Value) -> ir.Value:
+        ''' Return the equivalent of `lhs <binop> rhs`, abstracting type-handling. '''
+        assert isinstance(lhs, rhs), f"{type(lhs)} != {type(rhs)}"
+
+        if isinstance(lhs, UCLLVM.Type.Int):
+            assert binop in TYPE_INT.binary_ops
+            return {
+                '+': lambda: self.builder.add(lhs, rhs, name="iadd"),
+                '-': lambda: self.builder.sub(lhs, rhs, name="isub"),
+                '*': lambda: self.builder.mul(lhs, rhs, name="imul"),
+                '/': lambda: self.builder.sdiv(lhs, rhs, name="idiv"),
+                '%': lambda: self.builder.srem(lhs, rhs, name="irem"),
+            }[binop]()
+
+        elif isinstance(lhs, UCLLVM.Type.Float):
+            assert binop in TYPE_FLOAT.binary_ops
+            return {
+                '+': lambda: self.builder.fadd(lhs, rhs, name="fadd"),
+                '-': lambda: self.builder.fsub(lhs, rhs, name="fsub"),
+                '*': lambda: self.builder.fmul(lhs, rhs, name="fmul"),
+                '/': lambda: self.builder.fdiv(lhs, rhs, name="fdiv"),
+                '%': lambda: self.builder.frem(lhs, rhs, name="frem"),
+            }[binop]()
+
+        else:
+            assert False, type(lhs)  # TODO implement
+
+
     def visit_ArrayDecl(self, node: ArrayDecl):  # [type*, dim*]
         raise NotImplementedError
 
@@ -80,17 +108,20 @@ class LLVMCodeGenerator(NodeVisitor):
         if node.op != "=":
             assert len(node.op) == 2, node.op
             _log(f"visiting Assignment, node.op={node.op}")
-
-            op, *_ = node.op
             lhs_value = self.builder.load(ptr=lhs_addr, name=node.lvalue.name)
-
-            assert False, node.op  # FIXME implement
-            # NOTE it'll be something like: rhs_value = op<type>(lhs_value, rhs_value)
+            rhs_value = self.__binop(binop=node.op[0], lhs=lhs_value, rhs=rhs_value)
 
         self.builder.store(value=rhs_value, ptr=lhs_addr)
         return rhs_value
 
-    def visit_BinaryOp(self, node: BinaryOp): raise NotImplementedError  # [op, left*, right*]
+    def visit_BinaryOp(self, node: BinaryOp):  # [op, left*, right*]
+        _log(f"visiting Assignment, type(node.left)={type(node.left)}")
+        _log(f"visiting Assignment, type(node.right)={type(node.right)}")
+
+        lhs_value = self.visit(node.left)
+        rhs_value = self.visit(node.right)
+
+        self.__binop(node.op, lhs_value, rhs_value)
 
     def visit_Break(self, node: Break): raise NotImplementedError  # []
     def visit_Cast(self, node: Cast): raise NotImplementedError  # [type*, expr*]
