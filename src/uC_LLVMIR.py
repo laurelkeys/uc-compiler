@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import llvmlite.ir as ir
 
@@ -60,10 +60,10 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def __binop(self, binop: str, lhs: ir.Value, rhs: ir.Value) -> ir.Value:
         ''' Return the equivalent of `lhs <binop> rhs`, abstracting type-handling. '''
-        assert isinstance(lhs, rhs), f"{type(lhs)} != {type(rhs)}"
+        assert isinstance(lhs, type(rhs)), f"{type(lhs)} != {type(rhs)}"
 
         if isinstance(lhs, UCLLVM.Type.Int):
-            assert binop in TYPE_INT.binary_ops
+            assert binop in TYPE_INT.binary_ops, binop
             return {
                 '+': lambda: self.builder.add(lhs, rhs, name="iadd"),
                 '-': lambda: self.builder.sub(lhs, rhs, name="isub"),
@@ -73,7 +73,7 @@ class LLVMCodeGenerator(NodeVisitor):
             }[binop]()
 
         elif isinstance(lhs, UCLLVM.Type.Float):
-            assert binop in TYPE_FLOAT.binary_ops
+            assert binop in TYPE_FLOAT.binary_ops, binop
             return {
                 '+': lambda: self.builder.fadd(lhs, rhs, name="fadd"),
                 '-': lambda: self.builder.fsub(lhs, rhs, name="fsub"),
@@ -121,7 +121,7 @@ class LLVMCodeGenerator(NodeVisitor):
         lhs_value = self.visit(node.left)
         rhs_value = self.visit(node.right)
 
-        self.__binop(node.op, lhs_value, rhs_value)
+        return self.__binop(node.op, lhs_value, rhs_value)
 
     def visit_Break(self, node: Break): raise NotImplementedError  # []
     def visit_Cast(self, node: Cast): raise NotImplementedError  # [type*, expr*]
@@ -134,29 +134,30 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def visit_Constant(self, node: Constant):  # [type, value]
         # FIXME global constants
-        _ass(isinstance(node.type, Type))
-        return ir.Constant(typ=UCLLVM.Type.of(node.type.names), constant=node.value)  # FIXME add \00 to strings
+        _ass(isinstance(node.type, str))
+        return ir.Constant(typ=UCLLVM.Type.of([node.type]), constant=node.value)  # FIXME add \00 to strings
 
     def visit_Decl(self, node: Decl):  # [name*, type*, init*]
         _ass(isinstance(node.name, ID))
         _ass(isinstance(node.type, (ArrayDecl, FuncDecl, PtrDecl, VarDecl)))
-        _ass(isinstance(node.type.type, Type))
         _log(f"visiting Decl, type(node.init)={type(node.init)}")
 
         name = node.name.name
 
         if isinstance(node.type, FuncDecl):
             _ass(node.init is None)
+            _ass(isinstance(node.type.type, VarDecl))
+            _ass(isinstance(node.type.type.type, Type))
             funcdecl: FuncDecl = node.type
 
             # Create an ir.Function to represent funcdecl
             fn_args = []
-            for arg_decl in funcdecl.args:
+            for arg_decl in funcdecl.args or []:
                 arg_vardecl = arg_decl.type
                 fn_args.append(UCLLVM.Type.of(arg_vardecl.type.names))
 
             fn_type = ir.FunctionType(
-                return_type=UCLLVM.Type.of(funcdecl.type.names),
+                return_type=UCLLVM.Type.of(funcdecl.type.type.names),
                 args=fn_args
             )
 
@@ -165,8 +166,10 @@ class LLVMCodeGenerator(NodeVisitor):
             if fn is None:
                 # Create a new function and name its arguments
                 fn = ir.Function(module=self.module, ftype=fn_type, name=fn_name)
-                for arg, arg_name in zip(fn.args, node.params):
-                    arg.name = arg_name
+                for arg, arg_decl in zip(fn.args, funcdecl.args or []):
+                    _ass(isinstance(arg_decl, Decl))
+                    _ass(isinstance(arg_decl.type, VarDecl))
+                    arg.name = arg_decl.name
             else:
                 # Assert that all we've seen is the function's prototype
                 assert isinstance(fn, ir.Function), f"Function/global name collision '{fn_name}'"
@@ -179,6 +182,7 @@ class LLVMCodeGenerator(NodeVisitor):
 
         elif isinstance(node.type, VarDecl):
             _ass(node.init is None)
+            _ass(isinstance(node.type.type, Type))
             vardecl: VarDecl = node.type
 
             # Allocate space for the variable (and register it in the correct symtab)
@@ -222,7 +226,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.func_symtab = {}
 
         # Generate an ir.Function from the prototype (i.e. the function declaration)
-        fn: ir.Function = self.visit(node.Decl)
+        fn: ir.Function = self.visit(node.decl)
 
         # Create a new basic block to start insertion into
         bb_entry = fn.append_basic_block(name="entry")
@@ -293,7 +297,7 @@ class UCLLVM:
         Bool = ir.IntType(1)
         Void = ir.VoidType()
 
-        def of(typename: str):
+        def of(typename: List[str]):
             try:
                 basename, *qualifiers = typename  # FIXME arrays/strings
                 return {
@@ -306,12 +310,15 @@ class UCLLVM:
             except KeyError:
                 assert False, f"Type name not mapped to an LLVM type: '{typename}'"
 
-    # class Const:
-    #     i0 = ir.Constant(UCLLVM.Type.Int, 0)
-    #     i1 = ir.Constant(UCLLVM.Type.Int, 1)
+    class Const:
+        # Int
+        i0 = ir.Constant(ir.IntType(32), 0)
+        i1 = ir.Constant(ir.IntType(32), 1)
 
-    #     f0 = ir.Constant(UCLLVM.Type.Float, 0)
-    #     f1 = ir.Constant(UCLLVM.Type.Float, 1)
+        # Float
+        f0 = ir.Constant(ir.DoubleType(), 0)
+        f1 = ir.Constant(ir.DoubleType(), 1)
 
-    #     true = ir.Constant(UCLLVM.Type.Bool, 1)
-    #     false = ir.Constant(UCLLVM.Type.Bool, 0)
+        # Bool
+        true = ir.Constant(ir.DoubleType(), 1)
+        false = ir.Constant(ir.DoubleType(), 0)
