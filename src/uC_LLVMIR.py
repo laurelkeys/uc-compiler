@@ -35,8 +35,14 @@ class LLVMCodeGenerator(NodeVisitor):
         assert isinstance(node, Program)
         return self.visit(node)
 
+    def __addr(self, var_name: str) -> ir.AllocaInstr:
+        ''' Return the address pointed by `var_name`. '''
+        return self.func_symtab.get(var_name) or self.global_symtab[var_name]
+
     def __alloca(self, var_name: str, ir_type: ir.Type) -> ir.AllocaInstr:
-        ''' Create an alloca instruction in the entry block of the current function. '''
+        ''' Create an alloca instruction in the entry block of the current function,
+            if there is one, or in global scope (and add it to the correct symtab).
+        '''
         size = None  # FIXME add as arg for implementing arrays/strings
 
         if self.builder is not None:
@@ -59,8 +65,33 @@ class LLVMCodeGenerator(NodeVisitor):
         raise NotImplementedError
 
     def visit_Assert(self, node: Assert): raise NotImplementedError  # [expr*]
-    def visit_Assignment(self, node: Assignment): raise NotImplementedError  # [op, lvalue*, rvalue*]
+
+    def visit_Assignment(self, node: Assignment):  # [op, lvalue*, rvalue*]
+        _log(f"visiting Assignment, type(node.lvalue)={type(node.lvalue)}")
+        _log(f"visiting Assignment, type(node.rvalue)={type(node.rvalue)}")
+
+        if isinstance(node.lvalue, ID):
+            lhs_addr = self.__addr(node.lvalue.name)
+        else:
+            assert False, node.lvalue  # TODO implement
+
+        rhs_value = self.visit(node.rvalue)
+
+        if node.op != "=":
+            assert len(node.op) == 2, node.op
+            _log(f"visiting Assignment, node.op={node.op}")
+
+            op, *_ = node.op
+            lhs_value = self.builder.load(ptr=lhs_addr, name=node.lvalue.name)
+
+            assert False, node.op  # FIXME implement
+            # NOTE it'll be something like: rhs_value = op<type>(lhs_value, rhs_value)
+
+        self.builder.store(value=rhs_value, ptr=lhs_addr)
+        return rhs_value
+
     def visit_BinaryOp(self, node: BinaryOp): raise NotImplementedError  # [op, left*, right*]
+
     def visit_Break(self, node: Break): raise NotImplementedError  # []
     def visit_Cast(self, node: Cast): raise NotImplementedError  # [type*, expr*]
 
@@ -81,6 +112,8 @@ class LLVMCodeGenerator(NodeVisitor):
         _ass(isinstance(node.type.type, Type))
         _log(f"visiting Decl, type(node.init)={type(node.init)}")
 
+        name = node.name.name
+
         if isinstance(node.type, FuncDecl):
             _ass(node.init is None)
             funcdecl: FuncDecl = node.type
@@ -96,7 +129,7 @@ class LLVMCodeGenerator(NodeVisitor):
                 args=fn_args
             )
 
-            fn_name = node.name.name
+            fn_name = name
             fn = self.module.globals.get(fn_name)
             if fn is None:
                 # Create a new function and name its arguments
@@ -114,12 +147,26 @@ class LLVMCodeGenerator(NodeVisitor):
             return fn
 
         elif isinstance(node.type, VarDecl):
-            # FIXME global variables
-            var_addr = self.__alloca(var_name=node.name.name, ir_type=UCLLVM.Type.of(node.type.type.names))
-            # TODO call a builder to store the init value on var_addr
+            _ass(node.init is None)
+            vardecl: VarDecl = node.type
+
+            # Allocate space for the variable (and register it in the correct symtab)
+            var_name = name
+            var_addr = self.__alloca(var_name, ir_type=UCLLVM.Type.of(vardecl.type.names))
+
+            # Store its optional initial value
+            if node.init is not None:
+                init_value = self.visit(node.init)  # FIXME this could be a name (or an addr)
+                self.builder.store(value=init_value, ptr=var_addr)
+            else:
+                # TODO zero-initialize (needs a "zero" for each type)
+                init_value = None
+
+            return init_value  # FIXME what do we need to return, actually? i.e. name/addr/value
 
         elif isinstance(node.type, ArrayDecl):
-            pass  # FIXME arrays
+            pass  # TODO arrays
+
         elif isinstance(node.type, PtrDecl):
             raise NotImplementedError
 
@@ -156,8 +203,7 @@ class LLVMCodeGenerator(NodeVisitor):
             self.builder.store(value=arg, ptr=arg_addr)
 
         # Finish off generating the function
-        fn_return_value: ir.Value = self.visit(node.body)
-        self.builder.ret(value=fn_return_value)
+        self.visit(node.body)
         self.builder = None
 
         return fn
@@ -167,8 +213,8 @@ class LLVMCodeGenerator(NodeVisitor):
             self.visit(decl)  # XXX add a 'global?' attr
 
     def visit_ID(self, node: ID):  # [name]
-        var_addr = self.func_symtab.get(node.name) or self.global_symtab[node.name]
-        return self.func_builder.load(ptr=var_addr, name=node.name)
+        var_addr = self.__addr(node.name)
+        return self.builder.load(ptr=var_addr, name=node.name)
 
     def visit_If(self, node: If): raise NotImplementedError  # [cond*, ifthen*, ifelse*]
     def visit_InitList(self, node: InitList): raise NotImplementedError  # [exprs**]
@@ -185,7 +231,11 @@ class LLVMCodeGenerator(NodeVisitor):
         raise NotImplementedError
 
     def visit_Read(self, node: Read): raise NotImplementedError  # [expr*]
-    def visit_Return(self, node: Return): raise NotImplementedError  # [expr*]
+
+    def visit_Return(self, node: Return):  # [expr*]
+        _log(f"visiting Return, type(node.expr)={type(node.expr)}")
+        fn_return_value = self.visit(node.expr)
+        self.builder.ret(fn_return_value)
 
     def visit_Type(self, node: Type):  # [names]
         _log(f"visiting Type, node={node}")
