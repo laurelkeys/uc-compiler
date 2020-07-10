@@ -61,27 +61,37 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def __binop(self, binop: str, lhs: ir.Value, rhs: ir.Value) -> ir.Value:
         ''' Return the equivalent of `lhs <binop> rhs`, abstracting type-handling. '''
-        assert isinstance(lhs, type(rhs)), f"{type(lhs)} != {type(rhs)}"
-
         if isinstance(lhs.type, ir.IntType):
-            assert binop in TYPE_INT.binary_ops, binop
-            return {
-                '+': lambda: self.builder.add(lhs, rhs, name="i.add"),
-                '-': lambda: self.builder.sub(lhs, rhs, name="i.sub"),
-                '*': lambda: self.builder.mul(lhs, rhs, name="i.mul"),
-                '/': lambda: self.builder.sdiv(lhs, rhs, name="i.div"),
-                '%': lambda: self.builder.srem(lhs, rhs, name="i.rem"),
-            }[binop]()
+            if binop in TYPE_INT.binary_ops:
+                return {
+                    '+': lambda: self.builder.add(lhs, rhs, name="i.add"),
+                    '-': lambda: self.builder.sub(lhs, rhs, name="i.sub"),
+                    '*': lambda: self.builder.mul(lhs, rhs, name="i.mul"),
+                    '/': lambda: self.builder.sdiv(lhs, rhs, name="i.div"),
+                    '%': lambda: self.builder.srem(lhs, rhs, name="i.rem"),
+                }[binop]()
+
+            elif binop in TYPE_INT.rel_ops:
+                return self.builder.icmp_signed(binop, lhs, rhs, name="i.cmp")
+
+            else:
+                assert False, binop
 
         elif isinstance(lhs.type, ir.DoubleType):
-            assert binop in TYPE_FLOAT.binary_ops, binop
-            return {
-                '+': lambda: self.builder.fadd(lhs, rhs, name="f.add"),
-                '-': lambda: self.builder.fsub(lhs, rhs, name="f.sub"),
-                '*': lambda: self.builder.fmul(lhs, rhs, name="f.mul"),
-                '/': lambda: self.builder.fdiv(lhs, rhs, name="f.div"),
-                '%': lambda: self.builder.frem(lhs, rhs, name="f.rem"),
-            }[binop]()
+            if binop in TYPE_FLOAT.binary_ops:
+                return {
+                    '+': lambda: self.builder.fadd(lhs, rhs, name="f.add"),
+                    '-': lambda: self.builder.fsub(lhs, rhs, name="f.sub"),
+                    '*': lambda: self.builder.fmul(lhs, rhs, name="f.mul"),
+                    '/': lambda: self.builder.fdiv(lhs, rhs, name="f.div"),
+                    '%': lambda: self.builder.frem(lhs, rhs, name="f.rem"),
+                }[binop]()
+
+            elif binop in TYPE_FLOAT.rel_ops:
+                return self.builder.fcmp_signed(binop, lhs, rhs, name="f.cmp")
+
+            else:
+                assert False, binop
 
         else:
             assert False, type(lhs)  # TODO implement
@@ -91,7 +101,6 @@ class LLVMCodeGenerator(NodeVisitor):
 
             Note: `expr_addr` is used (and required) for operations that change the operand (e.g. ++, --).
         '''
-
         if isinstance(expr_value.type, ir.IntType):
             assert unop in TYPE_INT.unary_ops, unop
 
@@ -352,7 +361,31 @@ class LLVMCodeGenerator(NodeVisitor):
         else:
             return self.__unop(node.op, expr_value, expr_addr)
 
-    def visit_While(self, node: While): raise NotImplementedError  # [cond*, body*]
+    def visit_While(self, node: While):  # [cond*, body*]
+        # Start insertion onto the current block
+        self.builder.position_at_end(block=self.builder.block)
+
+        # Create basic blocks in the current function to express the control flow
+        cond_bb = self.builder.function.append_basic_block("while.cond")
+        body_bb = self.builder.function.append_basic_block("while.body")
+        end_bb = self.builder.function.append_basic_block("while.end")
+
+        # Condition:
+        self.builder.branch(cond_bb)
+        self.builder.position_at_start(block=cond_bb)
+
+        cond_value = self.visit(node.cond)
+        self.builder.cbranch(cond=cond_value, truebr=body_bb, falsebr=end_bb)
+
+        # Body:
+        self.builder.position_at_start(block=body_bb)
+
+        _ = self.visit(node.body)
+        self.builder.branch(target=cond_bb)
+
+        # End:
+        self.builder.position_at_start(block=end_bb)
+
 
 ###########################################################
 ## uC LLVM Helper #########################################
