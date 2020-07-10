@@ -11,7 +11,6 @@ from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
 ## uC Semantic Analysis ###################################
 ###########################################################
 
-
 class SymbolTable:
     ''' Class representing a symbol table.\n
         It should provide functionality for adding and looking up nodes associated with identifiers.

@@ -405,11 +405,9 @@ class LLVMCodeGenerator(NodeVisitor):
         # End:
         self.builder.position_at_start(block=end_bb)
 
-
 ###########################################################
-## uC LLVM Helper #########################################
+## uC's LLVM IR Helper ####################################
 ###########################################################
-
 
 class UCLLVM:
     class Type:

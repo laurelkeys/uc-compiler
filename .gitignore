@@ -3,9 +3,8 @@
 
 *.uc
 *.ir
+*.opt
 *.ast
-
-project-1/test_files
 
 # GraphViz
 graphviz/

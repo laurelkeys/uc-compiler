@@ -7,7 +7,6 @@ from uC_blocks import *
 ## uC Data Flow Analysis (DFA) ############################
 ###########################################################
 
-
 class DataFlow:
     class LivenessAnalysis:
         @staticmethod

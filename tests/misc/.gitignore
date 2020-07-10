@@ -1,1 +1,11 @@
-!*.uc
+# uC
+!checkPrime.uc
+!doubleMe.uc
+!ex_arrays.uc
+!ex_casting.uc
+!ex_for_loop.uc
+!ex_increment.uc
+!opt_constprop.uc
+!opt_deadcode.uc
+!opt_ex1.uc
+!opt_ex2.uc

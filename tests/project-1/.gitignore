@@ -1,3 +1,13 @@
-!*.uc
-!*.ast
-uc/*.ast
+# uC
+!ex0.uc
+!ex1.uc
+!ex2.uc
+!ex3.uc
+!t1.uc
+!t2.uc
+!t3.uc
+!t4.uc
+!t5.uc
+
+# AST
+!ast/*.ast

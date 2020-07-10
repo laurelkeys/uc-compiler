@@ -12,7 +12,6 @@ from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
 ## uC Intermediate Representation (IR) ####################
 ###########################################################
 
-
 class GenerateCode(NodeVisitor):
     ''' Node visitor class that creates 3-address encoded instruction sequences. '''
 

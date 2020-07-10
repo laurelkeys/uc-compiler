@@ -1,0 +1,77 @@
+Program: 
+    FuncDef: 
+        Type: ['int']   @ 1:1
+        Decl: ID(name='main'  )
+            FuncDecl: 
+                VarDecl: 
+                    Type: ['int']   @ 1:1
+        Compound:    @ 1:1
+            Decl: ID(name='s'  )
+                ArrayDecl: 
+                    VarDecl: 
+                        Type: ['char']   @ 2:5
+                Constant: string, "TajMahal."   @ 2:16
+            Decl: ID(name='i'  )
+                VarDecl: 
+                    Type: ['int']   @ 3:5
+                Constant: int, 0   @ 3:13
+            Decl: ID(name='vowels'  )
+                VarDecl: 
+                    Type: ['int']   @ 4:5
+                Constant: int, 0   @ 4:18
+            Decl: ID(name='consonants'  )
+                VarDecl: 
+                    Type: ['int']   @ 5:5
+                Constant: int, 0   @ 5:22
+            While:    @ 7:5
+                BinaryOp: !=   @ 7:11
+                    ArrayRef:    @ 7:11
+                        ID: s   @ 7:11
+                        UnaryOp: p++   @ 7:13
+                            ID: i   @ 7:13
+                    Constant: char, '.'   @ 7:21
+                Compound:    @ 7:1
+                    If:    @ 8:9
+                        BinaryOp: ||   @ 8:12
+                            BinaryOp: ||   @ 8:12
+                                BinaryOp: ||   @ 8:12
+                                    BinaryOp: ||   @ 8:12
+                                        BinaryOp: ==   @ 8:12
+                                            ArrayRef:    @ 8:12
+                                                ID: s   @ 8:12
+                                                ID: i   @ 8:14
+                                            Constant: char, 'a'   @ 8:20
+                                        BinaryOp: ==   @ 8:27
+                                            ArrayRef:    @ 8:27
+                                                ID: s   @ 8:27
+                                                ID: i   @ 8:29
+                                            Constant: char, 'e'   @ 8:35
+                                    BinaryOp: ==   @ 8:42
+                                        ArrayRef:    @ 8:42
+                                            ID: s   @ 8:42
+                                            ID: i   @ 8:44
+                                        Constant: char, 'i'   @ 8:50
+                                BinaryOp: ==   @ 8:57
+                                    ArrayRef:    @ 8:57
+                                        ID: s   @ 8:57
+                                        ID: i   @ 8:59
+                                    Constant: char, 'o'   @ 8:65
+                            BinaryOp: ==   @ 8:72
+                                ArrayRef:    @ 8:72
+                                    ID: s   @ 8:72
+                                    ID: i   @ 8:74
+                                Constant: char, 'u'   @ 8:80
+                        UnaryOp: p++   @ 9:13
+                            ID: vowels   @ 9:13
+                        UnaryOp: p++   @ 11:13
+                            ID: consonants   @ 11:13
+            Assert:    @ 14:5
+                BinaryOp: &&   @ 14:12
+                    BinaryOp: ==   @ 14:12
+                        ID: vowels   @ 14:12
+                        Constant: int, 3   @ 14:22
+                    BinaryOp: ==   @ 14:27
+                        ID: consonants   @ 14:27
+                        Constant: int, 5   @ 14:41
+            Return:    @ 15:5
+                Constant: int, 0   @ 15:12

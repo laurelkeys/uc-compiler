@@ -6,7 +6,6 @@ from uC_blocks import *
 ## uC Code Optimizer ######################################
 ###########################################################
 
-
 class Optimizer:
     @staticmethod
     def constant_folding_and_propagation(cfg: ControlFlowGraph):

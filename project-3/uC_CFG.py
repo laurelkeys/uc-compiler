@@ -12,7 +12,6 @@ from uC_IR import Instruction
 ## uC Control-Flow Graph (CFG) ############################
 ###########################################################
 
-
 class ControlFlowGraph:
     ''' Control-flow graph (CFG) representation of a uC program. '''
 

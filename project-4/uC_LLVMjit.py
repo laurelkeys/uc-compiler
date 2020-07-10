@@ -5,6 +5,9 @@ import llvmlite.binding as llvm
 from uC_LLVMIR import LLVMCodeGenerator, UCLLVM
 from uC_parser import UCParser
 
+###########################################################
+## uC's LLVM IR Representation JIT Compiler ###############
+###########################################################
 
 class LLVMCompiler:
     def __init__(self) -> None:

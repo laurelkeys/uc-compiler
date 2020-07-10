@@ -29,10 +29,8 @@ from uC_IR import Instruction
 ## uC Basic Blocks (BBs) ##################################
 ###########################################################
 
-
 In_Out = namedtuple(typename="In_Out", field_names=["in_", "out"])
 Gen_Kill = namedtuple(typename="Gen_Kill", field_names=["gen", "kill"])
-
 
 class Block:
     ''' Base class representing a CFG block. '''
