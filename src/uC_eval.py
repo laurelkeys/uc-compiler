@@ -1,4 +1,4 @@
-from ctypes import CFUNCTYPE, c_double
+from ctypes import CFUNCTYPE, c_int
 
 import llvmlite.binding as llvm
 
@@ -58,10 +58,9 @@ class CodeEvaluator:
         target_machine = self.target.create_target_machine()
         with llvm.create_mcjit_compiler(llvm_module, target_machine) as execution_engine:
             execution_engine.finalize_object()  # NOTE dump .asm machine code here
+            execution_engine.run_static_constructors()
 
-            fn = llvm_module.get_function(name="main")
-            fn_return_type = UCLLVM.Type.Void  # FIXME get the return type of main
-
-            fn_ptr = CFUNCTYPE(fn_return_type)(execution_engine.get_pointer_to_function(fn))
+            # FIXME get the return type of main
+            main = CFUNCTYPE(c_int)(execution_engine.get_function_address(name="main"))
             
-            return fn_ptr()  # FIXME args (?)
+            return main()  # FIXME args (?)

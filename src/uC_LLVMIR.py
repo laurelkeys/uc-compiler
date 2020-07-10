@@ -31,9 +31,10 @@ class LLVMCodeGenerator(NodeVisitor):
         self.func_symtab: Dict[str, ir.AllocaInstr] = {}
         self.global_symtab: Dict[str, ir.AllocaInstr] = {}
 
-    def generate_code(self, node: Node):
+    def generate_code(self, node: Node) -> str:
         assert isinstance(node, Program)
-        return self.visit(node)
+        self.visit(node)
+        return str(self.module)
 
     def __addr(self, var_name: str) -> ir.AllocaInstr:
         ''' Return the address pointed by `var_name`. '''
@@ -62,7 +63,7 @@ class LLVMCodeGenerator(NodeVisitor):
         ''' Return the equivalent of `lhs <binop> rhs`, abstracting type-handling. '''
         assert isinstance(lhs, type(rhs)), f"{type(lhs)} != {type(rhs)}"
 
-        if isinstance(lhs, UCLLVM.Type.Int):
+        if isinstance(lhs.type, ir.IntType):
             assert binop in TYPE_INT.binary_ops, binop
             return {
                 '+': lambda: self.builder.add(lhs, rhs, name="iadd"),
@@ -72,7 +73,7 @@ class LLVMCodeGenerator(NodeVisitor):
                 '%': lambda: self.builder.srem(lhs, rhs, name="irem"),
             }[binop]()
 
-        elif isinstance(lhs, UCLLVM.Type.Float):
+        elif isinstance(lhs.type, ir.DoubleType):
             assert binop in TYPE_FLOAT.binary_ops, binop
             return {
                 '+': lambda: self.builder.fadd(lhs, rhs, name="fadd"),
@@ -85,6 +86,10 @@ class LLVMCodeGenerator(NodeVisitor):
         else:
             assert False, type(lhs)  # TODO implement
 
+    def __byte_array(self, source, convert_str=True) -> ir.Constant:
+        b = bytearray(source) if not convert_str else (source + '\00').encode('ascii')
+        n = len(b)
+        return ir.Constant(ir.ArrayType(UCLLVM.Type.Char, n), b)
 
     def visit_ArrayDecl(self, node: ArrayDecl):  # [type*, dim*]
         raise NotImplementedError
@@ -92,7 +97,10 @@ class LLVMCodeGenerator(NodeVisitor):
     def visit_ArrayRef(self, node: ArrayRef):  # [name*, subscript*]
         raise NotImplementedError
 
-    def visit_Assert(self, node: Assert): raise NotImplementedError  # [expr*]
+    def visit_Assert(self, node: Assert):  # [expr*]
+        # TODO implement
+        raise NotImplementedError
+
 
     def visit_Assignment(self, node: Assignment):  # [op, lvalue*, rvalue*]
         _log(f"visiting Assignment, type(node.lvalue)={type(node.lvalue)}")
