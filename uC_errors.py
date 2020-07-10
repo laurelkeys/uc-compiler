@@ -1,5 +1,32 @@
 from contextlib import contextmanager
 
+# NOTE Error handling is based on a subscription model using context-managers with `subscribe_errors()`.
+#
+#      For example, to route error messages to standard output, use this:
+#          with subscribe_errors(print):
+#              run_compiler()
+#
+#      To send messages to standard error, you can do this:
+#          from functools import partial
+#          with subscribe_errors(partial(print, file=sys.stderr)):
+#               run_compiler()
+#
+#      To route messages to a logger, you can do this:
+#          import logging
+#          log = logging.getLogger("somelogger")
+#          with subscribe_errors(log.error):
+#               run_compiler()
+#
+#      To collect error messages for the purpose of unit testing, do this:
+#          errs = []
+#          with subscribe_errors(errs.append):
+#               run_compiler()
+#          # Check errs for specific errors
+
+# NOTE The utility function `errors_reported()` returns the total number of errors reported so far.
+#      Different stages of the compiler might use this to decide whether or not to keep processing.
+#      Use `clear_errors()` to clear the total number of errors.
+
 ###########################################################
 ## uC Error Handling Helper ###############################
 ###########################################################

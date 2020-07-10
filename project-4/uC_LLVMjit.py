@@ -6,7 +6,7 @@ from uC_LLVMIR import LLVMCodeGenerator, UCLLVM
 from uC_parser import UCParser
 
 
-class CodeEvaluator:
+class LLVMCompiler:
     def __init__(self) -> None:
         llvm.initialize()
         llvm.initialize_native_target()
@@ -20,19 +20,16 @@ class CodeEvaluator:
         self.generator = LLVMCodeGenerator()
         # TODO add built-ins
 
-    def eval(self, uC_code: str, optimize: bool = True):
-        ast = self.parser.parse(uC_code)
-        llvm_code = self.generator.generate_code(ast)
-
+    def eval(self, llvm_code, optimize=True, opt_file=None, opt_debug=False):
         llvm_module = llvm.parse_assembly(llvmir=str(llvm_code))
-        llvm_module.verify()  # NOTE dump .ll unoptimized code here
+        llvm_module.verify()
 
         if optimize:
             pmb = llvm.create_pass_manager_builder()
             pm = llvm.create_module_pass_manager()
 
             # ref.: https://clang.llvm.org/docs/CommandGuide/clang.html#code-generation-options
-            pmb.opt_level  = 2  # 0 = -O0,  1 = -O1, 2 = -O2, 3 = -O3
+            pmb.opt_level  = 0  # 0 = -O0,  1 = -O1, 2 = -O2, 3 = -O3
             pmb.size_level = 0  # 0 = none, 1 = -Os, 2 = -Oz
 
             # ref.: http://llvm.org/docs/Passes.html https://stackoverflow.com/a/15548189
@@ -53,7 +50,12 @@ class CodeEvaluator:
             pmb.populate(pm)
             pm.run(llvm_module)
 
-            llvm_module.verify()  # NOTE dump .ll optimized code here
+            llvm_module.verify()
+            if opt_file is not None:
+                opt_file.write(str(llvm_module))
+            if opt_debug:
+                print("----")
+                print(str(llvm_module))
 
         target_machine = self.target.create_target_machine()
         with llvm.create_mcjit_compiler(llvm_module, target_machine) as execution_engine:
@@ -62,5 +64,5 @@ class CodeEvaluator:
 
             # FIXME get the return type of main
             main = CFUNCTYPE(c_int)(execution_engine.get_function_address(name="main"))
-            
+
             return main()  # FIXME args (?)

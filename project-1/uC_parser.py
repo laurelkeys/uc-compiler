@@ -1,5 +1,3 @@
-import re
-
 import ply.yacc as yacc
 
 from uC_AST import *

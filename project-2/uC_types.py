@@ -119,16 +119,17 @@ TYPE_FUNC = UCType(
 
 
 def from_name(typename: str) -> UCType:
-    # FIXME turn into a dict
-    if   typename == "int":     return TYPE_INT
-    elif typename == "float":   return TYPE_FLOAT
-    elif typename == "char":    return TYPE_CHAR
-    elif typename == "string":  return TYPE_STRING
-    elif typename == "void":    return TYPE_VOID
-
-    elif typename == "bool":    return TYPE_BOOL
-    elif typename == "array":   return TYPE_ARRAY
-    elif typename == "func":    return TYPE_FUNC
-    #elif typename == "ptr":     return TYPE_PTR
-
-    else: assert False, f"Unkown type name: '{typename}'"
+    try:
+        return {
+            "int": TYPE_INT,
+            "float": TYPE_FLOAT,
+            "char": TYPE_CHAR,
+            "string": TYPE_STRING,
+            "void": TYPE_VOID,
+            "bool": TYPE_BOOL,
+            "array": TYPE_ARRAY,
+            "func": TYPE_FUNC,
+            #"ptr": TYPE_PTR
+        }[typename]
+    except KeyError:
+        assert False, f"Unkown type name: '{typename}'"
