@@ -66,25 +66,78 @@ class LLVMCodeGenerator(NodeVisitor):
         if isinstance(lhs.type, ir.IntType):
             assert binop in TYPE_INT.binary_ops, binop
             return {
-                '+': lambda: self.builder.add(lhs, rhs, name="iadd"),
-                '-': lambda: self.builder.sub(lhs, rhs, name="isub"),
-                '*': lambda: self.builder.mul(lhs, rhs, name="imul"),
-                '/': lambda: self.builder.sdiv(lhs, rhs, name="idiv"),
-                '%': lambda: self.builder.srem(lhs, rhs, name="irem"),
+                '+': lambda: self.builder.add(lhs, rhs, name="i.add"),
+                '-': lambda: self.builder.sub(lhs, rhs, name="i.sub"),
+                '*': lambda: self.builder.mul(lhs, rhs, name="i.mul"),
+                '/': lambda: self.builder.sdiv(lhs, rhs, name="i.div"),
+                '%': lambda: self.builder.srem(lhs, rhs, name="i.rem"),
             }[binop]()
 
         elif isinstance(lhs.type, ir.DoubleType):
             assert binop in TYPE_FLOAT.binary_ops, binop
             return {
-                '+': lambda: self.builder.fadd(lhs, rhs, name="fadd"),
-                '-': lambda: self.builder.fsub(lhs, rhs, name="fsub"),
-                '*': lambda: self.builder.fmul(lhs, rhs, name="fmul"),
-                '/': lambda: self.builder.fdiv(lhs, rhs, name="fdiv"),
-                '%': lambda: self.builder.frem(lhs, rhs, name="frem"),
+                '+': lambda: self.builder.fadd(lhs, rhs, name="f.add"),
+                '-': lambda: self.builder.fsub(lhs, rhs, name="f.sub"),
+                '*': lambda: self.builder.fmul(lhs, rhs, name="f.mul"),
+                '/': lambda: self.builder.fdiv(lhs, rhs, name="f.div"),
+                '%': lambda: self.builder.frem(lhs, rhs, name="f.rem"),
             }[binop]()
 
         else:
             assert False, type(lhs)  # TODO implement
+
+    def __unop(self, unop: str, expr_value: ir.Value, expr_addr: ir.AllocaInstr = None) -> ir.Value:
+        ''' Return the equivalent of `<unop> operand`, or `operand <unop>`, abstracting type-handling.
+
+            Note: `expr_addr` is used (and required) for operations that change the operand (e.g. ++, --).
+        '''
+
+        if isinstance(expr_value.type, ir.IntType):
+            assert unop in TYPE_INT.unary_ops, unop
+
+            if unop == '+':
+                return expr_value
+
+            elif unop == '-':
+                return self.builder.sub(lhs=UCLLVM.Const.i0, rhs=expr_value, name="i.neg")
+
+            elif unop.endswith('++'):
+                inc_expr_value = self.builder.add(lhs=expr_value, rhs=UCLLVM.Const.i1, name="i.inc")
+                self.builder.store(value=inc_expr_value, ptr=expr_addr)
+                return inc_expr_value
+
+            elif unop.endswith('--'):
+                dec_expr_value = self.builder.sub(lhs=expr_value, rhs=UCLLVM.Const.i1, name="i.dec")
+                self.builder.store(value=dec_expr_value, ptr=expr_addr)
+                return dec_expr_value
+
+            else:
+                assert False, unop  # FIXME implement
+
+        elif isinstance(operand.type, ir.DoubleType):
+            assert unop in TYPE_INT.unary_ops, unop
+
+            if unop == '+':
+                return expr_value
+
+            elif unop == '-':
+                return self.builder.fsub(lhs=UCLLVM.Const.f0, rhs=expr_value, name="f.neg")
+
+            elif unop.endswith('++'):
+                inc_expr_value = self.builder.fadd(lhs=expr_value, rhs=UCLLVM.Const.f1, name="f.inc")
+                self.builder.store(value=inc_expr_value, ptr=expr_addr)
+                return inc_expr_value
+
+            elif unop.endswith('--'):
+                dec_expr_value = self.builder.fsub(lhs=expr_value, rhs=UCLLVM.Const.f1, name="f.dec")
+                self.builder.store(value=dec_expr_value, ptr=expr_addr)
+                return dec_expr_value
+
+            else:
+                assert False, unop  # FIXME implement
+
+        else:
+            assert False, type(operand)  # TODO implement
 
     def __byte_array(self, source, convert_str=True) -> ir.Constant:
         b = bytearray(source) if not convert_str else (source + '\00').encode('ascii')
@@ -123,8 +176,8 @@ class LLVMCodeGenerator(NodeVisitor):
         return rhs_value
 
     def visit_BinaryOp(self, node: BinaryOp):  # [op, left*, right*]
-        _log(f"visiting Assignment, type(node.left)={type(node.left)}")
-        _log(f"visiting Assignment, type(node.right)={type(node.right)}")
+        _log(f"visiting BinaryOp, type(node.left)={type(node.left)}")
+        _log(f"visiting BinaryOp, type(node.right)={type(node.right)}")
 
         lhs_value = self.visit(node.left)
         rhs_value = self.visit(node.right)
@@ -189,7 +242,6 @@ class LLVMCodeGenerator(NodeVisitor):
             return fn
 
         elif isinstance(node.type, VarDecl):
-            _ass(node.init is None)
             _ass(isinstance(node.type.type, Type))
             vardecl: VarDecl = node.type
 
@@ -288,7 +340,18 @@ class LLVMCodeGenerator(NodeVisitor):
         _ass(isinstance(node.type, Type))
         self.visit(node.type)
 
-    def visit_UnaryOp(self, node: UnaryOp): raise NotImplementedError  # [op, expr*]
+    def visit_UnaryOp(self, node: UnaryOp):  # [op, expr*]
+        _log(f"visiting UnaryOp, type(node.expr)={type(node.expr)}")
+
+        expr_value = self.visit(node.expr)
+        expr_addr = None if not isinstance(node.expr, ID) else self.__addr(node.expr.name)  # FIXME arrays
+
+        if node.op.startswith('p'):
+            self.__unop(node.op, expr_value, expr_addr)
+            return expr_value
+        else:
+            return self.__unop(node.op, expr_value, expr_addr)
+
     def visit_While(self, node: While): raise NotImplementedError  # [cond*, body*]
 
 ###########################################################
