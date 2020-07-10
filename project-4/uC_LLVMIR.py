@@ -306,20 +306,22 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.position_at_end(block=self.builder.block)
 
         # Create basic blocks in the current function to express the control flow
-        cond_bb = self.builder.function.append_basic_block("for.cond")
-        body_bb = self.builder.function.append_basic_block("for.body")
-        end_bb = self.builder.function.append_basic_block("for.end")
+        cond_bb = ir.Block(self.builder.function, "for.cond")
+        body_bb = ir.Block(self.builder.function, "for.body")
+        end_bb = ir.Block(self.builder.function, "for.end")
 
         # Init:
         self.visit(node.init)
         self.builder.branch(cond_bb)
 
         # Condition:
+        self.builder.function.basic_blocks.append(cond_bb)
         self.builder.position_at_start(block=cond_bb)
         cond_value = self.visit(node.cond)
         self.builder.cbranch(cond=cond_value, truebr=body_bb, falsebr=end_bb)
 
         # Body:
+        self.builder.function.basic_blocks.append(body_bb)
         self.builder.position_at_start(block=body_bb)
 
         self.visit(node.body)
@@ -327,6 +329,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.branch(target=cond_bb)
 
         # End:
+        self.builder.function.basic_blocks.append(end_bb)
         self.builder.position_at_start(block=end_bb)
 
     def visit_FuncCall(self, node: FuncCall): raise NotImplementedError  # [name*, args*]
@@ -371,18 +374,11 @@ class LLVMCodeGenerator(NodeVisitor):
         # Start insertion onto the current block
         self.builder.position_at_end(block=self.builder.block)
 
-        # if node.ifelse is not None:
-        # with builder.if_else(pred) as (then, otherwise):
-        #     with then:
-        #         # emit instructions for when the predicate is true
-        #     with otherwise:
-        #         # emit instructions for when the predicate is false
-
         # Create basic blocks in the current function to express the control flow
-        then_bb = self.builder.function.append_basic_block("if.then")
+        then_bb = ir.Block(self.builder.function, "if.then")
         if node.ifelse is not None:
-            else_bb = self.builder.function.append_basic_block("if.else")
-        end_bb = self.builder.function.append_basic_block("if.end")
+            else_bb = ir.Block(self.builder.function, "if.else")
+        end_bb = ir.Block(self.builder.function, "if.end")
 
         # Condition:
         cond_value = self.visit(node.cond)
@@ -391,6 +387,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.cbranch(cond=cond_value, truebr=then_bb, falsebr=false_br)
 
         # Body:
+        self.builder.function.basic_blocks.append(then_bb)
         self.builder.position_at_start(block=then_bb)
 
         _ = self.visit(node.ifthen)
@@ -398,12 +395,14 @@ class LLVMCodeGenerator(NodeVisitor):
 
         # Else:
         if node.ifelse is not None:
+            self.builder.function.basic_blocks.append(else_bb)
             self.builder.position_at_start(block=else_bb)
 
             _ = self.visit(node.ifelse)
             self.builder.branch(target=end_bb)
 
         # End:
+        self.builder.function.basic_blocks.append(end_bb)
         self.builder.position_at_start(block=end_bb)
 
 
