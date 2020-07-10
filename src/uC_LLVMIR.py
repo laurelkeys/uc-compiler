@@ -88,7 +88,7 @@ class LLVMCodeGenerator(NodeVisitor):
                 }[binop]()
 
             elif binop in TYPE_FLOAT.rel_ops:
-                return self.builder.fcmp_signed(binop, lhs, rhs, name="f.cmp")
+                return self.builder.fcmp_ordered(binop, lhs, rhs, name="f.cmp")
 
             else:
                 assert False, binop
@@ -194,7 +194,26 @@ class LLVMCodeGenerator(NodeVisitor):
         return self.__binop(node.op, lhs_value, rhs_value)
 
     def visit_Break(self, node: Break): raise NotImplementedError  # []
-    def visit_Cast(self, node: Cast): raise NotImplementedError  # [type*, expr*]
+
+    def visit_Cast(self, node: Cast):  # [type*, expr*]
+        _ass(isinstance(node.type, Type))
+
+        expr_value = self.visit(node.expr)
+        assert isinstance(expr_value.type, (ir.IntType, ir.DoubleType)), type(expr_value)
+
+        assert len(node.type.names) == 1, node.type.names
+
+        if node.type.names[0] == TYPE_INT.typename:
+            return expr_value if isinstance(expr_value, ir.IntType) else (
+                self.builder.fptosi(expr_value, typ=UCLLVM.Type.Int)
+            )
+
+        if node.type.names[0] == TYPE_FLOAT.typename:
+            return expr_value if isinstance(expr_value, ir.DoubleType) else (
+                self.builder.sitofp(expr_value, typ=UCLLVM.Type.Float)
+            )
+
+        assert False
 
     def visit_Compound(self, node: Compound):  # [decls**, stmts**]
         for decl in node.decls or []:
