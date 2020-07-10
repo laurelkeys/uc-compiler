@@ -1,5 +1,3 @@
-import re
-
 import ply.lex as lex
 
 # NOTE For simple tokens, the regular expression can be specified as strings,
