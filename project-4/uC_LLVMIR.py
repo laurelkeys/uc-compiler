@@ -300,7 +300,35 @@ class LLVMCodeGenerator(NodeVisitor):
         pass
 
     def visit_ExprList(self, node: ExprList): raise NotImplementedError  # [exprs**]
-    def visit_For(self, node: For): raise NotImplementedError  # [init*, cond*, next*, body*]
+
+    def visit_For(self, node: For):  # [init*, cond*, next*, body*]
+        # Start insertion onto the current block
+        self.builder.position_at_end(block=self.builder.block)
+
+        # Create basic blocks in the current function to express the control flow
+        cond_bb = self.builder.function.append_basic_block("for.cond")
+        body_bb = self.builder.function.append_basic_block("for.body")
+        end_bb = self.builder.function.append_basic_block("for.end")
+
+        # Init:
+        self.visit(node.init)
+        self.builder.branch(cond_bb)
+
+        # Condition:
+        self.builder.position_at_start(block=cond_bb)
+        cond_value = self.visit(node.cond)
+        self.builder.cbranch(cond=cond_value, truebr=body_bb, falsebr=end_bb)
+
+        # Body:
+        self.builder.position_at_start(block=body_bb)
+
+        self.visit(node.body)
+        self.visit(node.next)
+        self.builder.branch(target=cond_bb)
+
+        # End:
+        self.builder.position_at_start(block=end_bb)
+
     def visit_FuncCall(self, node: FuncCall): raise NotImplementedError  # [name*, args*]
 
     def visit_FuncDecl(self, node: FuncDecl): raise NotImplementedError  # [args*, type*]
@@ -339,7 +367,46 @@ class LLVMCodeGenerator(NodeVisitor):
         var_addr = self.__addr(node.name)
         return self.builder.load(ptr=var_addr, name=node.name)
 
-    def visit_If(self, node: If): raise NotImplementedError  # [cond*, ifthen*, ifelse*]
+    def visit_If(self, node: If):  # [cond*, ifthen*, ifelse*]
+        # Start insertion onto the current block
+        self.builder.position_at_end(block=self.builder.block)
+
+        # if node.ifelse is not None:
+        # with builder.if_else(pred) as (then, otherwise):
+        #     with then:
+        #         # emit instructions for when the predicate is true
+        #     with otherwise:
+        #         # emit instructions for when the predicate is false
+
+        # Create basic blocks in the current function to express the control flow
+        then_bb = self.builder.function.append_basic_block("if.then")
+        if node.ifelse is not None:
+            else_bb = self.builder.function.append_basic_block("if.else")
+        end_bb = self.builder.function.append_basic_block("if.end")
+
+        # Condition:
+        cond_value = self.visit(node.cond)
+
+        false_br = end_bb if node.ifelse is None else else_bb
+        self.builder.cbranch(cond=cond_value, truebr=then_bb, falsebr=false_br)
+
+        # Body:
+        self.builder.position_at_start(block=then_bb)
+
+        _ = self.visit(node.ifthen)
+        self.builder.branch(target=end_bb)
+
+        # Else:
+        if node.ifelse is not None:
+            self.builder.position_at_start(block=else_bb)
+
+            _ = self.visit(node.ifelse)
+            self.builder.branch(target=end_bb)
+
+        # End:
+        self.builder.position_at_start(block=end_bb)
+
+
     def visit_InitList(self, node: InitList): raise NotImplementedError  # [exprs**]
     def visit_ParamList(self, node: ParamList): raise NotImplementedError  # [params**]
 
