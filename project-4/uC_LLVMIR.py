@@ -31,6 +31,9 @@ class LLVMCodeGenerator(NodeVisitor):
         self.func_symtab: Dict[str, ir.AllocaInstr] = {}
         self.global_symtab: Dict[str, ir.AllocaInstr] = {}
 
+        # break point stack
+        self.loop_end_blocks = []
+
     def generate_code(self, node: Node) -> str:
         assert isinstance(node, Program)
         self.visit(node)
@@ -193,7 +196,11 @@ class LLVMCodeGenerator(NodeVisitor):
 
         return self.__binop(node.op, lhs_value, rhs_value)
 
-    def visit_Break(self, node: Break): raise NotImplementedError  # []
+    def visit_Break(self, node: Break):  # []
+        assert len(self.loop_end_blocks) > 0
+        loop_end_bb, _ = self.loop_end_blocks.pop()
+        self.loop_end_blocks.append((loop_end_bb, True))
+        self.builder.branch(target=loop_end_bb)
 
     def visit_Cast(self, node: Cast):  # [type*, expr*]
         _ass(isinstance(node.type, Type))
@@ -310,23 +317,33 @@ class LLVMCodeGenerator(NodeVisitor):
         body_bb = ir.Block(self.builder.function, "for.body")
         end_bb = ir.Block(self.builder.function, "for.end")
 
-        # Init:
-        self.visit(node.init)
-        self.builder.branch(cond_bb)
+        self.loop_end_blocks.append((end_bb, False))
 
+        # Init:
+        if node.init is not None:
+            self.visit(node.init)
+        
         # Condition:
-        self.builder.function.basic_blocks.append(cond_bb)
-        self.builder.position_at_start(block=cond_bb)
-        cond_value = self.visit(node.cond)
-        self.builder.cbranch(cond=cond_value, truebr=body_bb, falsebr=end_bb)
+        if node.cond is None:
+            self.builder.branch(body_bb)
+        else:
+            self.builder.branch(cond_bb)
+
+            self.builder.function.basic_blocks.append(cond_bb)
+            self.builder.position_at_start(block=cond_bb)
+            cond_value = self.visit(node.cond)
+            self.builder.cbranch(cond=cond_value, truebr=body_bb, falsebr=end_bb)
 
         # Body:
         self.builder.function.basic_blocks.append(body_bb)
         self.builder.position_at_start(block=body_bb)
 
         self.visit(node.body)
-        self.visit(node.next)
-        self.builder.branch(target=cond_bb)
+        if node.next is not None:
+            self.visit(node.next)
+        _, did_break = self.loop_end_blocks.pop()
+        if not did_break:
+            self.builder.branch(target=cond_bb)
 
         # End:
         self.builder.function.basic_blocks.append(end_bb)
@@ -405,7 +422,6 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.function.basic_blocks.append(end_bb)
         self.builder.position_at_start(block=end_bb)
 
-
     def visit_InitList(self, node: InitList): raise NotImplementedError  # [exprs**]
     def visit_ParamList(self, node: ParamList): raise NotImplementedError  # [params**]
 
@@ -455,6 +471,8 @@ class LLVMCodeGenerator(NodeVisitor):
         body_bb = self.builder.function.append_basic_block("while.body")
         end_bb = self.builder.function.append_basic_block("while.end")
 
+        self.loop_end_blocks.append((end_bb, False))
+
         # Condition:
         self.builder.branch(cond_bb)
         self.builder.position_at_start(block=cond_bb)
@@ -466,10 +484,13 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.position_at_start(block=body_bb)
 
         _ = self.visit(node.body)
-        self.builder.branch(target=cond_bb)
+        _, did_break = self.loop_end_blocks.pop()
+        if not did_break:
+            self.builder.branch(target=cond_bb)
 
         # End:
         self.builder.position_at_start(block=end_bb)
+        
 
 ###########################################################
 ## uC's LLVM IR Helper ####################################
