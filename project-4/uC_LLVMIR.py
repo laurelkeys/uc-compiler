@@ -194,7 +194,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.cbranch(cond=expr_value, truebr=true_bb, falsebr=false_bb)
 
         self.builder.function.basic_blocks.append(false_bb)
-        self.builder.position_at_start(false_bb)
+        self.builder.position_at_start(block=false_bb)
 
         global_fmt = self._global_const("assert.msg", self.__byte_array("Assertion failed"))
         ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
@@ -203,7 +203,7 @@ class LLVMCodeGenerator(NodeVisitor):
 
         # fn_return_value = self.visit(node.expr)
         # self.builder.store(UCLLVM.Const.zero(), self.return_addr)
-        self.builder.branch(self.return_block)
+        self.builder.branch(target=self.return_block)
 
 
         self.builder.function.basic_blocks.append(true_bb)
@@ -307,7 +307,7 @@ class LLVMCodeGenerator(NodeVisitor):
                 for arg, arg_decl in zip(fn.args, funcdecl.args or []):
                     _ass(isinstance(arg_decl, Decl))
                     _ass(isinstance(arg_decl.type, VarDecl))
-                    arg.name = arg_decl.name
+                    arg.name = arg_decl.name.name
             else:
                 # Assert that all we've seen is the function's prototype
                 assert isinstance(fn, ir.Function), f"Function/global name collision '{fn_name}'"
@@ -329,7 +329,10 @@ class LLVMCodeGenerator(NodeVisitor):
             # Store its optional initial value
             if node.init is not None:
                 init_value = self.visit(node.init)  # FIXME this could be a name (or an addr)
-                self.builder.store(value=init_value, ptr=var_addr)
+                if self.builder is None:
+                    var_addr.initializer = init_value # FIXME remove globals from alloca
+                else:
+                    self.builder.store(value=init_value, ptr=var_addr)
             else:
                 # TODO zero-initialize (needs a "zero" for each type)
                 init_value = None
@@ -367,9 +370,9 @@ class LLVMCodeGenerator(NodeVisitor):
         
         # Condition:
         if node.cond is None:
-            self.builder.branch(body_bb)
+            self.builder.branch(target=body_bb)
         else:
-            self.builder.branch(cond_bb)
+            self.builder.branch(target=cond_bb)
 
             self.builder.function.basic_blocks.append(cond_bb)
             self.builder.position_at_start(block=cond_bb)
@@ -390,7 +393,16 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.position_at_start(block=end_bb)
         self.loop_end_blocks.pop()
 
-    def visit_FuncCall(self, node: FuncCall): raise NotImplementedError  # [name*, args*]
+    def visit_FuncCall(self, node: FuncCall):  # [name*, args*]
+        fn_name = node.name.name
+        fn = self.module.globals.get(fn_name)
+
+        args = []
+        for arg in node.args or []:
+            arg_addr = self.visit(arg)
+            args.append(arg_addr)
+
+        return self.builder.call(fn, args=args, name=f'{fn_name}.call')
 
     def visit_FuncDecl(self, node: FuncDecl): raise NotImplementedError  # [args*, type*]
 
@@ -417,7 +429,7 @@ class LLVMCodeGenerator(NodeVisitor):
 
         # Add the function arguments to the stack (and the symbol table)
         for arg in fn.args:
-            arg_addr = self.__alloca(var_name=arg.name.name, ir_type=arg.type)
+            arg_addr = self.__alloca(var_name=arg.name, ir_type=arg.type)
             self.builder.store(value=arg, ptr=arg_addr)
 
         self.return_block = ir.Block(self.builder.function, "exit")
@@ -427,7 +439,7 @@ class LLVMCodeGenerator(NodeVisitor):
         
         # Return
         if not self.builder.block.is_terminated:
-            self.builder.branch(self.return_block)
+            self.builder.branch(target=self.return_block)
 
         self.builder.function.basic_blocks.append(self.return_block)
         self.builder.position_at_start(block=self.return_block)
@@ -506,7 +518,7 @@ class LLVMCodeGenerator(NodeVisitor):
         if node.expr is not None:
             fn_return_value = self.visit(node.expr)
             self.builder.store(fn_return_value, self.return_addr)
-        self.builder.branch(self.return_block)
+        self.builder.branch(target=self.return_block)
 
         # FIXME two returns will break
 
@@ -542,7 +554,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.loop_end_blocks.append(end_bb)
 
         # Condition:
-        self.builder.branch(cond_bb)
+        self.builder.branch(target=cond_bb)
         self.builder.function.basic_blocks.append(cond_bb)
         self.builder.position_at_start(block=cond_bb)
 
