@@ -31,8 +31,17 @@ class LLVMCodeGenerator(NodeVisitor):
         self.func_symtab: Dict[str, ir.AllocaInstr] = {}
         self.global_symtab: Dict[str, ir.AllocaInstr] = {}
 
+        self.return_block = None
+        self.return_addr = None
+
         # break point stack
         self.loop_end_blocks = []
+        self.__add_builtins()
+    
+    def __add_builtins(self):
+        typ = ir.FunctionType(ir.IntType(32), [ir.IntType(8).as_pointer()], var_arg=True)
+        self.printf = ir.Function(self.module, typ, name="printf")
+        self.scanf = ir.Function(self.module, typ, name="scanf")
 
     def generate_code(self, node: Node) -> str:
         assert isinstance(node, Program)
@@ -152,9 +161,18 @@ class LLVMCodeGenerator(NodeVisitor):
             assert False, type(operand)  # TODO implement
 
     def __byte_array(self, source, convert_str=True) -> ir.Constant:
-        b = bytearray(source) if not convert_str else (source + '\00').encode('ascii')
+        b = bytearray(source) if not convert_str else bytearray((source + '\00').encode('ascii'))
         n = len(b)
         return ir.Constant(ir.ArrayType(UCLLVM.Type.Char, n), b)
+
+    def _global_const(self, name, value, linkage='internal'):
+        # Get or create a (LLVM module-)global constant with *name* or *value*.
+        data = ir.GlobalVariable(self.module, value.type, name=name)
+        data.linkage = linkage
+        data.global_constant = True
+        data.initializer = value
+        data.align = 1
+        return data
 
     def visit_ArrayDecl(self, node: ArrayDecl):  # [type*, dim*]
         raise NotImplementedError
@@ -163,8 +181,24 @@ class LLVMCodeGenerator(NodeVisitor):
         raise NotImplementedError
 
     def visit_Assert(self, node: Assert):  # [expr*]
-        # TODO implement
-        raise NotImplementedError
+        expr_value = self.visit(node.expr)
+
+        false_bb = ir.Block(self.builder.function, "assert.false")
+        true_bb = ir.Block(self.builder.function, "assert.true")
+
+        self.builder.cbranch(cond=expr_value, truebr=true_bb, falsebr=false_bb)
+
+        self.builder.function.basic_blocks.append(false_bb)
+        self.builder.position_at_start(false_bb)
+
+        global_fmt = self._global_const("assert.msg", self.__byte_array("Assertion failed"))
+        ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
+
+        self.builder.call(self.printf, args=[ptr_fmt], name="printf")
+
+
+        self.builder.function.basic_blocks.append(true_bb)
+        self.builder.position_at_start(true_bb)
 
     def visit_Assignment(self, node: Assignment):  # [op, lvalue*, rvalue*]
         _log(f"visiting Assignment, type(node.lvalue)={type(node.lvalue)}")
@@ -198,9 +232,8 @@ class LLVMCodeGenerator(NodeVisitor):
     def visit_Break(self, node: Break):  # []
         assert len(self.loop_end_blocks) > 0
         self.builder.branch(target=self.loop_end_blocks[-1])
-        next_bb = self.builder.function.append_basic_block("break.end")
+        next_bb = self.builder.function.append_basic_block("after.break")
         self.builder.position_at_start(block=next_bb)
-        
 
     def visit_Cast(self, node: Cast):  # [type*, expr*]
         _ass(isinstance(node.type, Type))
@@ -367,15 +400,37 @@ class LLVMCodeGenerator(NodeVisitor):
         bb_entry = fn.append_basic_block(name="entry")
         self.builder = ir.IRBuilder(block=bb_entry)
 
+        if fn.ftype.return_type is not UCLLVM.Type.Void:
+            self.return_addr = self.__alloca(var_name="retval", ir_type=fn.ftype.return_type)
+            self.builder.store(value=UCLLVM.Const.zero(fn.ftype.return_type), ptr=self.return_addr)
+        else:
+            self.return_addr = None
+
         # Add the function arguments to the stack (and the symbol table)
         for arg in fn.args:
             arg_addr = self.__alloca(var_name=arg.name, ir_type=arg.type)
             self.builder.store(value=arg, ptr=arg_addr)
 
+        self.return_block = ir.Block(self.builder.function, "exit")
+
         # Finish off generating the function
         self.visit(node.body)
-        self.builder = None
+        
+        # Return
+        if not self.builder.block.is_terminated:
+            self.builder.branch(self.return_block)
 
+        self.builder.function.basic_blocks.append(self.return_block)
+        self.builder.position_at_start(block=self.return_block)
+        if self.return_addr is not None:
+            ret_value = self.builder.load(self.return_addr, 'retvalue')
+            self.builder.ret(ret_value)
+        else:
+            self.builder.ret_void()
+        self.return_block = None
+        self.return_addr = None
+
+        self.builder = None
         return fn
 
     def visit_GlobalDecl(self, node: GlobalDecl):  # [decls**]
@@ -438,8 +493,12 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def visit_Return(self, node: Return):  # [expr*]
         _log(f"visiting Return, type(node.expr)={type(node.expr)}")
-        fn_return_value = self.visit(node.expr)
-        self.builder.ret(fn_return_value)
+        if node.expr is not None:
+            fn_return_value = self.visit(node.expr)
+            self.builder.store(fn_return_value, self.return_addr)
+        self.builder.branch(self.return_block)
+
+        # FIXME two returns will break
 
     def visit_Type(self, node: Type):  # [names]
         _log(f"visiting Type, node={node}")
@@ -505,6 +564,7 @@ class UCLLVM:
         Bool = ir.IntType(1)
         Void = ir.VoidType()
 
+        @staticmethod
         def of(typename: List[str]):
             try:
                 basename, *qualifiers = typename  # FIXME arrays/strings
@@ -527,6 +587,19 @@ class UCLLVM:
         f0 = ir.Constant(ir.DoubleType(), 0)
         f1 = ir.Constant(ir.DoubleType(), 1)
 
+        # Char
+        c0 = ir.Constant(ir.IntType(8), 0)
+
         # Bool
         true = ir.Constant(ir.DoubleType(), 1)
         false = ir.Constant(ir.DoubleType(), 0)
+
+        @staticmethod
+        def zero(typ: ir.Type) -> ir.Constant:
+            return {
+                UCLLVM.Type.Int: UCLLVM.Const.i0,
+                UCLLVM.Type.Float: UCLLVM.Const.f0,
+                UCLLVM.Type.Char: UCLLVM.Const.c0,
+                UCLLVM.Type.Void: None,
+                UCLLVM.Type.Bool: UCLLVM.Const.false,
+            }[typ]
