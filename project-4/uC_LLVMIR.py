@@ -56,6 +56,7 @@ class LLVMCodeGenerator(NodeVisitor):
         ''' Create an alloca instruction in the entry block of the current function,
             if there is one, or in global scope (and add it to the correct symtab).
         '''
+        assert isinstance(var_name, str)
         size = None  # FIXME add as arg for implementing arrays/strings
 
         if self.builder is not None:
@@ -416,7 +417,7 @@ class LLVMCodeGenerator(NodeVisitor):
 
         # Add the function arguments to the stack (and the symbol table)
         for arg in fn.args:
-            arg_addr = self.__alloca(var_name=arg.name, ir_type=arg.type)
+            arg_addr = self.__alloca(var_name=arg.name.name, ir_type=arg.type)
             self.builder.store(value=arg, ptr=arg_addr)
 
         self.return_block = ir.Block(self.builder.function, "exit")
@@ -485,7 +486,8 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.position_at_start(block=end_bb)
 
     def visit_InitList(self, node: InitList): raise NotImplementedError  # [exprs**]
-    def visit_ParamList(self, node: ParamList): raise NotImplementedError  # [params**]
+
+    # def visit_ParamList(self, node: ParamList): raise NotImplementedError  # [params**]
 
     def visit_Print(self, node: Print):  # [expr*]
         raise NotImplementedError
