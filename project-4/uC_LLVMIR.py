@@ -86,6 +86,10 @@ class LLVMCodeGenerator(NodeVisitor):
             elif binop in TYPE_INT.rel_ops:
                 return self.builder.icmp_signed(binop, lhs, rhs, name="i.cmp")
 
+            elif binop in TYPE_BOOL.binary_ops:
+                assert lhs.type.width == rhs.type.width == 1
+                return self.builder.and_(lhs, rhs, name="b.and")
+
             else:
                 assert False, binop
 
@@ -195,6 +199,10 @@ class LLVMCodeGenerator(NodeVisitor):
         ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
 
         self.builder.call(self.printf, args=[ptr_fmt], name="printf")
+
+        # fn_return_value = self.visit(node.expr)
+        # self.builder.store(UCLLVM.Const.zero(), self.return_addr)
+        self.builder.branch(self.return_block)
 
 
         self.builder.function.basic_blocks.append(true_bb)
