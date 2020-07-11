@@ -166,7 +166,6 @@ class LLVMCodeGenerator(NodeVisitor):
         # TODO implement
         raise NotImplementedError
 
-
     def visit_Assignment(self, node: Assignment):  # [op, lvalue*, rvalue*]
         _log(f"visiting Assignment, type(node.lvalue)={type(node.lvalue)}")
         _log(f"visiting Assignment, type(node.rvalue)={type(node.rvalue)}")
@@ -198,9 +197,10 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def visit_Break(self, node: Break):  # []
         assert len(self.loop_end_blocks) > 0
-        loop_end_bb, _ = self.loop_end_blocks.pop()
-        self.loop_end_blocks.append((loop_end_bb, True))
-        self.builder.branch(target=loop_end_bb)
+        self.builder.branch(target=self.loop_end_blocks[-1])
+        next_bb = self.builder.function.append_basic_block("break.end")
+        self.builder.position_at_start(block=next_bb)
+        
 
     def visit_Cast(self, node: Cast):  # [type*, expr*]
         _ass(isinstance(node.type, Type))
@@ -317,7 +317,7 @@ class LLVMCodeGenerator(NodeVisitor):
         body_bb = ir.Block(self.builder.function, "for.body")
         end_bb = ir.Block(self.builder.function, "for.end")
 
-        self.loop_end_blocks.append((end_bb, False))
+        self.loop_end_blocks.append(end_bb)
 
         # Init:
         if node.init is not None:
@@ -341,13 +341,12 @@ class LLVMCodeGenerator(NodeVisitor):
         self.visit(node.body)
         if node.next is not None:
             self.visit(node.next)
-        _, did_break = self.loop_end_blocks.pop()
-        if not did_break:
-            self.builder.branch(target=cond_bb)
+        self.builder.branch(target=cond_bb)
 
         # End:
         self.builder.function.basic_blocks.append(end_bb)
         self.builder.position_at_start(block=end_bb)
+        self.loop_end_blocks.pop()
 
     def visit_FuncCall(self, node: FuncCall): raise NotImplementedError  # [name*, args*]
 
@@ -467,30 +466,31 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.position_at_end(block=self.builder.block)
 
         # Create basic blocks in the current function to express the control flow
-        cond_bb = self.builder.function.append_basic_block("while.cond")
-        body_bb = self.builder.function.append_basic_block("while.body")
-        end_bb = self.builder.function.append_basic_block("while.end")
+        cond_bb = ir.Block(self.builder.function, "while.cond")
+        body_bb = ir.Block(self.builder.function, "while.body")
+        end_bb = ir.Block(self.builder.function, "while.end")
 
-        self.loop_end_blocks.append((end_bb, False))
+        self.loop_end_blocks.append(end_bb)
 
         # Condition:
         self.builder.branch(cond_bb)
+        self.builder.function.basic_blocks.append(cond_bb)
         self.builder.position_at_start(block=cond_bb)
 
         cond_value = self.visit(node.cond)
         self.builder.cbranch(cond=cond_value, truebr=body_bb, falsebr=end_bb)
 
         # Body:
+        self.builder.function.basic_blocks.append(body_bb)
         self.builder.position_at_start(block=body_bb)
 
         _ = self.visit(node.body)
-        _, did_break = self.loop_end_blocks.pop()
-        if not did_break:
-            self.builder.branch(target=cond_bb)
+        self.builder.branch(target=cond_bb)
 
         # End:
+        self.builder.function.basic_blocks.append(end_bb)
         self.builder.position_at_start(block=end_bb)
-        
+        self.loop_end_blocks.pop()
 
 ###########################################################
 ## uC's LLVM IR Helper ####################################
