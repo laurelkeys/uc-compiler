@@ -47,6 +47,10 @@ class LLVMCodeGenerator(NodeVisitor):
         self.visit(node)
         return str(self.module)
 
+    @property
+    def inside_func(self):
+        return self.builder is not None
+
     def __add_builtins(self) -> None:
         ''' Initialize `self.printf` and `self.scanf`. '''
         ftype = ir.FunctionType(
@@ -57,10 +61,6 @@ class LLVMCodeGenerator(NodeVisitor):
 
         self.printf = ir.Function(self.module, ftype, name="printf")
         self.scanf = ir.Function(self.module, ftype, name="scanf")
-
-    @property
-    def inside_func(self):
-        return self.builder is not None
 
     def __addr(self, var_name: str) -> ir.AllocaInstr:
         ''' Return the address pointed by `var_name`. '''
@@ -83,8 +83,7 @@ class LLVMCodeGenerator(NodeVisitor):
         return var_addr
 
     def __global_var(
-        self, var_name: str, ir_type: ir.Type,
-        init_value: ir.Value = None, is_const: bool = False
+        self, var_name: str, ir_type: ir.Type, init_value: ir.Value = None, is_const: bool = False
     ) -> ir.GlobalVariable:
         ''' Create a global variable and update `global_symtab[var_name]` with it. '''
         assert isinstance(var_name, str) and isinstance(ir_type, ir.Type)
@@ -231,13 +230,11 @@ class LLVMCodeGenerator(NodeVisitor):
             name="printf.call"
         )
 
-    def visit_ArrayDecl(self, node: ArrayDecl):  # [type*, dim*]
-        raise NotImplementedError
+    def visit_ArrayDecl(self, node: ArrayDecl): raise NotImplementedError
 
-    def visit_ArrayRef(self, node: ArrayRef):  # [name*, subscript*]
-        raise NotImplementedError
+    def visit_ArrayRef(self, node: ArrayRef): raise NotImplementedError
 
-    def visit_Assert(self, node: Assert):  # [expr*]
+    def visit_Assert(self, node: Assert):
         expr_value = self.visit(node.expr)
 
         true_bb = ir.Block(self.builder.function, "assert.true")
@@ -255,7 +252,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.function.basic_blocks.append(true_bb)
         self.builder.position_at_start(true_bb)
 
-    def visit_Assignment(self, node: Assignment):  # [op, lvalue*, rvalue*]
+    def visit_Assignment(self, node: Assignment):
         _log(f"visiting Assignment, type(node.lvalue)={type(node.lvalue)}")
         _log(f"visiting Assignment, type(node.rvalue)={type(node.rvalue)}")
 
@@ -275,7 +272,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.store(value=rhs_value, ptr=lhs_addr)
         return rhs_value
 
-    def visit_BinaryOp(self, node: BinaryOp):  # [op, left*, right*]
+    def visit_BinaryOp(self, node: BinaryOp):
         _log(f"visiting BinaryOp, type(node.left)={type(node.left)}")
         _log(f"visiting BinaryOp, type(node.right)={type(node.right)}")
 
@@ -284,7 +281,7 @@ class LLVMCodeGenerator(NodeVisitor):
 
         return self.__binop(node.op, lhs_value, rhs_value)
 
-    def visit_Break(self, node: Break):  # []
+    def visit_Break(self, node: Break):
         assert len(self.loop_end_blocks) > 0
         self.builder.branch(target=self.loop_end_blocks[-1])
         # FIXME do we need this anymore?
@@ -292,7 +289,7 @@ class LLVMCodeGenerator(NodeVisitor):
             block=self.builder.function.append_basic_block("after.break")
         )
 
-    def visit_Cast(self, node: Cast):  # [type*, expr*]
+    def visit_Cast(self, node: Cast):
         _ass(isinstance(node.type, Type))
         assert len(node.type.names) == 1, node.type.names
 
@@ -311,18 +308,18 @@ class LLVMCodeGenerator(NodeVisitor):
 
         assert False
 
-    def visit_Compound(self, node: Compound):  # [decls**, stmts**]
+    def visit_Compound(self, node: Compound):
         for decl in node.decls or []:
             self.visit(decl)
         for stmt in node.stmts or []:
             self.visit(stmt)
 
-    def visit_Constant(self, node: Constant):  # [type, value]
+    def visit_Constant(self, node: Constant):
         _ass(isinstance(node.type, str))
         # FIXME add \00 to strings
         return ir.Constant(typ=UCLLVM.Type.of([node.type]), constant=node.value)
 
-    def visit_Decl(self, node: Decl):  # [name*, type*, init*]
+    def visit_Decl(self, node: Decl):
         _ass(isinstance(node.name, ID))
         _ass(isinstance(node.type, (ArrayDecl, FuncDecl, PtrDecl, VarDecl)))
         _log(f"visiting Decl, type(node.init)={type(node.init)}")
@@ -390,15 +387,13 @@ class LLVMCodeGenerator(NodeVisitor):
         elif isinstance(node.type, PtrDecl):
             raise NotImplementedError
 
-    def visit_DeclList(self, node: DeclList): raise NotImplementedError  # [decls**]
+    def visit_DeclList(self, node: DeclList): raise NotImplementedError
 
-    def visit_EmptyStatement(self, node: EmptyStatement):  # []
-        pass
+    def visit_EmptyStatement(self, node: EmptyStatement): pass
 
-    def visit_ExprList(self, node: ExprList):  # [exprs**]
-        pass  # NOTE handled in FuncCall
+    def visit_ExprList(self, node: ExprList): pass  # NOTE handled in FuncCall
 
-    def visit_For(self, node: For):  # [init*, cond*, next*, body*]
+    def visit_For(self, node: For):
         # Start insertion onto the current block
         self.builder.position_at_end(block=self.builder.block)
 
@@ -438,7 +433,7 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.position_at_start(block=end_bb)
         self.loop_end_blocks.pop()
 
-    def visit_FuncCall(self, node: FuncCall):  # [name*, args*]
+    def visit_FuncCall(self, node: FuncCall):
         _ass(isinstance(node.name, ID))
         _ass(isinstance(node.args, ExprList))
 
@@ -452,10 +447,9 @@ class LLVMCodeGenerator(NodeVisitor):
 
         return self.builder.call(fn, args=args, name=f"{fn_name}.call")
 
-    def visit_FuncDecl(self, node: FuncDecl):  # [args*, type*]
-        pass  # NOTE handled in Decl
+    def visit_FuncDecl(self, node: FuncDecl): pass  # NOTE handled in Decl
 
-    def visit_FuncDef(self, node: FuncDef):  # [spec*, decl*, body*]
+    def visit_FuncDef(self, node: FuncDef):
         _ass(isinstance(node.spec, Type))
         _ass(isinstance(node.decl, Decl))
         _ass(isinstance(node.body, Compound))  # TODO double check for empty/single-line functions
@@ -503,15 +497,15 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder = None
         return fn
 
-    def visit_GlobalDecl(self, node: GlobalDecl):  # [decls**]
+    def visit_GlobalDecl(self, node: GlobalDecl):
         for decl in node.decls:
             self.visit(decl)  # XXX add a 'global?' attr
 
-    def visit_ID(self, node: ID):  # [name]
+    def visit_ID(self, node: ID):
         var_addr = self.__addr(node.name)
         return self.builder.load(ptr=var_addr, name=node.name)
 
-    def visit_If(self, node: If):  # [cond*, ifthen*, ifelse*]
+    def visit_If(self, node: If):
         # Start insertion onto the current block
         self.builder.position_at_end(block=self.builder.block)
 
@@ -546,41 +540,38 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.function.basic_blocks.append(end_bb)
         self.builder.position_at_start(block=end_bb)
 
-    def visit_InitList(self, node: InitList): raise NotImplementedError  # [exprs**]
+    def visit_InitList(self, node: InitList): raise NotImplementedError
 
-    def visit_ParamList(self, node: ParamList):  # [params**]
-        pass  # NOTE handled in Decl (for FuncDecl)
+    def visit_ParamList(self, node: ParamList): pass  # NOTE handled in Decl (for FuncDecl)
 
-    def visit_Print(self, node: Print): raise NotImplementedError  # [expr*]
+    def visit_Print(self, node: Print): raise NotImplementedError
 
-    def visit_Program(self, node: Program):  # [gdecls**]
+    def visit_Program(self, node: Program):
         for gdecl in node.gdecls:
             self.visit(gdecl)
 
-    def visit_PtrDecl(self, node: PtrDecl):  # [type*]
-        raise NotImplementedError
+    def visit_PtrDecl(self, node: PtrDecl): raise NotImplementedError
 
-    def visit_Read(self, node: Read): raise NotImplementedError  # [expr*]
+    def visit_Read(self, node: Read): raise NotImplementedError
 
-    def visit_Return(self, node: Return):  # [expr*]
+    def visit_Return(self, node: Return):
         _log(f"visiting Return, type(node.expr)={type(node.expr)}")
         if node.expr is not None:
             fn_return_value = self.visit(node.expr)
             self.builder.store(fn_return_value, self.return_addr)
         self.builder.branch(target=self.return_block)
-
         # FIXME two returns will break
 
-    def visit_Type(self, node: Type):  # [names]
+    def visit_Type(self, node: Type):
         _log(f"visiting Type, node={node}")
         pass
 
-    def visit_VarDecl(self, node: VarDecl):  # [declname, type*]
+    def visit_VarDecl(self, node: VarDecl):
         _log(f"visiting VarDecl, node={node}")
         _ass(isinstance(node.type, Type))
         self.visit(node.type)
 
-    def visit_UnaryOp(self, node: UnaryOp):  # [op, expr*]
+    def visit_UnaryOp(self, node: UnaryOp):
         _log(f"visiting UnaryOp, type(node.expr)={type(node.expr)}")
 
         expr_value = self.visit(node.expr)
@@ -592,7 +583,7 @@ class LLVMCodeGenerator(NodeVisitor):
         else:
             return self.__unop(node.op, expr_value, expr_addr)
 
-    def visit_While(self, node: While):  # [cond*, body*]
+    def visit_While(self, node: While):
         # Start insertion onto the current block
         self.builder.position_at_end(block=self.builder.block)
 
