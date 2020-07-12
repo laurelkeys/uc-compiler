@@ -1,12 +1,9 @@
 from collections import ChainMap
 from enum import Enum, unique
 
-import uC_ops
-import uC_types
-
-from uC_AST import *
-from uC_types import (TYPE_INT, TYPE_FLOAT, TYPE_CHAR, TYPE_STRING, TYPE_VOID,
-                      TYPE_BOOL, TYPE_ARRAY, TYPE_FUNC)
+from uc_ast import *
+from uc_types import (TYPE_ARRAY, TYPE_BOOL, TYPE_CHAR, TYPE_FLOAT, TYPE_FUNC,
+                      TYPE_INT, TYPE_STRING, TYPE_VOID)
 
 ###########################################################
 ## uC Intermediate Representation (IR) ####################

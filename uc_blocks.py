@@ -1,8 +1,5 @@
 from collections import namedtuple
 
-from uC_IR import Instruction
-
-
 # NOTE A basic block (BB) is a sequence of instructions where the control flow enters
 #      only at the beginning of the block and exits at the end of the block, without the
 #      possibility of deviation to any other part of the program.
