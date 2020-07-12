@@ -2,7 +2,7 @@ from ctypes import CFUNCTYPE, c_int
 
 import llvmlite.binding as llvm
 
-from uC_LLVMIR import LLVMCodeGenerator, UCLLVM
+from uC_LLVMIR import LLVMCodeGenerator
 from uC_parser import UCParser
 
 ###########################################################

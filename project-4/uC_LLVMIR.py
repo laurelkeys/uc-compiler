@@ -1,7 +1,6 @@
 from typing import Dict, List
 
 import llvmlite.ir as ir
-import llvmlite.binding as llvm
 
 from uC_AST import *
 from uC_types import *
@@ -109,6 +108,12 @@ class LLVMCodeGenerator(NodeVisitor):
             init_value=init_value,
             is_const=True
         )
+
+    def __terminate(self, target: ir.Block):
+        ''' Terminates the current block (if it wasn't already). '''
+        curr_block = self.builder.block
+        if not curr_block.is_terminated:
+            self.builder.branch(target=target)
 
     def __binop(self, binop: str, lhs: ir.Value, rhs: ir.Value) -> ir.Value:
         ''' Return the equivalent of `lhs <binop> rhs`, abstracting type-handling. '''
@@ -284,10 +289,6 @@ class LLVMCodeGenerator(NodeVisitor):
     def visit_Break(self, node: Break):
         assert len(self.loop_end_blocks) > 0
         self.builder.branch(target=self.loop_end_blocks[-1])
-        # FIXME do we need this anymore?
-        self.builder.position_at_start(
-            block=self.builder.function.append_basic_block("after.break")
-        )
 
     def visit_Cast(self, node: Cast):
         _ass(isinstance(node.type, Type))
@@ -367,16 +368,20 @@ class LLVMCodeGenerator(NodeVisitor):
             vardecl: VarDecl = node.type
 
             var_name = name
-            # TODO zero-initialize (needs a "zero" for each type)
-            init_value = None if node.init is None else self.visit(node.init) # FIXME could this be a name/addr?
+            var_type = UCLLVM.Type.of(vardecl.type.names)
+
+            if node.init is None:
+                init_value = UCLLVM.Const.zero(var_type)
+            else:
+                init_value = self.visit(node.init)
 
             # Allocate space for the variable and store its optional initial value
             if self.inside_func:
-                var_addr = self.__alloca(var_name, ir_type=UCLLVM.Type.of(vardecl.type.names))
+                var_addr = self.__alloca(var_name, var_type)
                 if node.init is not None: self.builder.store(value=init_value, ptr=var_addr)
             else:
                 # FIXME assuming this is a GlobalDecl
-                var_addr = self.__global_var(var_name, ir_type=UCLLVM.Type.of(vardecl.type.names))
+                var_addr = self.__global_var(var_name, var_type)
                 if node.init is not None: var_addr.initializer = init_value
 
             return init_value  # FIXME what do we need to return, actually? i.e. name/addr/value
@@ -409,13 +414,14 @@ class LLVMCodeGenerator(NodeVisitor):
             self.visit(node.init)
 
         # Condition:
+        self.builder.branch(target=cond_bb)
+
+        self.builder.function.basic_blocks.append(cond_bb)
+        self.builder.position_at_start(block=cond_bb)
+
         if node.cond is None:
             self.builder.branch(target=body_bb)
         else:
-            self.builder.branch(target=cond_bb)
-
-            self.builder.function.basic_blocks.append(cond_bb)
-            self.builder.position_at_start(block=cond_bb)
             cond_value = self.visit(node.cond)
             self.builder.cbranch(cond=cond_value, truebr=body_bb, falsebr=end_bb)
 
@@ -426,7 +432,8 @@ class LLVMCodeGenerator(NodeVisitor):
         self.visit(node.body)
         if node.next is not None:
             self.visit(node.next)
-        self.builder.branch(target=cond_bb)
+
+        self.__terminate(target=cond_bb)
 
         # End:
         self.builder.function.basic_blocks.append(end_bb)
@@ -435,14 +442,17 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def visit_FuncCall(self, node: FuncCall):
         _ass(isinstance(node.name, ID))
-        _ass(isinstance(node.args, ExprList))
 
         fn_name = node.name.name
         fn = self.module.globals.get(fn_name)
 
         args = []
-        for arg in node.args or []:
-            arg_addr = self.visit(arg)
+        if isinstance(node.args, ExprList):
+            for arg in node.args or []:
+                arg_addr = self.visit(arg)
+                args.append(arg_addr)
+        else:
+            arg_addr = self.visit(node.args)
             args.append(arg_addr)
 
         return self.builder.call(fn, args=args, name=f"{fn_name}.call")
@@ -481,19 +491,19 @@ class LLVMCodeGenerator(NodeVisitor):
         self.visit(node.body)
 
         # Return
-        if not self.builder.block.is_terminated:
-            self.builder.branch(target=self.return_block)
+        self.__terminate(target=self.return_block)
 
         self.builder.function.basic_blocks.append(self.return_block)
         self.builder.position_at_start(block=self.return_block)
+
         if self.return_addr is not None:
             ret_value = self.builder.load(self.return_addr, "retval")
             self.builder.ret(ret_value)
         else:
             self.builder.ret_void()
+
         self.return_block = None
         self.return_addr = None
-
         self.builder = None
         return fn
 
@@ -518,23 +528,26 @@ class LLVMCodeGenerator(NodeVisitor):
         # Condition:
         cond_value = self.visit(node.cond)
 
-        false_br = end_bb if node.ifelse is None else else_bb
-        self.builder.cbranch(cond=cond_value, truebr=then_bb, falsebr=false_br)
+        self.builder.cbranch(
+            cond=cond_value,
+            truebr=then_bb,
+            falsebr=end_bb if node.ifelse is None else else_bb
+        )
 
-        # Body:
+        # Then:
         self.builder.function.basic_blocks.append(then_bb)
         self.builder.position_at_start(block=then_bb)
 
-        _ = self.visit(node.ifthen)
-        self.builder.branch(target=end_bb)
+        self.visit(node.ifthen)
+        self.__terminate(target=end_bb)
 
         # Else:
         if node.ifelse is not None:
             self.builder.function.basic_blocks.append(else_bb)
             self.builder.position_at_start(block=else_bb)
 
-            _ = self.visit(node.ifelse)
-            self.builder.branch(target=end_bb)
+            self.visit(node.ifelse)
+            self.__terminate(target=end_bb)
 
         # End:
         self.builder.function.basic_blocks.append(end_bb)
@@ -556,11 +569,12 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def visit_Return(self, node: Return):
         _log(f"visiting Return, type(node.expr)={type(node.expr)}")
+
         if node.expr is not None:
             fn_return_value = self.visit(node.expr)
             self.builder.store(fn_return_value, self.return_addr)
-        self.builder.branch(target=self.return_block)
-        # FIXME two returns will break
+
+        self.__terminate(target=self.return_block)
 
     def visit_Type(self, node: Type):
         _log(f"visiting Type, node={node}")
@@ -606,8 +620,8 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.function.basic_blocks.append(body_bb)
         self.builder.position_at_start(block=body_bb)
 
-        _ = self.visit(node.body)
-        self.builder.branch(target=cond_bb)
+        self.visit(node.body)
+        self.__terminate(target=cond_bb)
 
         # End:
         self.builder.function.basic_blocks.append(end_bb)
