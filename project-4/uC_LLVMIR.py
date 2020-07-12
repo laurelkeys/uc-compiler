@@ -103,7 +103,7 @@ class LLVMCodeGenerator(NodeVisitor):
     def __global_const(self, var_name: str, init_value: ir.Value) -> ir.GlobalVariable:
         ''' Wrapper for `__global_var(var_name, init_value.type, init_value, True)`. '''
         return self.__global_var(
-            var_name,
+            self.module.get_unique_name(var_name),
             ir_type=init_value.type,
             init_value=init_value,
             is_const=True
@@ -392,7 +392,9 @@ class LLVMCodeGenerator(NodeVisitor):
         elif isinstance(node.type, PtrDecl):
             raise NotImplementedError
 
-    def visit_DeclList(self, node: DeclList): raise NotImplementedError
+    def visit_DeclList(self, node: DeclList):
+        for decl in node.decls:
+            self.visit(decl)
 
     def visit_EmptyStatement(self, node: EmptyStatement): pass
 
