@@ -1,9 +1,6 @@
-from ctypes import CFUNCTYPE, c_int
+from ctypes import CFUNCTYPE, c_void_p
 
 import llvmlite.binding as llvm
-
-from uC_LLVMIR import LLVMCodeGenerator
-from uC_parser import UCParser
 
 ###########################################################
 ## uC's LLVM IR Representation JIT Compiler ###############
@@ -16,14 +13,9 @@ class LLVMCompiler:
         llvm.initialize_native_asmprinter()
 
         self.target = llvm.Target.from_default_triple()
-        self.reset()
-
-    def reset(self):
-        self.parser = UCParser()
-        self.generator = LLVMCodeGenerator()
-        # TODO add built-ins
 
     def eval(self, llvm_code, optimize=True, opt_file=None, opt_debug=False):
+        ''' JIT-compile and execute the given `llvm_code`. '''
         llvm_module = llvm.parse_assembly(llvmir=str(llvm_code))
         llvm_module.verify()
 
@@ -62,10 +54,10 @@ class LLVMCompiler:
 
         target_machine = self.target.create_target_machine()
         with llvm.create_mcjit_compiler(llvm_module, target_machine) as execution_engine:
-            execution_engine.finalize_object()  # NOTE dump .asm machine code here
+            execution_engine.finalize_object()
             execution_engine.run_static_constructors()
 
             # FIXME get the return type of main
-            main = CFUNCTYPE(c_int)(execution_engine.get_function_address(name="main"))
+            main = CFUNCTYPE(c_void_p)(execution_engine.get_function_address(name="main"))
 
             return main()  # FIXME args (?)

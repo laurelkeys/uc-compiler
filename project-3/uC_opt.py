@@ -202,7 +202,8 @@ class Optimizer:
                                 false_target = jump_label
                             pred.instructions[-1] = (op, expr, true_target, false_target)
                         else:
-                            assert False
+                            # assert False, instr_type_pred
+                            pass  # FIXME Instruction.Type.STORE
 
         # Remove global unused vars
         code_functions = []

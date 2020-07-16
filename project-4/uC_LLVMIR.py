@@ -10,7 +10,7 @@ from uC_types import *
 ###########################################################
 
 def _log(*a, **k):
-    print("[log]", *a, **k)
+    pass#print("[log]", *a, **k)
 
 def _ass(cond):
     assert cond
@@ -24,7 +24,7 @@ class LLVMCodeGenerator(NodeVisitor):
         # Top-level container of all other LLVM IR objects
         self.module: ir.Module = ir.Module()
 
-        # Current IR builder
+        # Current function's IR builder
         self.builder: ir.IRBuilder = None
 
         # Global and current function symbol tables
@@ -32,38 +32,34 @@ class LLVMCodeGenerator(NodeVisitor):
         self.global_symtab: Dict[str, ir.AllocaInstr] = {}
 
         # Save the current function's "exit" block and "retval" address
-        self.return_block = None
-        self.return_addr = None
+        self.func_exit_block = None
+        self.func_return_addr = None
 
         # Break point stack
         self.loop_end_blocks = []
-
-        # Add printf() and scanf() as ir.Function's
-        self.__add_builtins()
 
     def generate_code(self, node: Node) -> str:
         assert isinstance(node, Program)
         self.visit(node)
         return str(self.module)
 
-    @property
-    def inside_func(self):
-        return self.builder is not None
-
-    def __add_builtins(self) -> None:
-        ''' Initialize `self.printf` and `self.scanf`. '''
-        ftype = ir.FunctionType(
-            return_type=ir.IntType(32),
-            args=[ir.IntType(8).as_pointer()],
-            var_arg=True
-        )
-
-        self.printf = ir.Function(self.module, ftype, name="printf")
-        self.scanf = ir.Function(self.module, ftype, name="scanf")
-
     def __addr(self, var_name: str) -> ir.AllocaInstr:
         ''' Return the address pointed by `var_name`. '''
         return self.func_symtab.get(var_name) or self.global_symtab[var_name]
+
+    def __elem_addr(self, array_addr, index_value):
+        ''' WIP wrapper for `getelementptr`. '''
+        # FIXME
+        # https://llvm.org/docs/GetElementPtr.html#summary
+        return self.builder.gep(
+            name="elem.addr",
+            ptr=array_addr,
+            inbounds=True,
+            indices=[
+                ir.Constant(typ=ir.IntType(64), constant=0),
+                index_value
+            ]
+        )
 
     def __alloca(self, var_name: str, ir_type: ir.Type) -> ir.AllocaInstr:
         ''' Create an alloca instruction in the entry of the current function,
@@ -110,7 +106,7 @@ class LLVMCodeGenerator(NodeVisitor):
         )
 
     def __terminate(self, target: ir.Block):
-        ''' Terminates the current block (if it wasn't already). '''
+        ''' Terminates the current basic block (if it wasn't already). '''
         curr_block = self.builder.block
         if not curr_block.is_terminated:
             self.builder.branch(target=target)
@@ -132,7 +128,10 @@ class LLVMCodeGenerator(NodeVisitor):
 
             elif binop in TYPE_BOOL.binary_ops:
                 assert lhs.type.width == rhs.type.width == 1
-                return self.builder.and_(lhs, rhs, name="b.and")
+                return {
+                    '&&': lambda: self.builder.and_(lhs, rhs, name="b.and"),
+                    '||': lambda: self.builder.or_(lhs, rhs, name="b.or"),
+                }[binop]()
 
             else:
                 assert False, binop
@@ -223,21 +222,69 @@ class LLVMCodeGenerator(NodeVisitor):
         )
 
     def __printf(self, fmt: str, fmt_name: str = None, *fmt_args):
-        ''' Reference: https://github.com/numba/numba/blob/master/numba/core/cgutils.py  '''
+        ''' Emit a call to C's printf, e.g.: `printf(fmt, *fmt_args)`.  '''
         assert isinstance(fmt, str)
 
         global_fmt = self.__global_const(fmt_name or "printf.fmt", self.__bytearray(fmt))
         ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
+        try:
+            printf_fn = self.module.globals["printf"]
+        except KeyError:
+            printf_fn = ir.Function(
+                self.module,
+                name="printf",
+                ftype=ir.FunctionType(
+                    return_type=ir.IntType(32),
+                    args=[ir.IntType(8).as_pointer()],
+                    var_arg=True
+                )
+            )
 
-        return self.builder.call(
-            fn=self.printf,
-            args=[ptr_fmt] + list(fmt_args),
-            name="printf.call"
-        )
+        return self.builder.call(printf_fn, args=[ptr_fmt] + list(fmt_args), name="printf.call")
 
-    def visit_ArrayDecl(self, node: ArrayDecl): raise NotImplementedError
+    def __scanf(self, fmt: str, fmt_name: str = None, *fmt_args):
+        ''' Emit a call to C's scanf, e.g.: `scanf(fmt, *fmt_args)`.  '''
+        assert isinstance(fmt, str)
 
-    def visit_ArrayRef(self, node: ArrayRef): raise NotImplementedError
+        global_fmt = self.__global_const(fmt_name or "scanf.fmt", self.__bytearray(fmt))
+        ptr_fmt = self.builder.bitcast(global_fmt, ir.IntType(8).as_pointer())
+        try:
+            scanf_fn = self.module.globals["scanf"]
+        except KeyError:
+            scanf_fn = ir.Function(
+                self.module,
+                name="scanf",
+                ftype=ir.FunctionType(
+                    return_type=ir.IntType(32),
+                    args=[ir.IntType(8).as_pointer()],
+                    var_arg=True
+                )
+            )
+
+        return self.builder.call(scanf_fn, args=[ptr_fmt] + list(fmt_args), name="scanf.call")
+
+    def visit_ArrayDecl(self, node: ArrayDecl): pass  # NOTE handled in Decl
+
+    def visit_ArrayRef(self, node: ArrayRef):
+        if isinstance(node.name, ID):
+            index_value = self.visit(node.subscript)
+            array_addr = self.__addr(node.name.name)
+            elem_addr = self.__elem_addr(array_addr, index_value)
+
+        else:
+            dummy, reversed_index_values = node, []
+            while isinstance(dummy, ArrayRef):
+                reversed_index_values.append(self.visit(dummy.subscript))
+                dummy = dummy.name
+
+            assert isinstance(dummy, ID)
+            array_addr = self.__addr(dummy.name)
+
+            elem_addr = array_addr
+            for index_value in reversed_index_values[::-1]:
+                elem_addr = self.__elem_addr(elem_addr, index_value)
+
+        return self.builder.load(ptr=elem_addr, name="elem")
 
     def visit_Assert(self, node: Assert):
         expr_value = self.visit(node.expr)
@@ -250,8 +297,8 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.function.basic_blocks.append(false_bb)
         self.builder.position_at_start(block=false_bb)
 
-        self.__printf("Assertion failed", fmt_name="assert.msg")
-        self.builder.branch(target=self.return_block)
+        self.__printf(f"Assertion failed {node.coord}", "assert.msg")
+        self.builder.branch(target=self.func_exit_block)
 
         # True:
         self.builder.function.basic_blocks.append(true_bb)
@@ -263,6 +310,12 @@ class LLVMCodeGenerator(NodeVisitor):
 
         if isinstance(node.lvalue, ID):
             lhs_addr = self.__addr(node.lvalue.name)
+        elif isinstance(node.lvalue, ArrayRef):
+            # FIXME generating unnecessary code
+            lhs_addr = self.__elem_addr(
+                array_addr=self.__addr(node.lvalue.name.name),
+                index_value=self.visit(node.lvalue.subscript)
+            )
         else:
             assert False, node.lvalue  # TODO implement
 
@@ -317,7 +370,15 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def visit_Constant(self, node: Constant):
         _ass(isinstance(node.type, str))
-        # FIXME add \00 to strings
+
+        if node.type == TYPE_CHAR.typename:
+            unquoted_char = node.value[1:-1]
+            return ir.Constant(typ=UCLLVM.Type.Char, constant=ord(unquoted_char))
+
+        if node.type == TYPE_STRING.typename:
+            unquoted_str = node.value[1:-1]
+            return self.__bytearray(unquoted_str)
+
         return ir.Constant(typ=UCLLVM.Type.of([node.type]), constant=node.value)
 
     def visit_Decl(self, node: Decl):
@@ -376,18 +437,93 @@ class LLVMCodeGenerator(NodeVisitor):
                 init_value = self.visit(node.init)
 
             # Allocate space for the variable and store its optional initial value
-            if self.inside_func:
+            if self.builder is not None:
+                # NOTE we're inside a function
                 var_addr = self.__alloca(var_name, var_type)
-                if node.init is not None: self.builder.store(value=init_value, ptr=var_addr)
+                self.builder.store(value=init_value, ptr=var_addr)
             else:
-                # FIXME assuming this is a GlobalDecl
+                # NOTE we assume this is a GlobalDecl
                 var_addr = self.__global_var(var_name, var_type)
-                if node.init is not None: var_addr.initializer = init_value
+                var_addr.initializer = init_value
 
-            return init_value  # FIXME what do we need to return, actually? i.e. name/addr/value
+            return init_value
 
         elif isinstance(node.type, ArrayDecl):
-            pass  # TODO arrays
+            arraydecl: ArrayDecl = node.type
+
+            array_name = name
+            array_dims = []
+
+            # Get the base element type of the array
+            base_type = arraydecl
+            while isinstance(base_type, ArrayDecl):
+                if base_type.dim is None:
+                    array_dims.append(base_type.dim)
+                else:
+                    assert isinstance(base_type.dim, Constant)
+                    array_dims.append(base_type.dim.value)
+                base_type = base_type.type
+
+            assert isinstance(base_type, VarDecl)
+            assert isinstance(base_type.type, Type)
+            elem_type = UCLLVM.Type.of(base_type.type.names)
+
+            # Create the optional initialization list
+            if node.init is None:
+                array_values = None  # NOTE zeroinitializer
+            else:
+                if isinstance(node.init, InitList):
+                    def _array_values(init):
+                        return (
+                            [self.visit(expr) for expr in init.exprs]
+                            if not isinstance(init.exprs[0], InitList)
+                            else [_array_values(expr) for expr in init.exprs]
+                        )
+
+                    def _array_dims(values):
+                        return (
+                            []
+                            if not isinstance(values, list)
+                            else [len(values)] + _array_dims(values[0])
+                        )
+
+                    array_values = _array_values(node.init)
+                    array_dims = _array_dims(array_values)  # NOTE updates possibly None values
+
+                elif isinstance(node.init, Constant):
+                    assert elem_type == UCLLVM.Type.Char
+                    assert node.init.type == TYPE_STRING.typename
+
+                    # FIXME check if it's a string at the start,
+                    #       then simply call self.visit(node.init),
+                    #       as _array_value is already what we need
+
+                    _array_value = self.visit(node.init)
+                    array_values = _array_value.constant
+                    array_dims = [_array_value.type.count]
+
+                else:
+                    assert False
+
+            # Allocate space for the array
+            array_type = elem_type
+            for dim in array_dims[::-1]:
+                array_type = ir.ArrayType(element=array_type, count=dim)
+
+            array_value = ir.Constant(typ=array_type, constant=array_values)
+
+            if self.builder is not None:
+                # NOTE we're inside a function
+                array_addr = self.__alloca(array_name, array_type)
+                if node.init is not None:
+                    self.builder.store(value=array_value, ptr=array_addr)  # FIXME might need wrapping
+            else:
+                # NOTE we assume this is a GlobalDecl
+                array_addr = self.__global_var(array_name, array_type)
+                if node.init is not None:
+                    array_addr.initializer = array_value
+
+            return array_value
 
         elif isinstance(node.type, PtrDecl):
             raise NotImplementedError
@@ -473,45 +609,43 @@ class LLVMCodeGenerator(NodeVisitor):
         fn: ir.Function = self.visit(node.decl)
 
         # Create a new basic block to start insertion into
-        bb_entry = fn.append_basic_block(name="entry")
-        self.builder = ir.IRBuilder(block=bb_entry)
+        func_entry_block = fn.append_basic_block(name="entry")
+        self.builder = ir.IRBuilder(block=func_entry_block)
 
         if fn.ftype.return_type is not UCLLVM.Type.Void:
-            self.return_addr = self.__alloca(var_name="retval", ir_type=fn.ftype.return_type)
-            self.builder.store(value=UCLLVM.Const.zero(fn.ftype.return_type), ptr=self.return_addr)
-        else:
-            self.return_addr = None
+            self.func_return_addr = self.__alloca(var_name="retval", ir_type=fn.ftype.return_type)
+            self.builder.store(value=UCLLVM.Const.zero(fn.ftype.return_type), ptr=self.func_return_addr)
 
         # Add the function arguments to the stack (and the symbol table)
         for arg in fn.args:
             arg_addr = self.__alloca(var_name=arg.name, ir_type=arg.type)
             self.builder.store(value=arg, ptr=arg_addr)
 
-        self.return_block = ir.Block(self.builder.function, "exit")
+        self.func_exit_block = ir.Block(self.builder.function, "exit")
 
         # Finish off generating the function
         self.visit(node.body)
 
         # Return
-        self.__terminate(target=self.return_block)
+        self.__terminate(target=self.func_exit_block)
 
-        self.builder.function.basic_blocks.append(self.return_block)
-        self.builder.position_at_start(block=self.return_block)
+        self.builder.function.basic_blocks.append(self.func_exit_block)
+        self.builder.position_at_start(block=self.func_exit_block)
 
-        if self.return_addr is not None:
-            ret_value = self.builder.load(self.return_addr, "retval")
+        if self.func_return_addr is not None:
+            ret_value = self.builder.load(self.func_return_addr, "retval")
             self.builder.ret(ret_value)
         else:
             self.builder.ret_void()
 
-        self.return_block = None
-        self.return_addr = None
+        self.func_exit_block = None
+        self.func_return_addr = None
         self.builder = None
         return fn
 
     def visit_GlobalDecl(self, node: GlobalDecl):
         for decl in node.decls:
-            self.visit(decl)  # XXX add a 'global?' attr
+            self.visit(decl)
 
     def visit_ID(self, node: ID):
         var_addr = self.__addr(node.name)
@@ -559,7 +693,24 @@ class LLVMCodeGenerator(NodeVisitor):
 
     def visit_ParamList(self, node: ParamList): pass  # NOTE handled in Decl (for FuncDecl)
 
-    def visit_Print(self, node: Print): raise NotImplementedError
+    def visit_Print(self, node: Print):
+        if node.expr is None:
+            self.__printf("\n", "print.newline")
+        elif isinstance(node.expr, Constant):
+            # TODO use fmt instead of Python's f-string
+            # FIXME use selv.visit(node.expr) to unquote the string
+            self.__printf(f"{node.expr.value}\n", "print.msg")
+        elif isinstance(node.expr, ExprList):
+            # FIXME
+            print_str = []
+            for expr in node.expr:
+                if isinstance(expr, Constant):
+                    print_str.append(f"{expr.value}")
+                else:
+                    print_str.append(f"{self.visit(expr)}")
+            self.__printf(f"{' '.join(print_str)}\n", "print.msg")
+        else:
+            assert False
 
     def visit_Program(self, node: Program):
         for gdecl in node.gdecls:
@@ -574,9 +725,9 @@ class LLVMCodeGenerator(NodeVisitor):
 
         if node.expr is not None:
             fn_return_value = self.visit(node.expr)
-            self.builder.store(fn_return_value, self.return_addr)
+            self.builder.store(fn_return_value, self.func_return_addr)
 
-        self.__terminate(target=self.return_block)
+        self.__terminate(target=self.func_exit_block)
 
     def visit_Type(self, node: Type):
         _log(f"visiting Type, node={node}")
