@@ -312,10 +312,25 @@ class LLVMCodeGenerator(NodeVisitor):
             lhs_addr = self.__addr(node.lvalue.name)
         elif isinstance(node.lvalue, ArrayRef):
             # FIXME generating unnecessary code
-            lhs_addr = self.__elem_addr(
-                array_addr=self.__addr(node.lvalue.name.name),
-                index_value=self.visit(node.lvalue.subscript)
-            )
+            if isinstance(node.lvalue.name, ID):
+                lhs_addr = self.__elem_addr(
+                    array_addr=self.__addr(node.lvalue.name.name),
+                    index_value=self.visit(node.lvalue.subscript)
+                )
+            else:
+                dummy, reversed_index_values = node.lvalue, []
+                while isinstance(dummy, ArrayRef):
+                    reversed_index_values.append(self.visit(dummy.subscript))
+                    dummy = dummy.name
+
+                assert isinstance(dummy, ID)
+                array_addr = self.__addr(dummy.name)
+
+                elem_addr = array_addr
+                for index_value in reversed_index_values[::-1]:
+                    elem_addr = self.__elem_addr(elem_addr, index_value)
+
+                lhs_addr = elem_addr
         else:
             assert False, node.lvalue  # TODO implement
 
@@ -694,21 +709,46 @@ class LLVMCodeGenerator(NodeVisitor):
     def visit_ParamList(self, node: ParamList): pass  # NOTE handled in Decl (for FuncDecl)
 
     def visit_Print(self, node: Print):
+        _fmt_dict = {
+            TYPE_INT.typename:    r"%d",
+            TYPE_FLOAT.typename:  r"%f",
+            TYPE_CHAR.typename:   r"%c",
+            TYPE_STRING.typename: r"%s",
+            TYPE_BOOL.typename:   r"%d",
+        }
+
         if node.expr is None:
-            self.__printf("\n", "print.newline")
+            self.__printf("\n", "print.eol")
+
         elif isinstance(node.expr, Constant):
-            # TODO use fmt instead of Python's f-string
-            # FIXME use selv.visit(node.expr) to unquote the string
-            self.__printf(f"{node.expr.value}\n", "print.msg")
+            _value = self.visit(node.expr)
+            _addr = self.__global_const("print.arg", _value)
+            _fmt = _fmt_dict[node.expr.type]
+
+            self.__printf(f"{_fmt}", "print.cte", _addr)  # FIXME use value for non-strings
+
         elif isinstance(node.expr, ExprList):
-            # FIXME
-            print_str = []
+            _fmt, _fmt_args = [], []
             for expr in node.expr:
                 if isinstance(expr, Constant):
-                    print_str.append(f"{expr.value}")
+                    _value = self.visit(expr)
+                    _fmt.append(_fmt_dict[expr.type])
+                    if expr.type == TYPE_STRING.typename:
+                        _addr = self.__global_const("print.arg", _value)
+                        _fmt_args.append(_addr)
+                    else:
+                        _fmt_args.append(_value)
+
+                elif isinstance(expr, ArrayRef):
+                    _value = self.visit(expr)
+                    _fmt.append(_fmt_dict["int"]) # FIXME expr.type])
+                    _fmt_args.append(_value)
+                        
                 else:
-                    print_str.append(f"{self.visit(expr)}")
-            self.__printf(f"{' '.join(print_str)}\n", "print.msg")
+                    assert False
+
+            self.__printf(f"{''.join(_fmt)}", "print.lst", *_fmt_args)
+
         else:
             assert False
 
