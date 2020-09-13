@@ -1,5 +1,3 @@
-from copy import copy
-
 from uC_CFG import *
 from uC_blocks import *
 

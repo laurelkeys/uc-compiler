@@ -9,12 +9,6 @@ from uC_types import *
 ## uC to LLVM IR ##########################################
 ###########################################################
 
-def _log(*a, **k):
-    pass#print("[log]", *a, **k)
-
-def _ass(cond):
-    assert cond
-
 class LLVMCodeGenerator(NodeVisitor):
     ''' Node visitor class that creates LLVM IR code. '''
 
@@ -305,8 +299,6 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.position_at_start(true_bb)
 
     def visit_Assignment(self, node: Assignment):
-        _log(f"visiting Assignment, type(node.lvalue)={type(node.lvalue)}")
-        _log(f"visiting Assignment, type(node.rvalue)={type(node.rvalue)}")
 
         if isinstance(node.lvalue, ID):
             lhs_addr = self.__addr(node.lvalue.name)
@@ -338,7 +330,6 @@ class LLVMCodeGenerator(NodeVisitor):
 
         if node.op != "=":
             assert len(node.op) == 2, node.op
-            _log(f"visiting Assignment, node.op={node.op}")
             lhs_value = self.builder.load(ptr=lhs_addr, name=node.lvalue.name)
             rhs_value = self.__binop(node.op[0], lhs_value, rhs_value)
 
@@ -346,8 +337,6 @@ class LLVMCodeGenerator(NodeVisitor):
         return rhs_value
 
     def visit_BinaryOp(self, node: BinaryOp):
-        _log(f"visiting BinaryOp, type(node.left)={type(node.left)}")
-        _log(f"visiting BinaryOp, type(node.right)={type(node.right)}")
 
         lhs_value = self.visit(node.left)
         rhs_value = self.visit(node.right)
@@ -359,7 +348,6 @@ class LLVMCodeGenerator(NodeVisitor):
         self.builder.branch(target=self.loop_end_blocks[-1])
 
     def visit_Cast(self, node: Cast):
-        _ass(isinstance(node.type, Type))
         assert len(node.type.names) == 1, node.type.names
 
         expr_value = self.visit(node.expr)
@@ -384,7 +372,6 @@ class LLVMCodeGenerator(NodeVisitor):
             self.visit(stmt)
 
     def visit_Constant(self, node: Constant):
-        _ass(isinstance(node.type, str))
 
         if node.type == TYPE_CHAR.typename:
             unquoted_char = node.value[1:-1]
@@ -397,16 +384,10 @@ class LLVMCodeGenerator(NodeVisitor):
         return ir.Constant(typ=UCLLVM.Type.of([node.type]), constant=node.value)
 
     def visit_Decl(self, node: Decl):
-        _ass(isinstance(node.name, ID))
-        _ass(isinstance(node.type, (ArrayDecl, FuncDecl, PtrDecl, VarDecl)))
-        _log(f"visiting Decl, type(node.init)={type(node.init)}")
 
         name = node.name.name
 
         if isinstance(node.type, FuncDecl):
-            _ass(node.init is None)
-            _ass(isinstance(node.type.type, VarDecl))
-            _ass(isinstance(node.type.type.type, Type))
             funcdecl: FuncDecl = node.type
 
             # Create an ir.Function to represent funcdecl
@@ -426,8 +407,6 @@ class LLVMCodeGenerator(NodeVisitor):
                 # Create a new function and name its arguments
                 fn = ir.Function(module=self.module, ftype=fn_type, name=fn_name)
                 for arg, arg_decl in zip(fn.args, funcdecl.args or []):
-                    _ass(isinstance(arg_decl, Decl))
-                    _ass(isinstance(arg_decl.type, VarDecl))
                     arg.name = arg_decl.name.name
             else:
                 # Assert that all we've seen is the function's prototype
@@ -440,7 +419,6 @@ class LLVMCodeGenerator(NodeVisitor):
             return fn
 
         elif isinstance(node.type, VarDecl):
-            _ass(isinstance(node.type.type, Type))
             vardecl: VarDecl = node.type
 
             var_name = name
@@ -594,7 +572,6 @@ class LLVMCodeGenerator(NodeVisitor):
         self.loop_end_blocks.pop()
 
     def visit_FuncCall(self, node: FuncCall):
-        _ass(isinstance(node.name, ID))
 
         fn_name = node.name.name
         fn = self.module.globals.get(fn_name)
@@ -613,9 +590,6 @@ class LLVMCodeGenerator(NodeVisitor):
     def visit_FuncDecl(self, node: FuncDecl): pass  # NOTE handled in Decl
 
     def visit_FuncDef(self, node: FuncDef):
-        _ass(isinstance(node.spec, Type))
-        _ass(isinstance(node.decl, Decl))
-        _ass(isinstance(node.body, Compound))  # TODO double check for empty/single-line functions
 
         # Reset the current function symbol table
         self.func_symtab = {}
@@ -743,7 +717,7 @@ class LLVMCodeGenerator(NodeVisitor):
                     _value = self.visit(expr)
                     _fmt.append(_fmt_dict["int"]) # FIXME expr.type])
                     _fmt_args.append(_value)
-                        
+
                 else:
                     assert False
 
@@ -761,7 +735,6 @@ class LLVMCodeGenerator(NodeVisitor):
     def visit_Read(self, node: Read): raise NotImplementedError
 
     def visit_Return(self, node: Return):
-        _log(f"visiting Return, type(node.expr)={type(node.expr)}")
 
         if node.expr is not None:
             fn_return_value = self.visit(node.expr)
@@ -770,16 +743,12 @@ class LLVMCodeGenerator(NodeVisitor):
         self.__terminate(target=self.func_exit_block)
 
     def visit_Type(self, node: Type):
-        _log(f"visiting Type, node={node}")
         pass
 
     def visit_VarDecl(self, node: VarDecl):
-        _log(f"visiting VarDecl, node={node}")
-        _ass(isinstance(node.type, Type))
         self.visit(node.type)
 
     def visit_UnaryOp(self, node: UnaryOp):
-        _log(f"visiting UnaryOp, type(node.expr)={type(node.expr)}")
 
         expr_value = self.visit(node.expr)
         expr_addr = None if not isinstance(node.expr, ID) else self.__addr(node.expr.name)  # FIXME arrays

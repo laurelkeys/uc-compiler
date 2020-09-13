@@ -1,8 +1,3 @@
-import os
-
-from collections import namedtuple
-from enum import Enum, unique
-
 from graphviz import Digraph
 
 from uC_blocks import *

@@ -1,4 +1,7 @@
-import __context_tests__
+import os, sys
+abs_dir_path = os.path.abspath(os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(abs_dir_path, "..", "src"))
+del os, sys
 
 import re
 

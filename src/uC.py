@@ -6,8 +6,6 @@
 # This file defines some generic functionality for dealing with errors throughout the compiler project.
 #
 
-import __context_root__
-
 import os
 import sys
 import argparse
@@ -19,7 +17,7 @@ from uC_sema import Visitor
 from uC_parser import UCParser
 from uC_LLVMIR import LLVMCodeGenerator
 from uC_LLVMjit import LLVMCompiler
-from uC_errors import clear_errors, error, errors_reported, subscribe_errors
+from uC_errors import error, errors_reported, subscribe_errors
 from uc_interpreter import Interpreter
 
 ###########################################################

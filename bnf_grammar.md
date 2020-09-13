@@ -1,3 +1,5 @@
+# BNF Grammar
+
 ```
 <program> ::= {<global_declaration>}+
 
