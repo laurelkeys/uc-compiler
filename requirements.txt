@@ -49,7 +49,7 @@ ply==3.11
 prometheus-client==0.7.1
 prompt-toolkit==3.0.4
 py==1.8.1
-Pygments==2.6.1
+Pygments==2.7.4
 pylint==2.5.2
 pyparsing==2.4.6
 pyrsistent==0.15.7
