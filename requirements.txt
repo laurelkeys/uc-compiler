@@ -31,7 +31,7 @@ jupyter-latex-envs==1.4.6
 jupyter-nbextensions-configurator==0.4.1
 lazy-object-proxy==1.4.3
 llvmlite==0.33.0
-lxml==4.5.0
+lxml==4.6.3
 MarkupSafe==1.1.1
 mccabe==0.6.1
 mistune==0.8.4
